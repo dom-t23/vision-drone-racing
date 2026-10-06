@@ -120,7 +120,8 @@ def main(argv=None) -> int:
 
     summary = summarize(runs)
     commit = _git("rev-parse", "--short", "HEAD")
-    dirty = bool(_git("status", "--porcelain", "--untracked-files=no"))
+    # "dirty" = uncommitted changes to the code that produced these numbers (docs don't count)
+    dirty = bool(_git("status", "--porcelain", "--", "vdr", "requirements.txt"))
     result = {
         "timestamp": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "commit": commit,
