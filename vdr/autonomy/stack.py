@@ -139,8 +139,10 @@ class Autonomy:
         cands = []
         for d in dets:
             size = info.gate_outer_size if d.kind == OUTER else info.gate_inner_size
-            sols = [s for s in pnp.solve_gate_pose(d.corners, info.K, size, up_c)
-                    if s.reproj_err <= cfg.max_reproj_px and pnp.gate_tilt_deg(s, up_c) <= cfg.max_gate_tilt_deg]
+            sols = self._valid_solutions(d.corners, size, up_c)
+            if not sols and d.inner is not None:
+                # the outline fit was bad (often two gates merged) -- try the gate's own opening
+                sols = self._valid_solutions(d.inner, info.gate_inner_size, up_c)
             if sols:
                 cands.append((d, sols))
         if not cands:
@@ -192,6 +194,11 @@ class Autonomy:
         elif self.mode == SEARCH and ahead:
             a = min(ahead, key=lambda a: np.linalg.norm(a[2]))
             self._switch_to(self._add_sighting([], a), passed=False)
+
+    def _valid_solutions(self, corners: np.ndarray, size: float, up_c: np.ndarray) -> list:
+        cfg = self.cfg
+        return [s for s in pnp.solve_gate_pose(corners, self.info.K, size, up_c)
+                if s.reproj_err <= cfg.max_reproj_px and pnp.gate_tilt_deg(s, up_c) <= cfg.max_gate_tilt_deg]
 
     def _yaw_meas(self, s: pnp.GatePose) -> float:
         """Yaw of a detected gate's frame relative to the current navigation frame."""
