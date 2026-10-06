@@ -72,7 +72,7 @@ estimate trace and course for one seed — use it to debug a specific failure.
   (gates passed in order / gates on course; a run ends at the first crash, miss or timeout).
   Also report completion rate, outcomes, and mean lap time of completed runs.
 - **Race clock:** each run must average >= `race_min_speed` (5 m/s) along the gate-to-gate
-  path or it times out. Slowing down is not a way to score (4 m/s gives 55% — see results).
+  path or it times out. Slowing down is not a way to score (4 m/s gives 57% — see results).
 - **Pace rule:** do not lower `cruise_speed` (or otherwise slow the drone) to gain pass rate.
   A change only counts as an improvement if pass rate rises without mean lap time getting
   more than 5% worse. Going faster at equal pass rate is an improvement.
@@ -113,8 +113,11 @@ estimate trace and course for one seed — use it to debug a specific failure.
   generous (the chi2 gate decides), with "next gate" requiring >= 3 m beyond the target.
 - 2026-10-07 — A time-to-go floor in the cubic guidance made the drone brake to a stop 0.7 m
   before a gate. Switch to a terminal "hold the line" mode at x > -1.2 m instead.
-- 2026-10-07 — Chi-squared gating is worth ~11 pp of pass rate at race pace
-  (results/2026-10-07_32d0993_ablation-no-chi2.json vs _baseline.json).
+- 2026-10-07 — When a gate's outline merges with another gate, its RANSAC quad can fail the
+  uprightness check; fall back to the gate's own inner opening rather than dropping it
+  (seed 25 never initialised before; baseline 82.2% -> 89.2%).
+- 2026-10-07 — Chi-squared gating is worth ~14 pp of pass rate at race pace
+  (results/2026-10-07_c25234a_ablation-no-chi2.json 75.5% vs _baseline.json 89.2%).
 
 ## Instruction changes
 
