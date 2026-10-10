@@ -5,7 +5,14 @@ its monocular FPV camera and IMU** — no GPS, no depth sensor, no map of where 
 Everything is self-contained Python: the simulator renders real camera images, and the
 flight stack has to find the gates in the pixels.
 
-> Flight video (onboard camera + top-down view) — coming soon.
+![Seed 0: onboard camera (left) and top-down course view (right)](docs/img/flight.gif)
+
+*Course seed 0, default configuration, real-time playback at 8 fps. Left: the 320×240 camera
+image the flight stack actually receives, with a HUD (time, true speed, gates passed, tracker
+mode). Right: true trajectory over the course (for viewing only — the drone never gets the
+map). Regenerate with `python -m vdr.flightviz --seed 0`.*
+
+[![tests](https://github.com/dom-t23/vision-drone-racing/actions/workflows/tests.yml/badge.svg)](https://github.com/dom-t23/vision-drone-racing/actions/workflows/tests.yml)
 
 ## Results
 
@@ -15,11 +22,13 @@ file; see [NIGHTLY_LOG.md](NIGHTLY_LOG.md) for the history.
 
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline (8 m/s)** | **89.2%** | 82% | 11.9 s |
-| same, chi-squared gating off | 75.5% | 60% | 12.0 s |
+| **baseline (8 m/s)** | **94.5%** | 90% | 12.0 s |
+| same, lost-target recovery off | 89.2% | 82% | 11.9 s |
+| earlier baseline, chi-squared gating off | 75.5% | 60% | 12.0 s |
 | cruise 4 m/s (race clock expires) | 57.0% | 0% | — |
 
-Files: [`baseline`](results/2026-10-07_c25234a_baseline.json),
+Files: [`baseline`](results/2026-10-10_fe6114d_baseline.json),
+[`no recovery`](results/2026-10-10_0181f50_ablation-no-recovery.json),
 [`no chi2`](results/2026-10-07_c25234a_ablation-no-chi2.json),
 [`4 m/s`](results/2026-10-07_c25234a_ablation-4mps.json).
 
@@ -69,7 +78,7 @@ imports the simulator or the contract grows a ground-truth field.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 40 tests, ~10 s
+python -m pytest -q                         # 43 tests, ~12 s
 python -m vdr.harness --runs 50 --seed 0    # the benchmark (~1 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world

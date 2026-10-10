@@ -93,3 +93,29 @@ cause — depth-biased next-gate estimates — is untouched; recovery only limit
 
 **Next:** fix the handoff estimate itself (ROADMAP A2 upright PnP / A3 sub-pixel corners /
 A6 PnP-Jacobian covariance), or B (first-week extras) since the last two runs were build + A.
+
+---
+
+## 2026-10-10 — Run 3: (B) first-week extras — flight GIF + CI
+
+**Baseline confirmed on main (d33c241):** pytest 41 passed; `--runs 50 --seed 0` = 94.5% pass
+rate, 90% completion, 11.97 s lap — identical to `2026-10-10_0181f50_baseline.json`.
+
+**Chunk B (last run was A):**
+- `python -m vdr.flightviz --seed N --out docs/img/flight.gif`: onboard camera (with HUD:
+  time, true speed, gates passed, tracker mode) beside a top-down view of the course and the
+  true trajectory. Truth is used for the picture only, outside the autonomy. README now shows
+  seed 0 (completes 8/8). Real-time at 8 fps (every 5th camera frame). The camera's pixel noise
+  makes every frame unique, so per-frame palettes gave 9 MB; one shared 48-colour palette from
+  a 6-frame montage, no dithering, gives 3.3 MB.
+- `run_episode(..., keep_frames, frame_stride)`: frames are now `(t, image)` pairs, one every
+  `frame_stride` camera frames (no previous callers; flight unaffected).
+- `.github/workflows/tests.yml`: pytest + 8-run harness smoke test on push to main and PRs.
+  The workflow push was accepted (no `workflow` permission problem).
+- Tests: +2 (`tests/test_flightviz.py`), 43 total. README results table updated to the
+  current baseline and the recovery ablation.
+
+**Verified:** pytest 43 passed; harness on fe6114d = 94.5% / 90% / 11.97 s, identical to before
+(`results/2026-10-10_fe6114d_baseline.json`) — the change touches no flight code.
+
+**Next:** (A) ROADMAP A1 depth-biased handoff estimates; last remaining extra is UDP link mode.

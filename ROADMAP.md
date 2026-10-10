@@ -3,7 +3,7 @@
 Prioritised. Each overnight run takes ONE item (or a well-argued new one), and updates this
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
-Current baseline: `results/2026-10-10_0181f50_baseline.json` (94.5% pass rate, 90% completion,
+Current baseline: `results/2026-10-10_fe6114d_baseline.json` (same numbers as `2026-10-10_0181f50_baseline.json`) (94.5% pass rate, 90% completion,
 11.97 s lap, 5 failures: 2 crash_gate, 3 missed_gate). Older evidence below cites
 `2026-10-07_c25234a_baseline.json` (89.2%).
 
@@ -36,14 +36,9 @@ Current baseline: `results/2026-10-10_0181f50_baseline.json` (94.5% pass rate, 9
 ## (B) Robustness, realism, tooling
 
 - **First-week extras (fixed design decisions):**
-  - [ ] Flight GIF for the README: onboard camera + top-down course view, rendered from
-        `run_episode(seed, record=True)` with matplotlib/Pillow.
   - [ ] Optional UDP link mode: sim and autonomy as separate processes exchanging
         Observation/Command messages over localhost UDP in lockstep (`--link udp`), with a test
         that it gives identical results to in-process mode.
-  - [ ] GitHub Actions CI running `pytest` on push. Note: pushing `.github/workflows/*` may need
-        the `workflow` permission; if the push is rejected, keep the file out of the commit,
-        say so in the final message, and leave it for Dom to add.
 - **Failure analysis tool:** `python -m vdr.analyze results/<file>.json` -> failure modes by
   gate index, outcome, pre-crash estimation error; `--seed N` re-runs one seed with a
   trajectory/estimate plot saved to `docs/img/`.
@@ -67,6 +62,9 @@ Current baseline: `results/2026-10-10_0181f50_baseline.json` (94.5% pass rate, 9
   debugging stories from Lessons learned.
 
 ## Done
+
+- 2026-10-10 — First-week extras: README flight GIF (`python -m vdr.flightviz`) and GitHub
+  Actions CI (pytest + 8-run harness smoke test). No flight change (94.5% before and after).
 
 - 2026-10-10 — Lost-target recovery (`recover_lost_target`): a gate seen straight ahead just
   beyond an unmatched target becomes the target. 89.2% -> 94.5% (seed 0), 91.2% -> 93.5%
