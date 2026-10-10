@@ -1,0 +1,3554 @@
+{
+ "timestamp": "2026-10-10T22:44:23Z",
+ "commit": "0181f50",
+ "dirty": false,
+ "runs": 50,
+ "seed": 1000,
+ "flags": {},
+ "sim_overrides": {},
+ "wall_s": 76.9,
+ "pass_rate": 0.935,
+ "completion_rate": 0.84,
+ "gates_passed": 374,
+ "gates_total": 400,
+ "per_gate_pass_rate": [
+  1.0,
+  1.0,
+  0.98,
+  0.96,
+  0.94,
+  0.9,
+  0.86,
+  0.84
+ ],
+ "outcomes": {
+  "completed": 42,
+  "crash_gate": 5,
+  "crash_ground": 0,
+  "missed_gate": 2,
+  "wrong_gate": 0,
+  "flyaway": 0,
+  "timeout": 1
+ },
+ "mean_lap_time_completed": 12.1,
+ "median_pos_err_rms": 0.891,
+ "autonomy_config": {
+  "hue_lo": 0,
+  "hue_hi": 25,
+  "sat_min": 120,
+  "val_min": 100,
+  "min_area_outer": 40.0,
+  "min_area_inner": 30.0,
+  "approx_eps": 0.035,
+  "robust_quad_fit": true,
+  "min_edge_support": 0.6,
+  "border_margin": 1.5,
+  "corner_sigma_px": 1.5,
+  "depth_factor": 0.7,
+  "pos_sigma_floor": 0.03,
+  "att_sigma_floor_deg": 1.0,
+  "att_factor": 4.0,
+  "max_reproj_px": 2.5,
+  "max_gate_tilt_deg": 45.0,
+  "accel_noise": 0.08,
+  "gyro_noise": 0.003,
+  "accel_bias_walk": 0.005,
+  "gyro_bias_walk": 0.0005,
+  "init_accel_bias_sigma": 0.2,
+  "init_min_imu_samples": 40,
+  "init_gyro_bias_sigma": 0.03,
+  "chi2_gating": true,
+  "chi2_threshold": 11.345,
+  "max_consecutive_rejects": 8,
+  "assoc_radius": 2.0,
+  "assoc_radius_per_m": 0.1,
+  "assoc_radius_max": 4.0,
+  "next_gate_min_x": 3.0,
+  "pass_x": 0.3,
+  "next_gate_cluster_radius": 1.5,
+  "next_gate_min_sightings": 3,
+  "retarget_margin": 2.0,
+  "retarget_min_sightings": 4,
+  "retarget_min_range": 3.0,
+  "recover_lost_target": true,
+  "lost_target_frames": 3,
+  "lost_target_min_sightings": 3,
+  "next_gate_cone_deg": 60.0,
+  "yaw_prior_from_bearing": true,
+  "bearing_yaw_sigma_deg": 20.0,
+  "init_yaw_sigma_deg": 12.0,
+  "switch_pos_sigma_per_m": 0.08,
+  "cruise_speed": 8.0,
+  "t_go_min": 0.3,
+  "terminal_x": -1.2,
+  "look_ahead_x": 1.5,
+  "max_tilt_deg": 55.0,
+  "max_accel": 14.0,
+  "k_vel": 3.0,
+  "k_lat": 3.0,
+  "k_att_rp": 10.0,
+  "k_att_yaw": 4.0,
+  "search_yaw_rate": 0.6
+ },
+ "sim_config": {
+  "physics_dt": 0.0025,
+  "control_substeps": 2,
+  "camera_every": 5,
+  "time_limit": 60.0,
+  "race_min_speed": 5.0,
+  "race_start_allowance": 2.0,
+  "image_width": 320,
+  "image_height": 240,
+  "hfov_deg": 100.0,
+  "cam_uptilt_deg": 20.0,
+  "cam_offset_x": 0.08,
+  "cam_offset_z": 0.02,
+  "pixel_noise_sigma": 3.0,
+  "gate_outer": 1.7,
+  "gate_inner": 1.4,
+  "n_gates": 8,
+  "spacing_min": 6.0,
+  "spacing_max": 11.0,
+  "turn_max_deg": 35.0,
+  "gate_yaw_offset_deg": 15.0,
+  "z_min": 1.4,
+  "z_max": 3.0,
+  "dz_max": 0.8,
+  "min_gate_separation": 4.0,
+  "path_clearance": 2.5,
+  "next_gate_cone_deg": 60.0,
+  "start_dist_min": 5.0,
+  "start_dist_max": 7.0,
+  "start_lateral": 1.0,
+  "start_vertical": 0.3,
+  "start_yaw_deg": 10.0,
+  "thrust_max": 39.24,
+  "rate_max_rp": 12.0,
+  "rate_max_yaw": 6.0,
+  "tau_thrust": 0.03,
+  "tau_rate": 0.04,
+  "drag_xy": 0.35,
+  "drag_z": 0.1,
+  "drag_quad": 0.015,
+  "drone_radius": 0.15,
+  "gyro_noise": 0.002,
+  "accel_noise": 0.05,
+  "gyro_bias_sigma": 0.01,
+  "accel_bias_sigma": 0.1,
+  "gyro_bias_walk": 0.0001,
+  "accel_bias_walk": 0.001,
+  "flyaway_dist": 30.0
+ },
+ "per_run": [
+  {
+   "seed": 1000,
+   "n_gates": 8,
+   "gates_passed": 6,
+   "outcome": "crash_gate",
+   "time": 9.98,
+   "events": [
+    [
+     1.637,
+     0,
+     "pass"
+    ],
+    [
+     2.987,
+     1,
+     "pass"
+    ],
+    [
+     4.61,
+     2,
+     "pass"
+    ],
+    [
+     5.938,
+     3,
+     "pass"
+    ],
+    [
+     6.895,
+     4,
+     "pass"
+    ],
+    [
+     8.223,
+     5,
+     "pass"
+    ],
+    [
+     9.98,
+     6,
+     "crash_gate"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.253,
+    "pos_err_max": 3.827,
+    "yaw_err_rms_deg": 3.19,
+    "wrong_gate_frac": 0.038,
+    "frames": 400,
+    "detections": 1318,
+    "pos_updates": 255,
+    "pos_rejects": 2,
+    "att_updates": 255,
+    "att_rejects": 2,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 257,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.68
+  },
+  {
+   "seed": 1001,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.892,
+   "events": [
+    [
+     1.847,
+     0,
+     "pass"
+    ],
+    [
+     3.19,
+     1,
+     "pass"
+    ],
+    [
+     4.818,
+     2,
+     "pass"
+    ],
+    [
+     5.935,
+     3,
+     "pass"
+    ],
+    [
+     7.273,
+     4,
+     "pass"
+    ],
+    [
+     8.965,
+     5,
+     "pass"
+    ],
+    [
+     10.535,
+     6,
+     "pass"
+    ],
+    [
+     11.892,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.65,
+    "pos_err_max": 2.287,
+    "yaw_err_rms_deg": 5.58,
+    "wrong_gate_frac": 0.038,
+    "frames": 476,
+    "detections": 1319,
+    "pos_updates": 346,
+    "pos_rejects": 16,
+    "att_updates": 345,
+    "att_rejects": 17,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 362,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.0
+  },
+  {
+   "seed": 1002,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.26,
+   "events": [
+    [
+     2.012,
+     0,
+     "pass"
+    ],
+    [
+     3.307,
+     1,
+     "pass"
+    ],
+    [
+     5.015,
+     2,
+     "pass"
+    ],
+    [
+     6.233,
+     3,
+     "pass"
+    ],
+    [
+     7.8,
+     4,
+     "pass"
+    ],
+    [
+     8.773,
+     5,
+     "pass"
+    ],
+    [
+     10.025,
+     6,
+     "pass"
+    ],
+    [
+     11.26,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.662,
+    "pos_err_max": 2.93,
+    "yaw_err_rms_deg": 2.08,
+    "wrong_gate_frac": 0.041,
+    "frames": 451,
+    "detections": 1147,
+    "pos_updates": 304,
+    "pos_rejects": 36,
+    "att_updates": 290,
+    "att_rejects": 47,
+    "reinits": 3,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 340,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.98
+  },
+  {
+   "seed": 1003,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.75,
+   "events": [
+    [
+     1.962,
+     0,
+     "pass"
+    ],
+    [
+     3.157,
+     1,
+     "pass"
+    ],
+    [
+     4.49,
+     2,
+     "pass"
+    ],
+    [
+     5.928,
+     3,
+     "pass"
+    ],
+    [
+     7.45,
+     4,
+     "pass"
+    ],
+    [
+     9.15,
+     5,
+     "pass"
+    ],
+    [
+     10.175,
+     6,
+     "pass"
+    ],
+    [
+     11.75,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.939,
+    "pos_err_max": 3.083,
+    "yaw_err_rms_deg": 9.82,
+    "wrong_gate_frac": 0.041,
+    "frames": 470,
+    "detections": 1006,
+    "pos_updates": 335,
+    "pos_rejects": 16,
+    "att_updates": 322,
+    "att_rejects": 29,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 1,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 351,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.08
+  },
+  {
+   "seed": 1004,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.58,
+   "events": [
+    [
+     2.03,
+     0,
+     "pass"
+    ],
+    [
+     3.627,
+     1,
+     "pass"
+    ],
+    [
+     5.22,
+     2,
+     "pass"
+    ],
+    [
+     6.24,
+     3,
+     "pass"
+    ],
+    [
+     7.388,
+     4,
+     "pass"
+    ],
+    [
+     8.783,
+     5,
+     "pass"
+    ],
+    [
+     10.123,
+     6,
+     "pass"
+    ],
+    [
+     11.58,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.719,
+    "pos_err_max": 4.739,
+    "yaw_err_rms_deg": 2.98,
+    "wrong_gate_frac": 0.055,
+    "frames": 464,
+    "detections": 984,
+    "pos_updates": 304,
+    "pos_rejects": 28,
+    "att_updates": 308,
+    "att_rejects": 22,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 1,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 332,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.1
+  },
+  {
+   "seed": 1005,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.212,
+   "events": [
+    [
+     2.152,
+     0,
+     "pass"
+    ],
+    [
+     3.43,
+     1,
+     "pass"
+    ],
+    [
+     4.82,
+     2,
+     "pass"
+    ],
+    [
+     6.218,
+     3,
+     "pass"
+    ],
+    [
+     7.258,
+     4,
+     "pass"
+    ],
+    [
+     8.555,
+     5,
+     "pass"
+    ],
+    [
+     9.645,
+     6,
+     "pass"
+    ],
+    [
+     11.212,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.609,
+    "pos_err_max": 2.305,
+    "yaw_err_rms_deg": 7.59,
+    "wrong_gate_frac": 0.041,
+    "frames": 449,
+    "detections": 998,
+    "pos_updates": 323,
+    "pos_rejects": 3,
+    "att_updates": 311,
+    "att_rejects": 15,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 326,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.86
+  },
+  {
+   "seed": 1006,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.65,
+   "events": [
+    [
+     2.08,
+     0,
+     "pass"
+    ],
+    [
+     3.932,
+     1,
+     "pass"
+    ],
+    [
+     5.19,
+     2,
+     "pass"
+    ],
+    [
+     6.643,
+     3,
+     "pass"
+    ],
+    [
+     8.22,
+     4,
+     "pass"
+    ],
+    [
+     10.028,
+     5,
+     "pass"
+    ],
+    [
+     11.482,
+     6,
+     "pass"
+    ],
+    [
+     12.65,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.26,
+    "pos_err_max": 3.761,
+    "yaw_err_rms_deg": 6.05,
+    "wrong_gate_frac": 0.028,
+    "frames": 506,
+    "detections": 811,
+    "pos_updates": 323,
+    "pos_rejects": 35,
+    "att_updates": 322,
+    "att_rejects": 32,
+    "reinits": 4,
+    "handoffs": 7,
+    "switches": 1,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 358,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.15
+  },
+  {
+   "seed": 1007,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 13.277,
+   "events": [
+    [
+     2.242,
+     0,
+     "pass"
+    ],
+    [
+     3.87,
+     1,
+     "pass"
+    ],
+    [
+     5.025,
+     2,
+     "pass"
+    ],
+    [
+     6.325,
+     3,
+     "pass"
+    ],
+    [
+     8.158,
+     4,
+     "pass"
+    ],
+    [
+     9.89,
+     5,
+     "pass"
+    ],
+    [
+     11.357,
+     6,
+     "pass"
+    ],
+    [
+     13.277,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.688,
+    "pos_err_max": 3.43,
+    "yaw_err_rms_deg": 2.77,
+    "wrong_gate_frac": 0.032,
+    "frames": 532,
+    "detections": 1173,
+    "pos_updates": 389,
+    "pos_rejects": 18,
+    "att_updates": 383,
+    "att_rejects": 22,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 1,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 407,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.52
+  },
+  {
+   "seed": 1008,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.627,
+   "events": [
+    [
+     2.062,
+     0,
+     "pass"
+    ],
+    [
+     3.262,
+     1,
+     "pass"
+    ],
+    [
+     5.145,
+     2,
+     "pass"
+    ],
+    [
+     6.5,
+     3,
+     "pass"
+    ],
+    [
+     7.713,
+     4,
+     "pass"
+    ],
+    [
+     9.093,
+     5,
+     "pass"
+    ],
+    [
+     10.39,
+     6,
+     "pass"
+    ],
+    [
+     11.627,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.117,
+    "pos_err_max": 3.853,
+    "yaw_err_rms_deg": 11.16,
+    "wrong_gate_frac": 0.035,
+    "frames": 466,
+    "detections": 760,
+    "pos_updates": 322,
+    "pos_rejects": 0,
+    "att_updates": 293,
+    "att_rejects": 29,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 322,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.85
+  },
+  {
+   "seed": 1009,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.85,
+   "events": [
+    [
+     2.015,
+     0,
+     "pass"
+    ],
+    [
+     3.28,
+     1,
+     "pass"
+    ],
+    [
+     4.843,
+     2,
+     "pass"
+    ],
+    [
+     6.473,
+     3,
+     "pass"
+    ],
+    [
+     8.363,
+     4,
+     "pass"
+    ],
+    [
+     9.45,
+     5,
+     "pass"
+    ],
+    [
+     11.185,
+     6,
+     "pass"
+    ],
+    [
+     12.85,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.933,
+    "pos_err_max": 3.648,
+    "yaw_err_rms_deg": 5.79,
+    "wrong_gate_frac": 0.032,
+    "frames": 514,
+    "detections": 709,
+    "pos_updates": 347,
+    "pos_rejects": 37,
+    "att_updates": 343,
+    "att_rejects": 37,
+    "reinits": 4,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 384,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.16
+  },
+  {
+   "seed": 1010,
+   "n_gates": 8,
+   "gates_passed": 3,
+   "outcome": "missed_gate",
+   "time": 6.03,
+   "events": [
+    [
+     1.955,
+     0,
+     "pass"
+    ],
+    [
+     3.59,
+     1,
+     "pass"
+    ],
+    [
+     5.123,
+     2,
+     "pass"
+    ],
+    [
+     6.03,
+     3,
+     "missed_gate"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.729,
+    "pos_err_max": 4.733,
+    "yaw_err_rms_deg": 10.31,
+    "wrong_gate_frac": 0.056,
+    "frames": 242,
+    "detections": 491,
+    "pos_updates": 130,
+    "pos_rejects": 22,
+    "att_updates": 123,
+    "att_rejects": 28,
+    "reinits": 1,
+    "handoffs": 3,
+    "switches": 2,
+    "retargets": 1,
+    "searches": 0,
+    "target_frames": 152,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 3
+   },
+   "wall_s": 1.71
+  },
+  {
+   "seed": 1011,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.505,
+   "events": [
+    [
+     1.895,
+     0,
+     "pass"
+    ],
+    [
+     3.567,
+     1,
+     "pass"
+    ],
+    [
+     4.875,
+     2,
+     "pass"
+    ],
+    [
+     6.585,
+     3,
+     "pass"
+    ],
+    [
+     8.115,
+     4,
+     "pass"
+    ],
+    [
+     9.758,
+     5,
+     "pass"
+    ],
+    [
+     11.252,
+     6,
+     "pass"
+    ],
+    [
+     12.505,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.625,
+    "pos_err_max": 2.928,
+    "yaw_err_rms_deg": 3.64,
+    "wrong_gate_frac": 0.034,
+    "frames": 501,
+    "detections": 1244,
+    "pos_updates": 367,
+    "pos_rejects": 21,
+    "att_updates": 379,
+    "att_rejects": 7,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 388,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.52
+  },
+  {
+   "seed": 1012,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.917,
+   "events": [
+    [
+     2.122,
+     0,
+     "pass"
+    ],
+    [
+     3.727,
+     1,
+     "pass"
+    ],
+    [
+     5.18,
+     2,
+     "pass"
+    ],
+    [
+     6.745,
+     3,
+     "pass"
+    ],
+    [
+     8.245,
+     4,
+     "pass"
+    ],
+    [
+     9.908,
+     5,
+     "pass"
+    ],
+    [
+     11.122,
+     6,
+     "pass"
+    ],
+    [
+     12.917,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.574,
+    "pos_err_max": 2.094,
+    "yaw_err_rms_deg": 4.06,
+    "wrong_gate_frac": 0.031,
+    "frames": 517,
+    "detections": 1089,
+    "pos_updates": 367,
+    "pos_rejects": 36,
+    "att_updates": 386,
+    "att_rejects": 14,
+    "reinits": 3,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 403,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.47
+  },
+  {
+   "seed": 1013,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.087,
+   "events": [
+    [
+     1.987,
+     0,
+     "pass"
+    ],
+    [
+     3.645,
+     1,
+     "pass"
+    ],
+    [
+     5.288,
+     2,
+     "pass"
+    ],
+    [
+     6.55,
+     3,
+     "pass"
+    ],
+    [
+     8.393,
+     4,
+     "pass"
+    ],
+    [
+     9.5,
+     5,
+     "pass"
+    ],
+    [
+     11.052,
+     6,
+     "pass"
+    ],
+    [
+     12.087,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.616,
+    "pos_err_max": 2.488,
+    "yaw_err_rms_deg": 2.9,
+    "wrong_gate_frac": 0.038,
+    "frames": 484,
+    "detections": 1281,
+    "pos_updates": 327,
+    "pos_rejects": 30,
+    "att_updates": 338,
+    "att_rejects": 17,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 357,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.31
+  },
+  {
+   "seed": 1014,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 13.17,
+   "events": [
+    [
+     1.832,
+     0,
+     "pass"
+    ],
+    [
+     3.427,
+     1,
+     "pass"
+    ],
+    [
+     4.813,
+     2,
+     "pass"
+    ],
+    [
+     6.895,
+     3,
+     "pass"
+    ],
+    [
+     8.253,
+     4,
+     "pass"
+    ],
+    [
+     10.173,
+     5,
+     "pass"
+    ],
+    [
+     11.537,
+     6,
+     "pass"
+    ],
+    [
+     13.17,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.303,
+    "pos_err_max": 3.762,
+    "yaw_err_rms_deg": 3.76,
+    "wrong_gate_frac": 0.062,
+    "frames": 527,
+    "detections": 1060,
+    "pos_updates": 321,
+    "pos_rejects": 43,
+    "att_updates": 329,
+    "att_rejects": 31,
+    "reinits": 4,
+    "handoffs": 8,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 364,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 8
+   },
+   "wall_s": 3.3
+  },
+  {
+   "seed": 1015,
+   "n_gates": 8,
+   "gates_passed": 6,
+   "outcome": "crash_gate",
+   "time": 11.052,
+   "events": [
+    [
+     2.207,
+     0,
+     "pass"
+    ],
+    [
+     3.905,
+     1,
+     "pass"
+    ],
+    [
+     5.68,
+     2,
+     "pass"
+    ],
+    [
+     6.938,
+     3,
+     "pass"
+    ],
+    [
+     8.138,
+     4,
+     "pass"
+    ],
+    [
+     9.375,
+     5,
+     "pass"
+    ],
+    [
+     11.052,
+     6,
+     "crash_gate"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.03,
+    "pos_err_max": 4.014,
+    "yaw_err_rms_deg": 6.75,
+    "wrong_gate_frac": 0.03,
+    "frames": 443,
+    "detections": 1396,
+    "pos_updates": 318,
+    "pos_rejects": 27,
+    "att_updates": 309,
+    "att_rejects": 33,
+    "reinits": 3,
+    "handoffs": 6,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 345,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 6
+   },
+   "wall_s": 3.13
+  },
+  {
+   "seed": 1016,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.012,
+   "events": [
+    [
+     2.18,
+     0,
+     "pass"
+    ],
+    [
+     3.642,
+     1,
+     "pass"
+    ],
+    [
+     5.505,
+     2,
+     "pass"
+    ],
+    [
+     6.815,
+     3,
+     "pass"
+    ],
+    [
+     8.125,
+     4,
+     "pass"
+    ],
+    [
+     9.435,
+     5,
+     "pass"
+    ],
+    [
+     10.995,
+     6,
+     "pass"
+    ],
+    [
+     12.012,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.891,
+    "pos_err_max": 4.108,
+    "yaw_err_rms_deg": 5.46,
+    "wrong_gate_frac": 0.04,
+    "frames": 481,
+    "detections": 1210,
+    "pos_updates": 332,
+    "pos_rejects": 24,
+    "att_updates": 330,
+    "att_rejects": 25,
+    "reinits": 1,
+    "handoffs": 7,
+    "switches": 2,
+    "retargets": 1,
+    "searches": 0,
+    "target_frames": 356,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.27
+  },
+  {
+   "seed": 1017,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.45,
+   "events": [
+    [
+     2.15,
+     0,
+     "pass"
+    ],
+    [
+     3.417,
+     1,
+     "pass"
+    ],
+    [
+     4.638,
+     2,
+     "pass"
+    ],
+    [
+     6.153,
+     3,
+     "pass"
+    ],
+    [
+     7.415,
+     4,
+     "pass"
+    ],
+    [
+     8.95,
+     5,
+     "pass"
+    ],
+    [
+     10.088,
+     6,
+     "pass"
+    ],
+    [
+     11.45,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.19,
+    "pos_err_max": 4.222,
+    "yaw_err_rms_deg": 4.25,
+    "wrong_gate_frac": 0.044,
+    "frames": 458,
+    "detections": 1181,
+    "pos_updates": 293,
+    "pos_rejects": 10,
+    "att_updates": 294,
+    "att_rejects": 8,
+    "reinits": 1,
+    "handoffs": 8,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 303,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 8
+   },
+   "wall_s": 3.31
+  },
+  {
+   "seed": 1018,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.377,
+   "events": [
+    [
+     2.127,
+     0,
+     "pass"
+    ],
+    [
+     3.525,
+     1,
+     "pass"
+    ],
+    [
+     5.023,
+     2,
+     "pass"
+    ],
+    [
+     6.145,
+     3,
+     "pass"
+    ],
+    [
+     7.693,
+     4,
+     "pass"
+    ],
+    [
+     9.483,
+     5,
+     "pass"
+    ],
+    [
+     10.992,
+     6,
+     "pass"
+    ],
+    [
+     12.377,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.771,
+    "pos_err_max": 3.766,
+    "yaw_err_rms_deg": 4.47,
+    "wrong_gate_frac": 0.037,
+    "frames": 496,
+    "detections": 1482,
+    "pos_updates": 344,
+    "pos_rejects": 19,
+    "att_updates": 349,
+    "att_rejects": 12,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 3,
+    "retargets": 2,
+    "searches": 0,
+    "target_frames": 363,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.08
+  },
+  {
+   "seed": 1019,
+   "n_gates": 8,
+   "gates_passed": 5,
+   "outcome": "crash_gate",
+   "time": 9.308,
+   "events": [
+    [
+     2.085,
+     0,
+     "pass"
+    ],
+    [
+     3.862,
+     1,
+     "pass"
+    ],
+    [
+     5.47,
+     2,
+     "pass"
+    ],
+    [
+     6.59,
+     3,
+     "pass"
+    ],
+    [
+     7.653,
+     4,
+     "pass"
+    ],
+    [
+     9.308,
+     5,
+     "crash_gate"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.51,
+    "pos_err_max": 3.28,
+    "yaw_err_rms_deg": 6.62,
+    "wrong_gate_frac": 0.033,
+    "frames": 373,
+    "detections": 903,
+    "pos_updates": 232,
+    "pos_rejects": 8,
+    "att_updates": 202,
+    "att_rejects": 37,
+    "reinits": 1,
+    "handoffs": 6,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 240,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 6
+   },
+   "wall_s": 2.53
+  },
+  {
+   "seed": 1020,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.13,
+   "events": [
+    [
+     2.095,
+     0,
+     "pass"
+    ],
+    [
+     3.405,
+     1,
+     "pass"
+    ],
+    [
+     4.583,
+     2,
+     "pass"
+    ],
+    [
+     5.948,
+     3,
+     "pass"
+    ],
+    [
+     7.493,
+     4,
+     "pass"
+    ],
+    [
+     9.425,
+     5,
+     "pass"
+    ],
+    [
+     10.51,
+     6,
+     "pass"
+    ],
+    [
+     12.13,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.824,
+    "pos_err_max": 2.229,
+    "yaw_err_rms_deg": 5.73,
+    "wrong_gate_frac": 0.04,
+    "frames": 486,
+    "detections": 1124,
+    "pos_updates": 335,
+    "pos_rejects": 33,
+    "att_updates": 354,
+    "att_rejects": 11,
+    "reinits": 3,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 368,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.12
+  },
+  {
+   "seed": 1021,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.147,
+   "events": [
+    [
+     2.125,
+     0,
+     "pass"
+    ],
+    [
+     3.712,
+     1,
+     "pass"
+    ],
+    [
+     5.435,
+     2,
+     "pass"
+    ],
+    [
+     6.725,
+     3,
+     "pass"
+    ],
+    [
+     7.863,
+     4,
+     "pass"
+    ],
+    [
+     9.298,
+     5,
+     "pass"
+    ],
+    [
+     10.488,
+     6,
+     "pass"
+    ],
+    [
+     12.147,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.929,
+    "pos_err_max": 2.748,
+    "yaw_err_rms_deg": 3.89,
+    "wrong_gate_frac": 0.04,
+    "frames": 486,
+    "detections": 1226,
+    "pos_updates": 324,
+    "pos_rejects": 39,
+    "att_updates": 308,
+    "att_rejects": 52,
+    "reinits": 3,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 363,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.19
+  },
+  {
+   "seed": 1022,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.46,
+   "events": [
+    [
+     1.765,
+     0,
+     "pass"
+    ],
+    [
+     3.487,
+     1,
+     "pass"
+    ],
+    [
+     4.998,
+     2,
+     "pass"
+    ],
+    [
+     6.758,
+     3,
+     "pass"
+    ],
+    [
+     8.125,
+     4,
+     "pass"
+    ],
+    [
+     9.643,
+     5,
+     "pass"
+    ],
+    [
+     11.167,
+     6,
+     "pass"
+    ],
+    [
+     12.46,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.414,
+    "pos_err_max": 6.281,
+    "yaw_err_rms_deg": 9.66,
+    "wrong_gate_frac": 0.033,
+    "frames": 499,
+    "detections": 1047,
+    "pos_updates": 355,
+    "pos_rejects": 18,
+    "att_updates": 357,
+    "att_rejects": 14,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 373,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.1
+  },
+  {
+   "seed": 1023,
+   "n_gates": 8,
+   "gates_passed": 7,
+   "outcome": "timeout",
+   "time": 15.12,
+   "events": [
+    [
+     2.09,
+     0,
+     "pass"
+    ],
+    [
+     3.807,
+     1,
+     "pass"
+    ],
+    [
+     5.49,
+     2,
+     "pass"
+    ],
+    [
+     6.798,
+     3,
+     "pass"
+    ],
+    [
+     8.155,
+     4,
+     "pass"
+    ],
+    [
+     9.405,
+     5,
+     "pass"
+    ],
+    [
+     11.267,
+     6,
+     "pass"
+    ],
+    [
+     15.12,
+     7,
+     "timeout"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 2.157,
+    "pos_err_max": 4.579,
+    "yaw_err_rms_deg": 9.39,
+    "wrong_gate_frac": 0.085,
+    "frames": 605,
+    "detections": 944,
+    "pos_updates": 301,
+    "pos_rejects": 33,
+    "att_updates": 324,
+    "att_rejects": 7,
+    "reinits": 3,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 1,
+    "target_frames": 334,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 8
+   },
+   "wall_s": 3.54
+  },
+  {
+   "seed": 1024,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.675,
+   "events": [
+    [
+     1.845,
+     0,
+     "pass"
+    ],
+    [
+     4.027,
+     1,
+     "pass"
+    ],
+    [
+     5.375,
+     2,
+     "pass"
+    ],
+    [
+     6.655,
+     3,
+     "pass"
+    ],
+    [
+     8.23,
+     4,
+     "pass"
+    ],
+    [
+     9.278,
+     5,
+     "pass"
+    ],
+    [
+     10.383,
+     6,
+     "pass"
+    ],
+    [
+     11.675,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.528,
+    "pos_err_max": 4.579,
+    "yaw_err_rms_deg": 4.1,
+    "wrong_gate_frac": 0.033,
+    "frames": 467,
+    "detections": 1185,
+    "pos_updates": 284,
+    "pos_rejects": 0,
+    "att_updates": 284,
+    "att_rejects": 0,
+    "reinits": 0,
+    "handoffs": 8,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 284,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 8
+   },
+   "wall_s": 3.07
+  },
+  {
+   "seed": 1025,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.542,
+   "events": [
+    [
+     1.9,
+     0,
+     "pass"
+    ],
+    [
+     3.242,
+     1,
+     "pass"
+    ],
+    [
+     4.783,
+     2,
+     "pass"
+    ],
+    [
+     6.58,
+     3,
+     "pass"
+    ],
+    [
+     8.365,
+     4,
+     "pass"
+    ],
+    [
+     9.515,
+     5,
+     "pass"
+    ],
+    [
+     11.277,
+     6,
+     "pass"
+    ],
+    [
+     12.542,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.651,
+    "pos_err_max": 2.77,
+    "yaw_err_rms_deg": 3.92,
+    "wrong_gate_frac": 0.034,
+    "frames": 502,
+    "detections": 1318,
+    "pos_updates": 348,
+    "pos_rejects": 25,
+    "att_updates": 366,
+    "att_rejects": 5,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 373,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.08
+  },
+  {
+   "seed": 1026,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 13.042,
+   "events": [
+    [
+     2.035,
+     0,
+     "pass"
+    ],
+    [
+     3.58,
+     1,
+     "pass"
+    ],
+    [
+     5.43,
+     2,
+     "pass"
+    ],
+    [
+     6.75,
+     3,
+     "pass"
+    ],
+    [
+     7.92,
+     4,
+     "pass"
+    ],
+    [
+     9.468,
+     5,
+     "pass"
+    ],
+    [
+     11.14,
+     6,
+     "pass"
+    ],
+    [
+     13.042,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.81,
+    "pos_err_max": 4.51,
+    "yaw_err_rms_deg": 4.85,
+    "wrong_gate_frac": 0.053,
+    "frames": 522,
+    "detections": 1099,
+    "pos_updates": 389,
+    "pos_rejects": 5,
+    "att_updates": 389,
+    "att_rejects": 5,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 2,
+    "retargets": 1,
+    "searches": 0,
+    "target_frames": 394,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.25
+  },
+  {
+   "seed": 1027,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.565,
+   "events": [
+    [
+     1.902,
+     0,
+     "pass"
+    ],
+    [
+     3.672,
+     1,
+     "pass"
+    ],
+    [
+     5.635,
+     2,
+     "pass"
+    ],
+    [
+     7.003,
+     3,
+     "pass"
+    ],
+    [
+     8.135,
+     4,
+     "pass"
+    ],
+    [
+     9.613,
+     5,
+     "pass"
+    ],
+    [
+     10.792,
+     6,
+     "pass"
+    ],
+    [
+     12.565,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.525,
+    "pos_err_max": 1.458,
+    "yaw_err_rms_deg": 4.89,
+    "wrong_gate_frac": 0.026,
+    "frames": 503,
+    "detections": 1222,
+    "pos_updates": 385,
+    "pos_rejects": 2,
+    "att_updates": 385,
+    "att_rejects": 2,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 387,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.94
+  },
+  {
+   "seed": 1028,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.812,
+   "events": [
+    [
+     2.01,
+     0,
+     "pass"
+    ],
+    [
+     3.617,
+     1,
+     "pass"
+    ],
+    [
+     4.908,
+     2,
+     "pass"
+    ],
+    [
+     6.378,
+     3,
+     "pass"
+    ],
+    [
+     7.865,
+     4,
+     "pass"
+    ],
+    [
+     9.26,
+     5,
+     "pass"
+    ],
+    [
+     10.705,
+     6,
+     "pass"
+    ],
+    [
+     11.812,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.064,
+    "pos_err_max": 6.596,
+    "yaw_err_rms_deg": 7.53,
+    "wrong_gate_frac": 0.052,
+    "frames": 473,
+    "detections": 684,
+    "pos_updates": 347,
+    "pos_rejects": 8,
+    "att_updates": 313,
+    "att_rejects": 41,
+    "reinits": 1,
+    "handoffs": 7,
+    "switches": 1,
+    "retargets": 1,
+    "searches": 0,
+    "target_frames": 355,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.91
+  },
+  {
+   "seed": 1029,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.357,
+   "events": [
+    [
+     2.132,
+     0,
+     "pass"
+    ],
+    [
+     3.707,
+     1,
+     "pass"
+    ],
+    [
+     4.905,
+     2,
+     "pass"
+    ],
+    [
+     6.113,
+     3,
+     "pass"
+    ],
+    [
+     7.5,
+     4,
+     "pass"
+    ],
+    [
+     8.685,
+     5,
+     "pass"
+    ],
+    [
+     10.205,
+     6,
+     "pass"
+    ],
+    [
+     11.357,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.898,
+    "pos_err_max": 3.35,
+    "yaw_err_rms_deg": 3.94,
+    "wrong_gate_frac": 0.047,
+    "frames": 455,
+    "detections": 1194,
+    "pos_updates": 310,
+    "pos_rejects": 27,
+    "att_updates": 297,
+    "att_rejects": 37,
+    "reinits": 3,
+    "handoffs": 7,
+    "switches": 1,
+    "retargets": 1,
+    "searches": 0,
+    "target_frames": 337,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.1
+  },
+  {
+   "seed": 1030,
+   "n_gates": 8,
+   "gates_passed": 2,
+   "outcome": "crash_gate",
+   "time": 5.308,
+   "events": [
+    [
+     1.81,
+     0,
+     "pass"
+    ],
+    [
+     3.74,
+     1,
+     "pass"
+    ],
+    [
+     5.308,
+     2,
+     "crash_gate"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 2.13,
+    "pos_err_max": 3.78,
+    "yaw_err_rms_deg": 6.9,
+    "wrong_gate_frac": 0.024,
+    "frames": 213,
+    "detections": 410,
+    "pos_updates": 92,
+    "pos_rejects": 19,
+    "att_updates": 75,
+    "att_rejects": 34,
+    "reinits": 2,
+    "handoffs": 3,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 111,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 3
+   },
+   "wall_s": 1.38
+  },
+  {
+   "seed": 1031,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.617,
+   "events": [
+    [
+     2.22,
+     0,
+     "pass"
+    ],
+    [
+     3.437,
+     1,
+     "pass"
+    ],
+    [
+     5.253,
+     2,
+     "pass"
+    ],
+    [
+     6.938,
+     3,
+     "pass"
+    ],
+    [
+     8.123,
+     4,
+     "pass"
+    ],
+    [
+     9.605,
+     5,
+     "pass"
+    ],
+    [
+     10.855,
+     6,
+     "pass"
+    ],
+    [
+     12.617,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.239,
+    "pos_err_max": 1.099,
+    "yaw_err_rms_deg": 1.89,
+    "wrong_gate_frac": 0.032,
+    "frames": 505,
+    "detections": 1441,
+    "pos_updates": 390,
+    "pos_rejects": 1,
+    "att_updates": 390,
+    "att_rejects": 1,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 391,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.16
+  },
+  {
+   "seed": 1032,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.947,
+   "events": [
+    [
+     1.737,
+     0,
+     "pass"
+    ],
+    [
+     3.395,
+     1,
+     "pass"
+    ],
+    [
+     5.42,
+     2,
+     "pass"
+    ],
+    [
+     6.855,
+     3,
+     "pass"
+    ],
+    [
+     8.118,
+     4,
+     "pass"
+    ],
+    [
+     9.895,
+     5,
+     "pass"
+    ],
+    [
+     11.207,
+     6,
+     "pass"
+    ],
+    [
+     12.947,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.056,
+    "pos_err_max": 4.008,
+    "yaw_err_rms_deg": 9.37,
+    "wrong_gate_frac": 0.031,
+    "frames": 518,
+    "detections": 989,
+    "pos_updates": 387,
+    "pos_rejects": 6,
+    "att_updates": 377,
+    "att_rejects": 16,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 1,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 393,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.33
+  },
+  {
+   "seed": 1033,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 13.097,
+   "events": [
+    [
+     2.205,
+     0,
+     "pass"
+    ],
+    [
+     3.712,
+     1,
+     "pass"
+    ],
+    [
+     5.488,
+     2,
+     "pass"
+    ],
+    [
+     7.428,
+     3,
+     "pass"
+    ],
+    [
+     9.16,
+     4,
+     "pass"
+    ],
+    [
+     10.228,
+     5,
+     "pass"
+    ],
+    [
+     11.315,
+     6,
+     "pass"
+    ],
+    [
+     13.097,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.782,
+    "pos_err_max": 3.783,
+    "yaw_err_rms_deg": 2.98,
+    "wrong_gate_frac": 0.029,
+    "frames": 524,
+    "detections": 1256,
+    "pos_updates": 377,
+    "pos_rejects": 21,
+    "att_updates": 386,
+    "att_rejects": 10,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 1,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 398,
+    "recoveries": 1,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.25
+  },
+  {
+   "seed": 1034,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.207,
+   "events": [
+    [
+     1.777,
+     0,
+     "pass"
+    ],
+    [
+     3.132,
+     1,
+     "pass"
+    ],
+    [
+     4.558,
+     2,
+     "pass"
+    ],
+    [
+     5.73,
+     3,
+     "pass"
+    ],
+    [
+     7.06,
+     4,
+     "pass"
+    ],
+    [
+     8.63,
+     5,
+     "pass"
+    ],
+    [
+     9.658,
+     6,
+     "pass"
+    ],
+    [
+     11.207,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.423,
+    "pos_err_max": 1.603,
+    "yaw_err_rms_deg": 4.15,
+    "wrong_gate_frac": 0.027,
+    "frames": 449,
+    "detections": 917,
+    "pos_updates": 313,
+    "pos_rejects": 7,
+    "att_updates": 311,
+    "att_rejects": 9,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 320,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.92
+  },
+  {
+   "seed": 1035,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.61,
+   "events": [
+    [
+     2.045,
+     0,
+     "pass"
+    ],
+    [
+     3.57,
+     1,
+     "pass"
+    ],
+    [
+     5.098,
+     2,
+     "pass"
+    ],
+    [
+     6.36,
+     3,
+     "pass"
+    ],
+    [
+     7.665,
+     4,
+     "pass"
+    ],
+    [
+     9.29,
+     5,
+     "pass"
+    ],
+    [
+     10.573,
+     6,
+     "pass"
+    ],
+    [
+     11.61,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.4,
+    "pos_err_max": 1.591,
+    "yaw_err_rms_deg": 3.15,
+    "wrong_gate_frac": 0.037,
+    "frames": 465,
+    "detections": 1193,
+    "pos_updates": 326,
+    "pos_rejects": 19,
+    "att_updates": 326,
+    "att_rejects": 18,
+    "reinits": 1,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 345,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.08
+  },
+  {
+   "seed": 1036,
+   "n_gates": 8,
+   "gates_passed": 5,
+   "outcome": "crash_gate",
+   "time": 9.643,
+   "events": [
+    [
+     1.852,
+     0,
+     "pass"
+    ],
+    [
+     2.977,
+     1,
+     "pass"
+    ],
+    [
+     4.432,
+     2,
+     "pass"
+    ],
+    [
+     5.965,
+     3,
+     "pass"
+    ],
+    [
+     7.755,
+     4,
+     "pass"
+    ],
+    [
+     9.643,
+     5,
+     "crash_gate"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.578,
+    "pos_err_max": 3.635,
+    "yaw_err_rms_deg": 7.59,
+    "wrong_gate_frac": 0.032,
+    "frames": 386,
+    "detections": 846,
+    "pos_updates": 225,
+    "pos_rejects": 25,
+    "att_updates": 224,
+    "att_rejects": 24,
+    "reinits": 2,
+    "handoffs": 6,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 250,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 6
+   },
+   "wall_s": 2.52
+  },
+  {
+   "seed": 1037,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.012,
+   "events": [
+    [
+     1.715,
+     0,
+     "pass"
+    ],
+    [
+     2.865,
+     1,
+     "pass"
+    ],
+    [
+     3.937,
+     2,
+     "pass"
+    ],
+    [
+     5.738,
+     3,
+     "pass"
+    ],
+    [
+     7.243,
+     4,
+     "pass"
+    ],
+    [
+     8.34,
+     5,
+     "pass"
+    ],
+    [
+     9.388,
+     6,
+     "pass"
+    ],
+    [
+     11.012,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.571,
+    "pos_err_max": 1.547,
+    "yaw_err_rms_deg": 3.67,
+    "wrong_gate_frac": 0.037,
+    "frames": 441,
+    "detections": 951,
+    "pos_updates": 300,
+    "pos_rejects": 27,
+    "att_updates": 285,
+    "att_rejects": 40,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 327,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.94
+  },
+  {
+   "seed": 1038,
+   "n_gates": 8,
+   "gates_passed": 4,
+   "outcome": "missed_gate",
+   "time": 8.185,
+   "events": [
+    [
+     1.782,
+     0,
+     "pass"
+    ],
+    [
+     2.88,
+     1,
+     "pass"
+    ],
+    [
+     4.367,
+     2,
+     "pass"
+    ],
+    [
+     6.3,
+     3,
+     "pass"
+    ],
+    [
+     8.185,
+     4,
+     "missed_gate"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.838,
+    "pos_err_max": 5.034,
+    "yaw_err_rms_deg": 6.51,
+    "wrong_gate_frac": 0.028,
+    "frames": 328,
+    "detections": 772,
+    "pos_updates": 198,
+    "pos_rejects": 8,
+    "att_updates": 200,
+    "att_rejects": 5,
+    "reinits": 1,
+    "handoffs": 5,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 206,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 5
+   },
+   "wall_s": 2.3
+  },
+  {
+   "seed": 1039,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 10.765,
+   "events": [
+    [
+     1.875,
+     0,
+     "pass"
+    ],
+    [
+     2.92,
+     1,
+     "pass"
+    ],
+    [
+     4.117,
+     2,
+     "pass"
+    ],
+    [
+     5.638,
+     3,
+     "pass"
+    ],
+    [
+     7.17,
+     4,
+     "pass"
+    ],
+    [
+     8.58,
+     5,
+     "pass"
+    ],
+    [
+     9.715,
+     6,
+     "pass"
+    ],
+    [
+     10.765,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.562,
+    "pos_err_max": 1.935,
+    "yaw_err_rms_deg": 3.74,
+    "wrong_gate_frac": 0.052,
+    "frames": 431,
+    "detections": 1444,
+    "pos_updates": 273,
+    "pos_rejects": 38,
+    "att_updates": 278,
+    "att_rejects": 30,
+    "reinits": 3,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 311,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.06
+  },
+  {
+   "seed": 1040,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.732,
+   "events": [
+    [
+     1.667,
+     0,
+     "pass"
+    ],
+    [
+     3.04,
+     1,
+     "pass"
+    ],
+    [
+     4.785,
+     2,
+     "pass"
+    ],
+    [
+     6.115,
+     3,
+     "pass"
+    ],
+    [
+     7.398,
+     4,
+     "pass"
+    ],
+    [
+     8.75,
+     5,
+     "pass"
+    ],
+    [
+     9.828,
+     6,
+     "pass"
+    ],
+    [
+     11.732,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.551,
+    "pos_err_max": 2.536,
+    "yaw_err_rms_deg": 3.65,
+    "wrong_gate_frac": 0.037,
+    "frames": 470,
+    "detections": 858,
+    "pos_updates": 327,
+    "pos_rejects": 26,
+    "att_updates": 326,
+    "att_rejects": 25,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 353,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.74
+  },
+  {
+   "seed": 1041,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.845,
+   "events": [
+    [
+     2.137,
+     0,
+     "pass"
+    ],
+    [
+     4.067,
+     1,
+     "pass"
+    ],
+    [
+     5.553,
+     2,
+     "pass"
+    ],
+    [
+     6.668,
+     3,
+     "pass"
+    ],
+    [
+     7.853,
+     4,
+     "pass"
+    ],
+    [
+     9.42,
+     5,
+     "pass"
+    ],
+    [
+     10.585,
+     6,
+     "pass"
+    ],
+    [
+     11.845,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.9,
+    "pos_err_max": 3.598,
+    "yaw_err_rms_deg": 8.57,
+    "wrong_gate_frac": 0.036,
+    "frames": 474,
+    "detections": 949,
+    "pos_updates": 339,
+    "pos_rejects": 20,
+    "att_updates": 329,
+    "att_rejects": 28,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 359,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.26
+  },
+  {
+   "seed": 1042,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.64,
+   "events": [
+    [
+     1.905,
+     0,
+     "pass"
+    ],
+    [
+     3.012,
+     1,
+     "pass"
+    ],
+    [
+     4.518,
+     2,
+     "pass"
+    ],
+    [
+     5.65,
+     3,
+     "pass"
+    ],
+    [
+     7.348,
+     4,
+     "pass"
+    ],
+    [
+     8.768,
+     5,
+     "pass"
+    ],
+    [
+     10.065,
+     6,
+     "pass"
+    ],
+    [
+     11.64,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.076,
+    "pos_err_max": 2.926,
+    "yaw_err_rms_deg": 9.99,
+    "wrong_gate_frac": 0.044,
+    "frames": 466,
+    "detections": 854,
+    "pos_updates": 340,
+    "pos_rejects": 13,
+    "att_updates": 318,
+    "att_rejects": 34,
+    "reinits": 1,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 353,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.87
+  },
+  {
+   "seed": 1043,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 10.887,
+   "events": [
+    [
+     1.925,
+     0,
+     "pass"
+    ],
+    [
+     3.15,
+     1,
+     "pass"
+    ],
+    [
+     4.923,
+     2,
+     "pass"
+    ],
+    [
+     6.715,
+     3,
+     "pass"
+    ],
+    [
+     7.625,
+     4,
+     "pass"
+    ],
+    [
+     8.65,
+     5,
+     "pass"
+    ],
+    [
+     9.9,
+     6,
+     "pass"
+    ],
+    [
+     10.887,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.847,
+    "pos_err_max": 6.965,
+    "yaw_err_rms_deg": 4.95,
+    "wrong_gate_frac": 0.056,
+    "frames": 436,
+    "detections": 1139,
+    "pos_updates": 307,
+    "pos_rejects": 6,
+    "att_updates": 304,
+    "att_rejects": 9,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 1,
+    "retargets": 1,
+    "searches": 0,
+    "target_frames": 313,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.37
+  },
+  {
+   "seed": 1044,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 14.107,
+   "events": [
+    [
+     2.232,
+     0,
+     "pass"
+    ],
+    [
+     4.32,
+     1,
+     "pass"
+    ],
+    [
+     5.708,
+     2,
+     "pass"
+    ],
+    [
+     7.103,
+     3,
+     "pass"
+    ],
+    [
+     8.495,
+     4,
+     "pass"
+    ],
+    [
+     10.438,
+     5,
+     "pass"
+    ],
+    [
+     12.292,
+     6,
+     "pass"
+    ],
+    [
+     14.107,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.787,
+    "pos_err_max": 4.247,
+    "yaw_err_rms_deg": 5.27,
+    "wrong_gate_frac": 0.032,
+    "frames": 565,
+    "detections": 1431,
+    "pos_updates": 440,
+    "pos_rejects": 10,
+    "att_updates": 446,
+    "att_rejects": 4,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 450,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.59
+  },
+  {
+   "seed": 1045,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.405,
+   "events": [
+    [
+     2.16,
+     0,
+     "pass"
+    ],
+    [
+     3.517,
+     1,
+     "pass"
+    ],
+    [
+     5.2,
+     2,
+     "pass"
+    ],
+    [
+     6.848,
+     3,
+     "pass"
+    ],
+    [
+     8.365,
+     4,
+     "pass"
+    ],
+    [
+     9.863,
+     5,
+     "pass"
+    ],
+    [
+     11.4,
+     6,
+     "pass"
+    ],
+    [
+     12.405,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.731,
+    "pos_err_max": 2.264,
+    "yaw_err_rms_deg": 4.63,
+    "wrong_gate_frac": 0.033,
+    "frames": 497,
+    "detections": 918,
+    "pos_updates": 343,
+    "pos_rejects": 16,
+    "att_updates": 357,
+    "att_rejects": 0,
+    "reinits": 2,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 359,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.13
+  },
+  {
+   "seed": 1046,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.55,
+   "events": [
+    [
+     1.867,
+     0,
+     "pass"
+    ],
+    [
+     3.452,
+     1,
+     "pass"
+    ],
+    [
+     5.3,
+     2,
+     "pass"
+    ],
+    [
+     6.86,
+     3,
+     "pass"
+    ],
+    [
+     8.438,
+     4,
+     "pass"
+    ],
+    [
+     10.07,
+     5,
+     "pass"
+    ],
+    [
+     11.3,
+     6,
+     "pass"
+    ],
+    [
+     12.55,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.674,
+    "pos_err_max": 3.19,
+    "yaw_err_rms_deg": 5.44,
+    "wrong_gate_frac": 0.036,
+    "frames": 502,
+    "detections": 1261,
+    "pos_updates": 380,
+    "pos_rejects": 2,
+    "att_updates": 380,
+    "att_rejects": 2,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 382,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.96
+  },
+  {
+   "seed": 1047,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 12.667,
+   "events": [
+    [
+     1.932,
+     0,
+     "pass"
+    ],
+    [
+     3.182,
+     1,
+     "pass"
+    ],
+    [
+     4.62,
+     2,
+     "pass"
+    ],
+    [
+     6.493,
+     3,
+     "pass"
+    ],
+    [
+     8.088,
+     4,
+     "pass"
+    ],
+    [
+     9.85,
+     5,
+     "pass"
+    ],
+    [
+     10.897,
+     6,
+     "pass"
+    ],
+    [
+     12.667,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.754,
+    "pos_err_max": 2.097,
+    "yaw_err_rms_deg": 4.5,
+    "wrong_gate_frac": 0.034,
+    "frames": 507,
+    "detections": 1089,
+    "pos_updates": 366,
+    "pos_rejects": 26,
+    "att_updates": 354,
+    "att_rejects": 35,
+    "reinits": 3,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 392,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 3.04
+  },
+  {
+   "seed": 1048,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.407,
+   "events": [
+    [
+     2.057,
+     0,
+     "pass"
+    ],
+    [
+     3.412,
+     1,
+     "pass"
+    ],
+    [
+     4.455,
+     2,
+     "pass"
+    ],
+    [
+     5.538,
+     3,
+     "pass"
+    ],
+    [
+     7.005,
+     4,
+     "pass"
+    ],
+    [
+     8.293,
+     5,
+     "pass"
+    ],
+    [
+     9.703,
+     6,
+     "pass"
+    ],
+    [
+     11.407,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 0.948,
+    "pos_err_max": 2.793,
+    "yaw_err_rms_deg": 8.44,
+    "wrong_gate_frac": 0.058,
+    "frames": 457,
+    "detections": 1334,
+    "pos_updates": 305,
+    "pos_rejects": 29,
+    "att_updates": 292,
+    "att_rejects": 39,
+    "reinits": 3,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 334,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.89
+  },
+  {
+   "seed": 1049,
+   "n_gates": 8,
+   "gates_passed": 8,
+   "outcome": "completed",
+   "time": 11.497,
+   "events": [
+    [
+     1.975,
+     0,
+     "pass"
+    ],
+    [
+     3.69,
+     1,
+     "pass"
+    ],
+    [
+     5.128,
+     2,
+     "pass"
+    ],
+    [
+     6.348,
+     3,
+     "pass"
+    ],
+    [
+     7.48,
+     4,
+     "pass"
+    ],
+    [
+     8.545,
+     5,
+     "pass"
+    ],
+    [
+     10.258,
+     6,
+     "pass"
+    ],
+    [
+     11.497,
+     7,
+     "pass"
+    ]
+   ],
+   "diag": {
+    "pos_err_rms": 1.187,
+    "pos_err_max": 5.194,
+    "yaw_err_rms_deg": 9.63,
+    "wrong_gate_frac": 0.035,
+    "frames": 460,
+    "detections": 1062,
+    "pos_updates": 314,
+    "pos_rejects": 0,
+    "att_updates": 303,
+    "att_rejects": 11,
+    "reinits": 0,
+    "handoffs": 7,
+    "switches": 0,
+    "retargets": 0,
+    "searches": 0,
+    "target_frames": 314,
+    "recoveries": 0,
+    "passes_counted_by_autonomy": 7
+   },
+   "wall_s": 2.86
+  }
+ ]
+}

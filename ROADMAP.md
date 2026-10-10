@@ -3,17 +3,18 @@
 Prioritised. Each overnight run takes ONE item (or a well-argued new one), and updates this
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
-Evidence below refers to `results/2026-10-07_c25234a_baseline.json` (89.2% pass rate,
-82% completion, 11.9 s mean lap, 9 failures: 6 crash_gate, 3 missed_gate, all at gates 2-6).
+Current baseline: `results/2026-10-10_0181f50_baseline.json` (94.5% pass rate, 90% completion,
+11.97 s lap, 5 failures: 2 crash_gate, 3 missed_gate). Older evidence below cites
+`2026-10-07_c25234a_baseline.json` (89.2%).
 
 ## (A) Pass rate
 
-1. **Stop early handoffs.** In failing runs the filter often declares a pass before the drone
-   reaches the gate (e.g. seed 15: 3 handoffs, crashed at gate 2), then turns for the next gate
-   and clips the frame. Ideas: require a close-range (< ~4 m) accepted sighting of the target
-   before a pass can be declared; use the target's last good range + IMU to sanity-check
-   the crossing; delay the turn until the gate has left the image. Measure with a new
-   diagnostic: estimated vs true plane-crossing time.
+1. **Fix depth-biased next-gate estimates (root cause of early handoffs).** Lost-target
+   recovery (done) catches most of them, but 9 of 19 remaining failures over seeds 0/1000/2000
+   still have a handoff 2-5 m short, noticed too late (< 3 m) to recover. Ideas: weight far
+   sightings by a range-dependent *bias* model, refine the handoff estimate with close-range
+   sightings made right before the pass, or require a close-range (< ~4 m) accepted sighting
+   of the target before a pass can be declared. Items 2, 3 and 6 below attack the same bias.
 2. **Gravity-constrained ("upright") PnP.** Gates are vertical, so solve 4 DoF (position + yaw)
    by minimising reprojection error with roll/pitch fixed from the filter, seeded from the
    IPPE solutions. Removes most IPPE flips; replace the 3-DoF attitude update with a yaw-only
@@ -66,6 +67,10 @@ Evidence below refers to `results/2026-10-07_c25234a_baseline.json` (89.2% pass 
   debugging stories from Lessons learned.
 
 ## Done
+
+- 2026-10-10 — Lost-target recovery (`recover_lost_target`): a gate seen straight ahead just
+  beyond an unmatched target becomes the target. 89.2% -> 94.5% (seed 0), 91.2% -> 93.5%
+  (seed 1000), 86.8% -> 95.0% (seed 2000, held out); lap time within 0.6%.
 
 - 2026-10-07 — Bootstrap: simulator, autonomy stack, harness, 40 tests.
   Baseline 89.2% pass rate / 82% completion / 11.9 s lap (`2026-10-07_c25234a_baseline.json`).

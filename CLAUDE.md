@@ -119,6 +119,13 @@ estimate trace and course for one seed — use it to debug a specific failure.
 - 2026-10-07 — Chi-squared gating is worth ~14 pp of pass rate at race pace
   (results/2026-10-07_c25234a_ablation-no-chi2.json 75.5% vs _baseline.json 89.2%).
 
+- 2026-10-10 — A depth-biased handoff estimate (2-5 m short) leaves the real gate outside
+  the association radius but short of "next gate" range, so it was silently ignored and the
+  filter flew blind with a falsely small covariance. Every detection must land in *some*
+  category that can correct the target: a gate straight ahead beyond an unmatched target now
+  becomes the target (`recover_lost_target`; 89.2% -> 94.5%). Diagnose handoffs by hooking
+  `_handoff` with truth (estimate minus true position right after the switch).
+
 ## Instruction changes
 
 (none yet)
