@@ -19,7 +19,9 @@ from vdr.sim import SimConfig, Simulator
 
 
 def run_episode(seed: int, sim_cfg: Optional[SimConfig] = None, auto_cfg: Optional[AutonomyConfig] = None,
-                record: bool = False, keep_frames: int = 0) -> dict:
+                record: bool = False, keep_frames: int = 0, frame_stride: int = 1) -> dict:
+    """Fly one seeded course. `keep_frames` > 0 keeps up to that many camera images, one
+    every `frame_stride` camera frames (for videos/debugging; never affects the flight)."""
     sim_cfg = sim_cfg or SimConfig()
     auto_cfg = auto_cfg or AutonomyConfig()
     sim = Simulator(sim_cfg, seed, record=record)
@@ -28,6 +30,7 @@ def run_episode(seed: int, sim_cfg: Optional[SimConfig] = None, auto_cfg: Option
     pos_err2, yaw_err2, n_err, wrong_gate_frames, track_frames = 0.0, 0.0, 0, 0, 0
     max_pos_err = 0.0
     frames = []
+    frame_idx = 0
     trace = []
     gates = sim.course.gates
     obs = sim.reset()
@@ -57,8 +60,9 @@ def run_episode(seed: int, sim_cfg: Optional[SimConfig] = None, auto_cfg: Option
             if record:
                 trace.append(dict(t=obs.t, mode=dbg["mode"], p_est=dbg["p"].tolist(),
                                   p_true=sim.state.p.tolist(), next_gate=sim.next_gate))
-            if keep_frames and len(frames) < keep_frames:
-                frames.append(obs.image)
+            if keep_frames and len(frames) < keep_frames and frame_idx % frame_stride == 0:
+                frames.append((obs.t, obs.image))
+            frame_idx += 1
         obs = sim.step(cmd)
         if sim.done:
             break
