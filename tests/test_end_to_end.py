@@ -29,3 +29,12 @@ def test_summary_arithmetic():
     assert s["per_gate_pass_rate"][:3] == [1.0, 1.0, 0.5]
     assert s["outcomes"]["crash_gate"] == 1
     assert s["mean_lap_time_completed"] == 10.0
+
+
+def test_lost_target_recovery_rescues_a_phantom_handoff():
+    # Seed 15: the next-gate estimate handed over at gate 1 is ~2.8 m too short, so the
+    # real gate 2 never matches the target and (without recovery) the drone declares a
+    # pass 2.7 m early and clips the frame. Recovery re-anchors on the gate it does see.
+    r = run_episode(15)
+    assert r["diag"]["recoveries"] >= 1, r["diag"]
+    assert r["gates_passed"] >= 3, r

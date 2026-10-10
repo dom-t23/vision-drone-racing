@@ -11,6 +11,9 @@ WAIT    hovering at the start until the first gate is seen; initialise the filte
 TRACK   flying to the target gate. Detections near the target's centre update the filter;
         detections well beyond it build an estimate of the NEXT gate (all gates look
         identical, so "next" = nearest gate ahead of the one we're about to pass).
+        Two sanity checks re-anchor the target: a gate seen straight ahead NEARER than the
+        target (retarget), and a gate seen straight ahead just BEYOND it while the target
+        itself goes unseen (lost-target recovery, e.g. after a depth-biased handoff).
 SEARCH  passed a gate without having seen the next one: stop and turn slowly until a
         gate appears ahead.
 """
@@ -85,6 +88,8 @@ class Autonomy:
         self._acc_n = 0
         self._ahead_hyps: list = []       # gates seen beyond the target (next-gate candidates)
         self._closer_hyps: list = []      # gates seen between us and the target (wrong-target check)
+        self._beyond_hyps: list = []      # gates seen straight ahead just beyond the target (lost-target check)
+        self._target_miss = 0             # consecutive frames with detections but none associated to the target
         self._prev_gate: Optional[np.ndarray] = None   # last passed gate, in the current frame
         self._consec_rejects = 0
         self._search_target = None
@@ -92,7 +97,7 @@ class Autonomy:
         self.passes = 0
         self.stats = dict(frames=0, detections=0, pos_updates=0, pos_rejects=0, att_updates=0,
                           att_rejects=0, reinits=0, handoffs=0, switches=0, retargets=0, searches=0,
-                          target_frames=0)
+                          target_frames=0, recoveries=0)
 
     # ================================================================== API
     def step(self, obs: Observation) -> Command:
@@ -157,7 +162,7 @@ class Autonomy:
             return
 
         e = self.eskf
-        target, ahead, closer = None, [], []
+        target, ahead, closer, beyond = None, [], [], []
         cone = math.cos(math.radians(cfg.next_gate_cone_deg))
         fwd = e.R[:, 0].copy()
         fwd[2] = 0.0
@@ -176,11 +181,18 @@ class Autonomy:
                 r = c_G - e.p
                 if float(r @ fwd) >= cone * float(np.linalg.norm(r)):
                     closer.append((d, sols, c_G))
+            elif self.mode == TRACK and cfg.recover_lost_target and s0.distance > d_target:
+                r = c_G - e.p
+                if float(r @ fwd) >= cone * float(np.linalg.norm(r)):
+                    beyond.append((d, sols, c_G))
 
         if self.mode == TRACK:
             if target is not None:
                 self.stats["target_frames"] += 1
+                self._target_miss = 0
                 self._update_target(target[1])
+            else:
+                self._target_miss += 1
             for a in ahead:
                 self._add_sighting(self._ahead_hyps, a)
             for c in closer:
@@ -189,6 +201,16 @@ class Autonomy:
                     # "Next gate = nearest gate ahead": a gate in front of us that is
                     # nearer than the one we're flying to means we picked the wrong one.
                     self.stats["retargets"] += 1
+                    self._switch_to(h, passed=False)
+                    return
+            for b in beyond:
+                h = self._add_sighting(self._beyond_hyps, b)
+                if (h.n >= cfg.lost_target_min_sightings and self._target_miss >= cfg.lost_target_frames
+                        and d_target > cfg.retarget_min_range):
+                    # The target should be in view but never matches a detection, while a gate
+                    # straight ahead just beyond it is seen again and again: the target estimate
+                    # (usually a next-gate handoff with a depth bias) is wrong -- that gate is it.
+                    self.stats["recoveries"] += 1
                     self._switch_to(h, passed=False)
                     return
         elif self.mode == SEARCH and ahead:
@@ -351,6 +373,8 @@ class Autonomy:
             self._prev_gate = np.array([c * d[0] + s_ * d[1], -s_ * d[0] + c * d[1], d[2]])
         self._ahead_hyps = []
         self._closer_hyps = []
+        self._beyond_hyps = []
+        self._target_miss = 0
         self._consec_rejects = 0
         self.mode = TRACK
         self.stats["handoffs" if passed else "switches"] += 1

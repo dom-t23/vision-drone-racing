@@ -62,6 +62,9 @@ class AutonomyConfig:
     retarget_margin: float = 2.0      # a gate this much nearer than the target, straight ahead, ...
     retarget_min_sightings: int = 4   # ... seen this many times, becomes the target instead
     retarget_min_range: float = 3.0   # only retarget while the current target is still this far away
+    recover_lost_target: bool = True  # target unseen while a gate straight ahead just beyond it IS seen -> switch to it
+    lost_target_frames: int = 3       # ... after this many consecutive frames with detections but no target
+    lost_target_min_sightings: int = 3  # ... and this many sightings of that gate
     next_gate_cone_deg: float = 60.0  # next-gate candidates must lie within this cone of the pass direction
     yaw_prior_from_bearing: bool = True   # assume a new gate roughly faces the line from the previous gate
     bearing_yaw_sigma_deg: float = 20.0   # confidence in that prior
