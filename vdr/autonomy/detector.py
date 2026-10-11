@@ -133,6 +133,93 @@ def fit_quad_ransac(pts: np.ndarray, tol: float = 1.2, min_frac: float = 0.07) -
     return order_clockwise(q)
 
 
+def refine_quad_subpix(sig: np.ndarray, q: np.ndarray, bg_outside: bool, min_contrast: float = 60.0,
+                       max_shift: float = 2.0) -> np.ndarray:
+    """Move each edge of a quad to the sub-pixel edge of the painted frame.
+
+    The binary mask and contour tracing put a square's edges a fraction of a
+    pixel off (the traced boundary runs through pixel centres and the colour
+    threshold keeps partially covered pixels), and since that offset is
+    roughly constant in pixels, it becomes a range bias that grows with
+    distance (openings ~10% too far at 10-20 m). Here each edge is re-measured
+    on the continuous "orangeness" image `sig`: along short profiles normal to
+    the edge, from the background side into the frame, find where the signal
+    crosses halfway between background and paint (anti-aliased rendering
+    covers pixels in proportion to area, so the half-level crossing is the
+    edge). A line is fitted to the crossings and adjacent lines intersected.
+
+    `bg_outside` is True for an outer outline (background outside the quad),
+    False for an opening (background inside). Edges without enough clean
+    profiles (e.g. another gate behind them) keep their original line; the
+    original quad is returned if any corner would move more than `max_shift` px.
+    """
+    q = np.asarray(q, np.float64)
+    centre = q.mean(axis=0)
+    offs = np.arange(-3.0, 3.0001, 0.25)            # profile coordinate: bg side < 0 < paint side
+    n_bg = int(np.sum(offs <= -2.0))
+    i_lo = int(np.searchsorted(offs, -1.0))
+    lines = []
+    for i in range(4):
+        a, b = q[i], q[(i + 1) % 4]
+        L = float(np.linalg.norm(b - a))
+        u = (b - a) / max(L, 1e-9)
+        nrm = np.array([-u[1], u[0]])
+        if (0.5 * (a + b) - centre) @ nrm < 0:
+            nrm = -nrm                                # now points out of the quad
+        line0 = (nrm, -float(nrm @ a))
+        if L < 6.0:
+            lines.append(line0)
+            continue
+        into = -nrm if bg_outside else nrm            # from background into the paint
+        ts = np.linspace(0.2 * L, 0.8 * L, int(min(40, max(4, 0.6 * L))))
+        base = a + ts[:, None] * u                    # (T, 2)
+        P = base[:, None, :] + offs[None, :, None] * into[None, None, :]   # (T, S, 2)
+        mx = P[..., 0].astype(np.float32)
+        my = P[..., 1].astype(np.float32)
+        prof = cv2.remap(sig, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        bg = prof[:, :n_bg].mean(axis=1)
+        peak = prof[:, i_lo:].max(axis=1)
+        pts = []
+        for k in range(len(ts)):
+            if peak[k] - bg[k] < min_contrast:
+                continue
+            half = 0.5 * (bg[k] + peak[k])
+            above = np.nonzero(prof[k] >= half)[0]
+            if len(above) == 0 or above[0] == 0:
+                continue
+            j = above[0]
+            v0, v1 = prof[k, j - 1], prof[k, j]
+            s = offs[j - 1] + (half - v0) / max(v1 - v0, 1e-6) * (offs[j] - offs[j - 1])
+            if abs(s) <= 1.75:
+                pts.append(base[k] + s * into)
+        if len(pts) < max(4, 0.5 * len(ts)):
+            lines.append(line0)
+            continue
+        pts = np.array(pts)
+        line = None
+        for _ in range(2):
+            m = pts.mean(axis=0)
+            _, _, vt = np.linalg.svd(pts - m)
+            n_fit = vt[1] if vt[1] @ nrm >= 0 else -vt[1]
+            line = (n_fit, -float(n_fit @ m))
+            r = np.abs(pts @ n_fit + line[1])
+            keep = r < 0.75
+            if keep.all() or keep.sum() < 4:
+                break
+            pts = pts[keep]
+        lines.append(line)
+    out = []
+    for i in range(4):
+        x = _intersect(lines[(i - 1) % 4], lines[i])  # corner i joins edge i-1 and edge i
+        if x is None or np.linalg.norm(x - q[i]) > max_shift:
+            return q
+        out.append(x)
+    out = np.array(out)
+    if not cv2.isContourConvex(out.astype(np.float32).reshape(-1, 1, 2)):
+        return q
+    return out
+
+
 class GateDetector:
     def __init__(self, cfg: AutonomyConfig, width: int, height: int):
         self.cfg = cfg
@@ -172,6 +259,10 @@ class GateDetector:
         hsv = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, self.lo, self.hi)
         self.last_mask = mask
+        sig = None
+        if cfg.subpixel_corners:
+            # "orangeness": red minus blue, linear in the paint's pixel coverage
+            sig = image_bgr[:, :, 2].astype(np.float32) - image_bgr[:, :, 0].astype(np.float32)
         contours, hier = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
         if hier is None:
             return []
@@ -200,6 +291,11 @@ class GateDetector:
             inner_q, _ = self._quad(contours[best], best_area)
             if inner_q is not None:
                 used_holes.add(best)
+            if sig is not None:
+                q = refine_quad_subpix(sig, q, True, cfg.subpix_min_contrast, cfg.subpix_max_shift)
+                if inner_q is not None:
+                    inner_q = refine_quad_subpix(sig, inner_q, False, cfg.subpix_min_contrast,
+                                                 cfg.subpix_max_shift)
             dets.append(GateDetection(q, OUTER, qa, inner_q, robust))
         # Pass 2: holes not already used -> inner-opening detections (merged / overlapping gates).
         for i, cnt in enumerate(contours):
@@ -208,6 +304,8 @@ class GateDetector:
             q, robust = self._quad(cnt, areas[i])
             if q is None:
                 continue
+            if sig is not None:
+                q = refine_quad_subpix(sig, q, False, cfg.subpix_min_contrast, cfg.subpix_max_shift)
             dets.append(GateDetection(q, INNER, _quad_area(q), None, robust))
         dets.sort(key=lambda d: -d.area)
         return dets

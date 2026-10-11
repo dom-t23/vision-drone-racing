@@ -28,6 +28,9 @@ class AutonomyConfig:
     approx_eps: float = 0.035         # approxPolyDP tolerance as a fraction of perimeter
     robust_quad_fit: bool = True      # RANSAC edge fit when gates overlap and the outline isn't a 4-gon
     min_edge_support: float = 0.6     # robust fits: fraction of the outline that must lie on the quad
+    subpixel_corners: bool = False    # re-measure each quad edge at the half-contrast crossing of the paint (sub-pixel)
+    subpix_min_contrast: float = 60.0 # min paint-vs-background contrast (red-minus-blue units) per edge profile
+    subpix_max_shift: float = 2.0     # px; keep the contour quad if refinement moves a corner further than this
     border_margin: float = 1.5        # px; reject quads touching the image border (truncated)
 
     # --- PnP / measurement model --------------------------------------------------

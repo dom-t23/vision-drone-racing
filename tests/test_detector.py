@@ -81,3 +81,22 @@ def test_empty_image_has_no_detections():
     img = np.zeros((240, 320, 3), np.uint8)
     img[:] = (225, 196, 160)
     assert det.detect(img) == []
+
+
+def test_subpixel_corners_reduce_corner_error():
+    """With area-coverage rendering, edge refinement brings corners to a fraction of a pixel."""
+    from vdr.autonomy.detector import INNER
+    sim = Simulator(SimConfig(pixel_noise_sigma=3.0, gate_supersample=8), seed=11)
+    base = GateDetector(AutonomyConfig(), 320, 240)
+    sub = GateDetector(AutonomyConfig(subpixel_corners=True), 320, 240)
+    e_base, e_sub = [], []
+    for d in (3.0, 6.0, 10.0):
+        p_w, R_wb = _view(sim, 0, [-d, 0.3, 0.2], yaw=-0.05, pitch=0.25)
+        img = sim.camera.render(p_w, R_wb)
+        truth = sim.camera.project_gate_corners(p_w, R_wb, 0)
+        for det, errs in ((base, e_base), (sub, e_sub)):
+            dets = [x for x in det.detect(img) if x.kind == OUTER]
+            best = min(dets, key=lambda x: np.linalg.norm(x.corners.mean(0) - truth.mean(0)))
+            errs.append(_match_error(best.corners, truth))
+    assert max(e_sub) < 0.6, e_sub
+    assert np.mean(e_sub) < 0.5 * np.mean(e_base), (e_sub, e_base)
