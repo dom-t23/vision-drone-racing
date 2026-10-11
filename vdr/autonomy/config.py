@@ -38,6 +38,8 @@ class AutonomyConfig:
     att_factor: float = 4.0           # attitude-noise scale (single squares give poor rotation)
     max_reproj_px: float = 2.5        # reject PnP fits worse than this (not a square)
     max_gate_tilt_deg: float = 45.0   # gates are upright; reject poses tilted more than this
+    robust_outer_use_inner: bool = True   # RANSAC-fitted outline whose range disagrees with the gate's own opening ...
+    robust_inner_depth_tol: float = 0.08  # ... by more than this fraction -> trust the opening (0 = always)
 
     # --- ESKF ------------------------------------------------------------------------
     accel_noise: float = 0.08         # m/s^2/sqrt(Hz)   (assumed, includes vibration)

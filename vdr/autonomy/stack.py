@@ -143,11 +143,7 @@ class Autonomy:
         up_c = info.R_bc.T @ self._up_body()
         cands = []
         for d in dets:
-            size = info.gate_outer_size if d.kind == OUTER else info.gate_inner_size
-            sols = self._valid_solutions(d.corners, size, up_c)
-            if not sols and d.inner is not None:
-                # the outline fit was bad (often two gates merged) -- try the gate's own opening
-                sols = self._valid_solutions(d.inner, info.gate_inner_size, up_c)
+            sols = self._detection_solutions(d, up_c)
             if sols:
                 cands.append((d, sols))
         if not cands:
@@ -216,6 +212,24 @@ class Autonomy:
         elif self.mode == SEARCH and ahead:
             a = min(ahead, key=lambda a: np.linalg.norm(a[2]))
             self._switch_to(self._add_sighting([], a), passed=False)
+
+    def _detection_solutions(self, d, up_c: np.ndarray) -> list:
+        """Valid PnP solutions for one detection (best first), choosing which square to trust."""
+        info, cfg = self.info, self.cfg
+        size = info.gate_outer_size if d.kind == OUTER else info.gate_inner_size
+        sols = self._valid_solutions(d.corners, size, up_c)
+        if sols and cfg.robust_outer_use_inner and d.kind == OUTER and d.robust and d.inner is not None:
+            # A RANSAC outline usually means this gate's frame merged with another gate in
+            # the image, and the fitted corners can overshoot (gate ~20% too near at 7-16 m).
+            # The outline and the opening are two independent size cues for the same gate:
+            # if they disagree on range, trust the opening (a clean contour of its own).
+            inner = self._valid_solutions(d.inner, info.gate_inner_size, up_c)
+            if inner and abs(sols[0].distance / inner[0].distance - 1.0) > cfg.robust_inner_depth_tol:
+                sols = inner
+        if not sols and d.inner is not None:
+            # the outline fit was bad (often two gates merged) -- try the gate's own opening
+            sols = self._valid_solutions(d.inner, info.gate_inner_size, up_c)
+        return sols
 
     def _valid_solutions(self, corners: np.ndarray, size: float, up_c: np.ndarray) -> list:
         cfg = self.cfg
