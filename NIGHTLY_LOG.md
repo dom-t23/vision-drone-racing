@@ -119,3 +119,54 @@ rate, 90% completion, 11.97 s lap — identical to `2026-10-10_0181f50_baseline.
 (`results/2026-10-10_fe6114d_baseline.json`) — the change touches no flight code.
 
 **Next:** (A) ROADMAP A1 depth-biased handoff estimates; last remaining extra is UDP link mode.
+
+---
+
+## 2026-10-11 — Run 4: (A) robust-outline sanity check
+
+**Baseline confirmed on main (d9209f9):** pytest 43 passed; `--runs 50 --seed 0` = 94.5% pass
+rate, 90% completion, 11.97 s lap — identical to `2026-10-10_fe6114d_baseline.json`.
+
+**Diagnosis (ROADMAP A1, depth-biased next-gate estimates):** scratch diagnostic (truth used
+offline only) comparing every PnP solution's range with the true range of the nearest gate,
+seeds 0-9, split by detection type. Median estimated/true range:
+- clean outer outlines: 0.98-1.00 at all ranges (gate looks ~1-2% near)
+- inner openings: 1.01 at < 3 m rising to 1.10 at 12-30 m (looks far; the AA mask grows the frame)
+- **RANSAC-fitted ("robust") outer outlines at 7-16 m: 0.80-0.84** — 2-3 m short at 10-15 m,
+  while the *same detections'* inner openings read 1.03.
+A robust outline means the gate's frame merged with another gate in the image — typically the
+next gate seen overlapping the current one — which is exactly when next-gate sightings are
+made. The RANSAC quad overshoots onto the other gate, so the gate looks too big, i.e. too near.
+
+**Change (`robust_outer_use_inner`, default now True; `robust_inner_depth_tol` = 0.08):** for a
+robust outer detection with a valid inner-opening fit, if the two ranges disagree by > 8%, use
+the opening's PnP. Refactored into `Autonomy._detection_solutions`; +3 unit tests
+(`tests/test_stack_selection.py`), 46 total.
+
+**Tried first and changed:** "always use the opening for robust outlines" (tolerance 0):
+seed 0 94.8%, 1000 93.5%, 2000 95.8% vs 94.5/93.5/95.0 off — within noise, and it broke 4 seed-0
+runs that the old code completed (14, 16, 18, 40). Seed 16: near the gate both fits were good
+and the outer was more accurate; only when they *disagreed* was the outer badly wrong (gate 3:
+outer 3.4 m off, opening 0.25 m). Hence the agreement test. 0.08 was the only tolerance tried.
+Because the refinement was motivated by a seed-0 failure, seed 3000 was run as a held-out set.
+
+**Results (50 runs each, commit 68513f6):**
+| seeds | check off | check on | completion off -> on | lap off -> on (s) |
+|---|---|---|---|---|
+| 0 (headline) | 94.5% | **95.2%** | 90% -> 94% | 11.97 -> 12.10 |
+| 1000 | 93.5% | 96.5% | 84% -> 92% | 12.10 -> 12.27 |
+| 2000 | 95.0% | 96.0% | 88% -> 90% | 12.04 -> 12.14 |
+| 3000 (held out) | 87.8% | 95.2% | 76% -> 94% | 12.08 -> 12.11 |
+
+Files: `results/2026-10-11_68513f6_{baseline,ablation-no-robust-inner}{,-seed1000,-seed2000,-seed3000}.json`.
+Pooled over 200 runs: 92.7% -> 95.8% pass, 84.5% -> 92.5% completion; lap time +0.2% to +1.4%
+(pace rule OK). Each single set is under the 8 pp noise threshold, but all four move the same
+way and the held-out set moves most. Scratch handoff diagnostic (seeds 0-49, estimate minus
+truth right after each pass handoff): handoffs with |x error| > 1.5 m 17.8% -> 10.1%.
+
+**Still failing (seed 0):** 3 runs (1 crash_gate, 2 missed_gate). 10% of handoffs are still
+> 1.5 m off along x; the remaining bias sources are the inner openings' +5-10% range at > 9 m
+(mask growth) and the filter's own position error at the moment of the sighting.
+
+**Next:** (A) correct the mask-growth edge bias (ROADMAP A3 sub-pixel corners) or use both
+squares together (A4); or (B) the UDP link mode, the last first-week extra.

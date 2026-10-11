@@ -126,6 +126,13 @@ estimate trace and course for one seed — use it to debug a specific failure.
   becomes the target (`recover_lost_target`; 89.2% -> 94.5%). Diagnose handoffs by hooking
   `_handoff` with truth (estimate minus true position right after the switch).
 
+- 2026-10-11 — Measure PnP bias per detection *type* before tuning filters: a scratch script
+  comparing each solution's range with the nearest true gate (by outer / inner / RANSAC) found
+  RANSAC outlines of merged gates reading ~18% too near at 7-16 m — the main source of short
+  handoffs. "Always use the opening instead" was noise; "use it only when the two size cues
+  disagree" helped on all four seed sets (pooled 92.7% -> 95.8%). When a fix breaks some seeds,
+  look at what was different in those cases rather than discarding it.
+
 ## Instruction changes
 
 (none yet)

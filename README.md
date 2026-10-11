@@ -22,12 +22,14 @@ file; see [NIGHTLY_LOG.md](NIGHTLY_LOG.md) for the history.
 
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline (8 m/s)** | **94.5%** | 90% | 12.0 s |
-| same, lost-target recovery off | 89.2% | 82% | 11.9 s |
+| **baseline (8 m/s)** | **95.2%** | 94% | 12.1 s |
+| same, robust-outline check off | 94.5% | 90% | 12.0 s |
+| earlier baseline, lost-target recovery off | 89.2% | 82% | 11.9 s |
 | earlier baseline, chi-squared gating off | 75.5% | 60% | 12.0 s |
 | cruise 4 m/s (race clock expires) | 57.0% | 0% | — |
 
-Files: [`baseline`](results/2026-10-10_fe6114d_baseline.json),
+Files: [`baseline`](results/2026-10-11_68513f6_baseline.json),
+[`no robust-outline check`](results/2026-10-11_68513f6_ablation-no-robust-inner.json),
 [`no recovery`](results/2026-10-10_0181f50_ablation-no-recovery.json),
 [`no chi2`](results/2026-10-07_c25234a_ablation-no-chi2.json),
 [`4 m/s`](results/2026-10-07_c25234a_ablation-4mps.json).
