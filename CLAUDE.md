@@ -37,9 +37,11 @@ vdr/autonomy/
   eskf.py             15-state error-state KF in the target gate's frame; chi2-gated updates; frame change
   control.py          cubic terminal-velocity guidance + geometric attitude -> thrust/body rates
   stack.py            Autonomy: modes WAIT/TRACK/SEARCH, association, next-gate hypotheses, handoff, retarget
-vdr/runner.py         one episode in lockstep (+ diagnostics from truth, never fed back)
+vdr/link/             optional UDP link mode: wire.py (contract <-> bytes), udp.py (fragmenting
+                      endpoint), autonomy_node.py (autonomy process, no sim imports), sim_side.py
+vdr/runner.py         one episode in lockstep (+ diagnostics from truth, never fed back); link="udp"
 vdr/harness.py        seeded multi-process regression harness -> results/*.json
-tests/                pytest suite (~10 s)
+tests/                pytest suite (~30 s)
 ```
 
 Frames: world/gate frames gravity-aligned z-up; gate frame G has x = pass direction, y = left.
@@ -55,12 +57,13 @@ retarget to it.
 
 ```
 pip install --break-system-packages -r requirements.txt
-python -m pytest -q                                   # ~10 s, must pass before every push
+python -m pytest -q                                   # ~30 s, must pass before every push
 python -m vdr.harness --runs 50 --seed 0              # benchmark, ~65 s on 2 cores, writes results/
 python -m vdr.harness --runs 50 --flag NAME=VALUE     # A/B an AutonomyConfig field
 python -m vdr.harness --runs 50 --sim NAME=VALUE      # change the world (SimConfig field)
 python -m vdr.harness --runs 8 --no-save              # quick smoke test
 python -m vdr.harness --runs 50 --seed 1000           # second seed set to confirm a small gain
+python -m vdr.harness --runs 8 --link udp             # autonomy as a separate process over UDP
 ```
 
 `from vdr.runner import run_episode; run_episode(seed, record=True)` returns the trajectory,
@@ -132,6 +135,9 @@ estimate trace and course for one seed — use it to debug a specific failure.
   handoffs. "Always use the opening instead" was noise; "use it only when the two size cues
   disagree" helped on all four seed sets (pooled 92.7% -> 95.8%). When a fix breaks some seeds,
   look at what was different in those cases rather than discarding it.
+- 2026-10-11 — To show two execution paths are equivalent, compare `per_run` entries (minus
+  `wall_s`), not summaries: identical pass rates can hide different per-seed outcomes. UDP mode
+  sends arrays as raw bytes and floats via JSON repr, both exact, so it matches bit-for-bit.
 
 ## Instruction changes
 

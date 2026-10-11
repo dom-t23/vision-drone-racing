@@ -170,3 +170,40 @@ truth right after each pass handoff): handoffs with |x error| > 1.5 m 17.8% -> 1
 
 **Next:** (A) correct the mask-growth edge bias (ROADMAP A3 sub-pixel corners) or use both
 squares together (A4); or (B) the UDP link mode, the last first-week extra.
+
+---
+
+## 2026-10-11 — Run 5: (B) UDP link mode (last first-week extra)
+
+**Baseline confirmed on main (06008fb):** pytest 46 passed; `--runs 50 --seed 0` = 95.2% pass
+rate, 94% completion, 12.1 s lap — identical to `2026-10-11_68513f6_baseline.json`.
+
+**Chunk B (last run was A; pass rate is at 95.2% where single-set gains are now below the
+8 pp noise threshold, so the remaining extra was the better use of a run):**
+- `vdr/link/`: `python -m vdr.harness --link udp` (or `run_episode(seed, link="udp")`) spawns
+  the autonomy as its own process (`python -m vdr.link.autonomy_node`), which talks to the
+  simulator only over localhost UDP: HELLO -> VehicleInfo -> (Observation n -> Command n) per
+  tick -> BYE -> counters.
+- Wire format (`wire.py`): JSON header + raw numpy bytes, built from the interface
+  dataclasses' field lists; decoding calls the dataclass constructor, so an extra field
+  (e.g. a gate position) raises instead of passing through.
+- Images (230 kB) exceed one datagram: `udp.py` fragments into 60 kB datagrams and reassembles.
+- Lockstep with loss handling: if Command n doesn't arrive in 2 s the sim resends Observation n;
+  the autonomy answers a repeated n from its cache and never steps twice (tested by dropping
+  observations and commands on purpose).
+- The autonomy process returns its filter estimate as telemetry on camera ticks, used only for
+  the runner's diagnostics (estimation error), the same as `auto.debug()` in-process.
+- Separation tests +3: the autonomy-side link modules import nothing outside autonomy /
+  interface / geometry / cfgutil / link (AST), importing the node loads no `vdr.sim*` module
+  (subprocess check), and the wire messages carry exactly the contract's fields.
+  `tests/test_link.py` +5 (round trip bit-exact, extra field rejected, fragmentation,
+  UDP == in-process for seed 5, lossy lockstep). 54 tests total.
+
+**Verified (commit 8d3e44c):** pytest 54 passed. `--runs 50 --seed 0`: in-process 95.2% / 94% /
+12.1 s (`results/2026-10-11_8d3e44c_baseline.json`); UDP 95.2% / 94% / 12.1 s
+(`results/2026-10-11_8d3e44c_link-udp.json`). All 50 per-run results (outcome, time, events,
+diagnostics) are identical between the two and to `68513f6_baseline.json`; 0 retransmissions.
+Wall time 82 s in-process vs 125 s over UDP (process start-up + serialisation).
+
+**Next:** (A) ROADMAP A1/A3 (inner-opening mask-growth range bias) or A4 (both squares). (C) is
+due by 2026-10-14 (7 days since the last write-up on 2026-10-07): docs/WRITEUP.md.

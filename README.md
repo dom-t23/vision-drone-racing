@@ -76,14 +76,21 @@ is in view and is the nearest gate ahead. The simulator and the flight stack onl
 small contract in [`vdr/interface.py`](vdr/interface.py); a test fails if the autonomy ever
 imports the simulator or the contract grows a ground-truth field.
 
+**UDP link mode** (`--link udp`) makes that separation physical: the autonomy runs as its
+own process (`vdr/link/autonomy_node.py`, which imports no simulator code) and exchanges
+Observations and Commands with the simulator over localhost UDP in lockstep. Arrays travel
+as raw bytes, so the 50-run benchmark gives per-run results identical to in-process mode
+(`results/2026-10-11_8d3e44c_link-udp.json` vs `_baseline.json`).
+
 ## Run it
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 43 tests, ~12 s
+python -m pytest -q                         # 54 tests, ~30 s
 python -m vdr.harness --runs 50 --seed 0    # the benchmark (~1 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world
+python -m vdr.harness --runs 8 --link udp                     # autonomy in its own process
 ```
 
 Every run is deterministic for a given seed and configuration, so a change can be evaluated
@@ -95,6 +102,7 @@ by re-running the same 50 courses with it switched on and off.
 vdr/interface.py   the sim <-> autonomy contract
 vdr/sim/           dynamics, IMU, camera renderer, courses, scoring
 vdr/autonomy/      detector, PnP, ESKF, guidance/control, the flight stack
+vdr/link/          optional UDP link mode (wire format, autonomy process)
 vdr/harness.py     regression harness -> results/*.json
 tests/             unit and end-to-end tests
 ```

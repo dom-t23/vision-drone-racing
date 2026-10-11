@@ -3,7 +3,8 @@
 Prioritised. Each overnight run takes ONE item (or a well-argued new one), and updates this
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
-Current baseline: `results/2026-10-11_68513f6_baseline.json` (95.2% pass rate, 94% completion,
+Current baseline: `results/2026-10-11_8d3e44c_baseline.json` (same numbers as
+`2026-10-11_68513f6_baseline.json`; 95.2% pass rate, 94% completion,
 12.10 s lap, 3 failures: 1 crash_gate, 2 missed_gate). Older evidence below cites
 `2026-10-07_c25234a_baseline.json` (89.2%) and `2026-10-10_0181f50_baseline.json` (94.5%).
 
@@ -36,10 +37,6 @@ Current baseline: `results/2026-10-11_68513f6_baseline.json` (95.2% pass rate, 9
 
 ## (B) Robustness, realism, tooling
 
-- **First-week extras (fixed design decisions):**
-  - [ ] Optional UDP link mode: sim and autonomy as separate processes exchanging
-        Observation/Command messages over localhost UDP in lockstep (`--link udp`), with a test
-        that it gives identical results to in-process mode.
 - **Failure analysis tool:** `python -m vdr.analyze results/<file>.json` -> failure modes by
   gate index, outcome, pre-crash estimation error; `--seed N` re-runs one seed with a
   trajectory/estimate plot saved to `docs/img/`.
@@ -63,6 +60,11 @@ Current baseline: `results/2026-10-11_68513f6_baseline.json` (95.2% pass rate, 9
   debugging stories from Lessons learned.
 
 ## Done
+
+- 2026-10-11 — UDP link mode (`--link udp`, `vdr/link/`), the last first-week extra: the
+  autonomy runs as a separate process over localhost UDP in lockstep, with fragmentation and
+  retransmission. 50-run seed 0 per-run results identical to in-process (95.2% both);
+  3 new separation tests cover the autonomy process.
 
 - 2026-10-11 — Robust-outline sanity check (`robust_outer_use_inner`): a RANSAC-fitted outline
   whose range disagrees (> 8%) with the gate's own opening is replaced by the opening's PnP.
