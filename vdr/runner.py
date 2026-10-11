@@ -19,13 +19,35 @@ from vdr.sim import SimConfig, Simulator
 
 
 def run_episode(seed: int, sim_cfg: Optional[SimConfig] = None, auto_cfg: Optional[AutonomyConfig] = None,
-                record: bool = False, keep_frames: int = 0, frame_stride: int = 1) -> dict:
+                record: bool = False, keep_frames: int = 0, frame_stride: int = 1,
+                link: str = "inproc") -> dict:
     """Fly one seeded course. `keep_frames` > 0 keeps up to that many camera images, one
-    every `frame_stride` camera frames (for videos/debugging; never affects the flight)."""
+    every `frame_stride` camera frames (for videos/debugging; never affects the flight).
+
+    link="udp" runs the autonomy in a separate process that talks to the simulator over
+    localhost UDP (vdr.link); results are identical to the default in-process mode."""
     sim_cfg = sim_cfg or SimConfig()
     auto_cfg = auto_cfg or AutonomyConfig()
     sim = Simulator(sim_cfg, seed, record=record)
-    auto = Autonomy(sim.vehicle_info(), auto_cfg)
+    if link == "inproc":
+        auto = Autonomy(sim.vehicle_info(), auto_cfg)
+    elif link == "udp":
+        from vdr.link.sim_side import UdpAutonomy
+        auto = UdpAutonomy(sim.vehicle_info(), auto_cfg)
+    else:
+        raise ValueError(f"unknown link mode: {link!r}")
+    try:
+        res = _fly(sim, auto, record, keep_frames, frame_stride)
+    finally:
+        if link == "udp":
+            auto.finish()
+    res["diag"].update({**auto.stats, "passes_counted_by_autonomy": auto.passes})
+    if link == "udp":
+        res["diag"]["link_retries"] = auto.retries
+    return res
+
+
+def _fly(sim: Simulator, auto, record: bool, keep_frames: int, frame_stride: int) -> dict:
 
     pos_err2, yaw_err2, n_err, wrong_gate_frames, track_frames = 0.0, 0.0, 0, 0, 0
     max_pos_err = 0.0
@@ -73,8 +95,6 @@ def run_episode(seed: int, sim_cfg: Optional[SimConfig] = None, auto_cfg: Option
         "pos_err_max": round(max_pos_err, 3) if n_err else None,
         "yaw_err_rms_deg": round(math.degrees(math.sqrt(yaw_err2 / n_err)), 2) if n_err else None,
         "wrong_gate_frac": round(wrong_gate_frames / track_frames, 3) if track_frames else None,
-        **auto.stats,
-        "passes_counted_by_autonomy": auto.passes,
     }
     if record:
         res["log"] = sim.log

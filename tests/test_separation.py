@@ -87,3 +87,48 @@ def test_simulator_observations_hold_no_extra_data():
         obs = sim.step(Command.hover())
         assert set(vars(obs)) == ALLOWED_OBSERVATION
         assert obs.accel.shape == (3,) and obs.gyro.shape == (3,)
+
+
+LINK_AUTONOMY_SIDE = ("autonomy_node.py", "wire.py", "udp.py", "__init__.py")
+
+
+def test_link_autonomy_process_never_imports_the_simulator():
+    """UDP link mode: the autonomy process's modules import nothing from vdr.sim/runner."""
+    link_dir = AUTONOMY_DIR.parent / "link"
+    allowed = ALLOWED_IMPORTS + ("vdr.link.wire", "vdr.link.udp", "vdr.link")
+    offenders = []
+    for name in LINK_AUTONOMY_SIDE:
+        tree = ast.parse((link_dir / name).read_text())
+        for node in ast.walk(tree):
+            names = []
+            if isinstance(node, ast.Import):
+                names = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                names = [node.module or ""]
+            for n in names:
+                if n == "vdr" or (n.startswith("vdr") and not n.startswith(allowed)):
+                    offenders.append(f"{name}: {n}")
+    assert not offenders, f"autonomy-side link modules import outside the allowed set: {offenders}"
+
+
+def test_link_autonomy_process_runtime_imports():
+    """Importing the autonomy process's entry point pulls in no simulator module at all."""
+    import subprocess
+    import sys
+
+    code = ("import sys, vdr.link.autonomy_node; "
+            "bad = [m for m in sys.modules if m.startswith(('vdr.sim', 'vdr.runner', 'vdr.harness'))]; "
+            "print(bad); sys.exit(1 if bad else 0)")
+    r = subprocess.run([sys.executable, "-c", code], cwd=AUTONOMY_DIR.parents[1], capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_link_wire_messages_are_built_from_the_contract():
+    """The wire format encodes exactly the interface dataclasses' fields."""
+    from vdr.link import wire
+    from vdr.sim import SimConfig, Simulator
+
+    sim = Simulator(SimConfig(), seed=0)
+    assert set(wire.decode(wire.encode_info(sim.vehicle_info()))) == ALLOWED_VEHICLE_INFO
+    assert set(wire.decode(wire.encode_obs(sim.reset()))) == ALLOWED_OBSERVATION
+    assert set(wire.decode(wire.encode_cmd(Command.hover()))["cmd"]) == ALLOWED_COMMAND

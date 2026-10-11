@@ -4,6 +4,7 @@
     python -m vdr.harness --runs 50 --flag chi2_gating=false # A/B an autonomy flag
     python -m vdr.harness --runs 50 --sim pixel_noise_sigma=6 # harder world
     python -m vdr.harness --runs 8 --no-save                 # quick smoke test
+    python -m vdr.harness --runs 8 --link udp                # autonomy in its own process over UDP
 
 Run i uses seed (seed + i) for the course, sensor noise and everything else,
 so a given (code, config, seed) always produces exactly the same result.
@@ -44,11 +45,11 @@ def _worker_init():
 
 
 def _run(args):
-    seed, sim_kw, auto_kw = args
+    seed, sim_kw, auto_kw, link = args
     sim_cfg = SimConfig().override(**sim_kw)
     auto_cfg = AutonomyConfig().override(**auto_kw)
     t0 = time.time()
-    r = run_episode(seed, sim_cfg, auto_cfg)
+    r = run_episode(seed, sim_cfg, auto_cfg, link=link)
     r["wall_s"] = round(time.time() - t0, 2)
     return r
 
@@ -99,6 +100,8 @@ def main(argv=None) -> int:
     ap.add_argument("--sim", action="append", default=[], help="simulator config override key=value")
     ap.add_argument("--out", type=str, default=None, help="results JSON path (default results/<date>_<commit>[_tag].json)")
     ap.add_argument("--tag", type=str, default="", help="suffix for the default results filename")
+    ap.add_argument("--link", choices=["inproc", "udp"], default="inproc",
+                    help="udp: each run's autonomy is a separate process talking over localhost UDP")
     ap.add_argument("--no-save", action="store_true")
     ap.add_argument("--quiet", action="store_true")
     a = ap.parse_args(argv)
@@ -108,7 +111,7 @@ def main(argv=None) -> int:
     sim_cfg = SimConfig().override(**sim_kw)          # validate early
     auto_cfg = AutonomyConfig().override(**auto_kw)
 
-    jobs = [(a.seed + i, sim_kw, auto_kw) for i in range(a.runs)]
+    jobs = [(a.seed + i, sim_kw, auto_kw, a.link) for i in range(a.runs)]
     t0 = time.time()
     if a.workers > 1:
         with Pool(a.workers, initializer=_worker_init) as pool:
@@ -130,6 +133,7 @@ def main(argv=None) -> int:
         "seed": a.seed,
         "flags": auto_kw,
         "sim_overrides": sim_kw,
+        "link": a.link,
         "wall_s": round(wall, 1),
         **summary,
         "autonomy_config": auto_cfg.to_dict(),
@@ -138,7 +142,7 @@ def main(argv=None) -> int:
     }
 
     if not a.quiet:
-        print(f"runs={a.runs} seed={a.seed} flags={auto_kw or '-'} sim={sim_kw or '-'}  ({wall:.0f}s)")
+        print(f"runs={a.runs} seed={a.seed} flags={auto_kw or '-'} sim={sim_kw or '-'} link={a.link}  ({wall:.0f}s)")
         print(f"  gate pass rate   {summary['pass_rate'] * 100:5.1f}%  ({summary['gates_passed']}/{summary['gates_total']})")
         print(f"  completion rate  {summary['completion_rate'] * 100:5.1f}%")
         print(f"  per-gate         {' '.join(f'{x * 100:.0f}' for x in summary['per_gate_pass_rate'])}")
