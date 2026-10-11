@@ -1,3 +1,4 @@
+import cv2
 import math
 
 import numpy as np
@@ -88,3 +89,29 @@ def test_race_clock_scales_with_course_length():
     sim = Simulator(SimConfig(), seed=3)
     assert sim.time_limit < SimConfig().time_limit
     assert math.isclose(sim.time_limit, 2.0 + sim.path_length / 5.0)
+
+
+
+def test_supersampled_gate_fill_has_area_coverage():
+    """gate_supersample: an edge pixel half covered by the polygon gets ~half the colour,
+    and the painted area matches the polygon's (cv2 LINE_AA paints ~0.7 px too wide)."""
+    import numpy as np
+    from vdr.sim.camera import FpvCamera
+    cfg = SimConfig(pixel_noise_sigma=0.0, gate_supersample=8)
+    cam = FpvCamera(cfg, np.random.default_rng(0))
+    cam.W, cam.H = 40, 40
+    img = np.zeros((40, 40, 3), np.uint8)
+    sq = np.array([[10.03, 10.03], [30.03, 10.03], [30.03, 30.03], [10.03, 30.03]])
+    hole = np.array([[15.03, 15.03], [25.03, 15.03], [25.03, 25.03], [15.03, 25.03]])
+    cam._fill_coverage(img, [sq, hole], (255, 255, 255))
+    a = img[..., 0].astype(float) / 255.0
+    for v, u in ((20, 10), (20, 30), (10, 20), (30, 20), (20, 15), (20, 25)):
+        assert abs(a[v, u] - 0.5) < 0.1, (v, u, a[v, u])
+    assert a[20, 9] == 0.0 and a[20, 11] == 1.0
+    assert abs(a.sum() - (400 - 100)) < 1.0
+
+    legacy = np.zeros((40, 40, 3), np.uint8)
+    cam.cfg = SimConfig(pixel_noise_sigma=0.0)
+    pts = [np.round(P * 16).astype(np.int32) for P in (sq, hole)]
+    cv2.fillPoly(legacy, pts, (255, 255, 255), lineType=cv2.LINE_AA, shift=4)
+    assert legacy[..., 0].sum() / 255.0 - 300 > 20   # the old fill is visibly too fat

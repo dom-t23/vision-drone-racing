@@ -30,6 +30,8 @@ class SimConfig:
     cam_offset_x: float = 0.08        # camera position in body frame (m, forward)
     cam_offset_z: float = 0.02        # (m, up)
     pixel_noise_sigma: float = 3.0    # additive Gaussian image noise (0-255 scale)
+    gate_supersample: int = 0         # 0: legacy cv2 LINE_AA fill (paints ~0.7 px too wide on every edge);
+                                      # N >= 2: area-coverage anti-aliasing from an N x N supersampled mask
 
     # --- gates & course -------------------------------------------------------
     gate_outer: float = 1.7           # outer edge of square frame (m)

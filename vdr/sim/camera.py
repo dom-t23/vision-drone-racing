@@ -59,6 +59,36 @@ def _clip_poly_halfplane(poly, l) -> list:
     return out
 
 
+def _offset_convex(P: np.ndarray, delta: float) -> np.ndarray:
+    """Move every edge of a convex polygon inward by `delta` (outward if negative)."""
+    n = len(P)
+    if n < 3:
+        return P
+    c = P.mean(axis=0)
+    lines = []
+    for i in range(n):
+        a, b = P[i], P[(i + 1) % n]
+        d = b - a
+        L = math.hypot(d[0], d[1])
+        if L < 1e-9:
+            return P
+        nrm = np.array([-d[1], d[0]]) / L
+        if (c - a) @ nrm < 0:
+            nrm = -nrm                     # inward normal
+        lines.append((nrm, float(nrm @ a) + delta))
+    out = []
+    for i in range(n):
+        (n1, c1), (n2, c2) = lines[i - 1], lines[i]
+        det = n1[0] * n2[1] - n1[1] * n2[0]
+        if abs(det) < 1e-9:
+            return P
+        out.append(np.linalg.solve(np.array([n1, n2]), [c1, c2]))
+    out = np.array(out)
+    if np.max(np.linalg.norm(out - P, axis=1)) > 4.0 * abs(delta) + 1e-6:
+        return P                           # sliver / spike: leave it
+    return out
+
+
 class FpvCamera:
     def __init__(self, cfg: SimConfig, rng: np.random.Generator):
         self.cfg = cfg
@@ -102,9 +132,44 @@ class FpvCamera:
         p_wc = p_wb + R_wb @ self.t_bc
         return R_wc, p_wc
 
+    def _project_uv(self, Pc: np.ndarray) -> np.ndarray:
+        return (Pc[:, :2] / Pc[:, 2:3]) * [self.K[0, 0], self.K[1, 1]] + [self.K[0, 2], self.K[1, 2]]
+
     def _project(self, Pc: np.ndarray) -> np.ndarray:
-        uv = (Pc[:, :2] / Pc[:, 2:3]) * [self.K[0, 0], self.K[1, 1]] + [self.K[0, 2], self.K[1, 2]]
-        return np.round(uv * _SCALE).astype(np.int32)
+        return np.round(self._project_uv(Pc) * _SCALE).astype(np.int32)
+
+    def _fill_coverage(self, img: np.ndarray, polys_uv: list, colour) -> None:
+        """Fill polygons (even-odd, so an inner contour is a hole) with area-coverage anti-aliasing.
+
+        cv2's LINE_AA polygon fill paints roughly 0.7 px beyond the true edge on
+        every side, so painted squares look too big and their openings too small
+        -- a range bias of several percent at distance. Here the gate is
+        rasterised into an N x N supersampled mask, box-filtered down to a per-pixel
+        coverage fraction and alpha-blended over the image, like a camera
+        pixel integrating light over its area. cv2's fill also paints sub-pixels
+        within ~half a sub-pixel outside the polygon, so the outline is shrunk
+        and the opening grown by that much first.
+        """
+        N = self.cfg.gate_supersample
+        allp = np.vstack(polys_uv)
+        u0 = int(max(0, math.floor(allp[:, 0].min()) - 1))
+        v0 = int(max(0, math.floor(allp[:, 1].min()) - 1))
+        u1 = int(min(self.W, math.ceil(allp[:, 0].max()) + 2))
+        v1 = int(min(self.H, math.ceil(allp[:, 1].max()) + 2))
+        if u1 <= u0 or v1 <= v0:
+            return
+        w, h = u1 - u0, v1 - v0
+        mask = np.zeros((h * N, w * N), np.uint8)
+        # native pixel centre u -> supersampled centre N * (u - u0 + 0.5) - 0.5
+        pts = []
+        for k, P in enumerate(polys_uv):
+            Q = _offset_convex(N * (P - [u0, v0] + 0.5) - 0.5, 0.5 if k == 0 else -0.5)
+            pts.append(np.round(Q * _SCALE).astype(np.int32))
+        cv2.fillPoly(mask, pts, 255, lineType=cv2.LINE_8, shift=_SHIFT)
+        a = cv2.resize(mask, (w, h), interpolation=cv2.INTER_AREA).astype(np.float32) * (1.0 / 255.0)
+        roi = img[v0:v1, u0:u1].astype(np.float32)
+        roi += a[:, :, None] * (np.array(colour, np.float32) - roi)
+        img[v0:v1, u0:u1] = np.clip(np.round(roi), 0, 255).astype(np.uint8)
 
     def render(self, p_wb: np.ndarray, R_wb: np.ndarray) -> np.ndarray:
         R_wc, p_wc = self.camera_pose(p_wb, R_wb)
@@ -132,6 +197,12 @@ class FpvCamera:
                 if len(oc) < 3:
                     continue
                 ic = _clip_poly_near((R_cw @ (inner - p_wc).T).T)
+                if self.cfg.gate_supersample >= 2:
+                    polys = [self._project_uv(oc)]
+                    if len(ic) >= 3:
+                        polys.append(self._project_uv(ic))
+                    self._fill_coverage(img, polys, GATE_BGR)
+                    continue
                 contours = [self._project(oc)]
                 if len(ic) >= 3:
                     contours.append(self._project(ic))
