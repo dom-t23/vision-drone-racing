@@ -133,6 +133,22 @@ def fit_quad_ransac(pts: np.ndarray, tol: float = 1.2, min_frac: float = 0.07) -
     return order_clockwise(q)
 
 
+_SUBPIX_OFFS = np.arange(-3.0, 3.0001, 0.25)
+_SUBPIX_NBG = int(np.sum(_SUBPIX_OFFS <= -2.0))
+_SUBPIX_ILO = int(np.searchsorted(_SUBPIX_OFFS, -1.0))
+_SUBPIX_TS = {n: np.linspace(0.2, 0.8, n) for n in range(4, 41)}
+
+
+def _fit_line_normal(pts: np.ndarray):
+    """Total-least-squares line through 2D points: (unit normal, centroid)."""
+    m = pts.mean(axis=0)
+    d = pts - m
+    sxx, syy, sxy = float(d[:, 0] @ d[:, 0]), float(d[:, 1] @ d[:, 1]), float(d[:, 0] @ d[:, 1])
+    # direction of the larger principal axis, normal is perpendicular to it
+    theta = 0.5 * np.arctan2(2.0 * sxy, sxx - syy)
+    return np.array([-np.sin(theta), np.cos(theta)]), m
+
+
 def refine_quad_subpix(sig: np.ndarray, q: np.ndarray, bg_outside: bool, min_contrast: float = 60.0,
                        max_shift: float = 2.0) -> np.ndarray:
     """Move each edge of a quad to the sub-pixel edge of the painted frame.
@@ -155,59 +171,65 @@ def refine_quad_subpix(sig: np.ndarray, q: np.ndarray, bg_outside: bool, min_con
     """
     q = np.asarray(q, np.float64)
     centre = q.mean(axis=0)
-    offs = np.arange(-3.0, 3.0001, 0.25)            # profile coordinate: bg side < 0 < paint side
-    n_bg = int(np.sum(offs <= -2.0))
-    i_lo = int(np.searchsorted(offs, -1.0))
-    lines = []
+    offs = _SUBPIX_OFFS                               # profile coordinate: bg side < 0 < paint side
+    # Geometry of all four edges, then ONE remap for every profile of every edge.
+    A, B = q, np.roll(q, -1, axis=0)
+    D = B - A
+    Ls = np.hypot(D[:, 0], D[:, 1])
+    U = D / np.maximum(Ls, 1e-9)[:, None]
+    N = np.stack([-U[:, 1], U[:, 0]], axis=1)
+    flip = np.einsum('ij,ij->i', 0.5 * (A + B) - centre, N) < 0
+    N[flip] = -N[flip]                                # now point out of the quad
+    lines = [(N[i], -float(N[i] @ A[i])) for i in range(4)]
+    INTO = -N if bg_outside else N                    # from background into the paint
+    edges, bases, intos = [], [], []
     for i in range(4):
-        a, b = q[i], q[(i + 1) % 4]
-        L = float(np.linalg.norm(b - a))
-        u = (b - a) / max(L, 1e-9)
-        nrm = np.array([-u[1], u[0]])
-        if (0.5 * (a + b) - centre) @ nrm < 0:
-            nrm = -nrm                                # now points out of the quad
-        line0 = (nrm, -float(nrm @ a))
-        if L < 6.0:
-            lines.append(line0)
+        if Ls[i] < 6.0:
             continue
-        into = -nrm if bg_outside else nrm            # from background into the paint
-        ts = np.linspace(0.2 * L, 0.8 * L, int(min(40, max(4, 0.6 * L))))
-        base = a + ts[:, None] * u                    # (T, 2)
-        P = base[:, None, :] + offs[None, :, None] * into[None, None, :]   # (T, S, 2)
-        mx = P[..., 0].astype(np.float32)
-        my = P[..., 1].astype(np.float32)
-        prof = cv2.remap(sig, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-        bg = prof[:, :n_bg].mean(axis=1)
-        peak = prof[:, i_lo:].max(axis=1)
-        pts = []
-        for k in range(len(ts)):
-            if peak[k] - bg[k] < min_contrast:
-                continue
-            half = 0.5 * (bg[k] + peak[k])
-            above = np.nonzero(prof[k] >= half)[0]
-            if len(above) == 0 or above[0] == 0:
-                continue
-            j = above[0]
-            v0, v1 = prof[k, j - 1], prof[k, j]
-            s = offs[j - 1] + (half - v0) / max(v1 - v0, 1e-6) * (offs[j] - offs[j - 1])
-            if abs(s) <= 1.75:
-                pts.append(base[k] + s * into)
-        if len(pts) < max(4, 0.5 * len(ts)):
-            lines.append(line0)
-            continue
-        pts = np.array(pts)
+        n_t = int(min(40, max(4, 0.6 * Ls[i])))
+        ts = _SUBPIX_TS[n_t] * Ls[i]
+        edges.append((i, n_t))
+        bases.append(A[i] + ts[:, None] * U[i])
+        intos.append(np.repeat(INTO[i][None, :], n_t, axis=0))
+    if not edges:
+        return q
+    base = np.concatenate(bases)                      # (T, 2), all edges
+    into = np.concatenate(intos)                      # (T, 2)
+    P = base[:, None, :] + offs[None, :, None] * into[:, None, :]       # (T, S, 2)
+    prof = cv2.remap(sig, P[..., 0].astype(np.float32), P[..., 1].astype(np.float32),
+                     cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    bg = prof[:, :_SUBPIX_NBG].mean(axis=1)
+    peak = prof[:, _SUBPIX_ILO:].max(axis=1)
+    # First half-level crossing on every profile at once.
+    half = 0.5 * (bg + peak)
+    above = prof >= half[:, None]
+    j = np.argmax(above, axis=1)                      # first True (0 if none)
+    jm = np.maximum(j - 1, 0)
+    rows = np.arange(len(j))
+    v0 = prof[rows, jm]
+    v1 = prof[rows, j]
+    s = offs[jm] + (half - v0) / np.maximum(v1 - v0, 1e-6) * (offs[j] - offs[jm])
+    ok = (peak - bg >= min_contrast) & above.any(axis=1) & (j > 0) & (np.abs(s) <= 1.75)
+    crossing = base + s[:, None] * into
+    k0 = 0
+    for i, n_t in edges:
+        sel = ok[k0:k0 + n_t]
+        pts = crossing[k0:k0 + n_t][sel]
+        k0 += n_t
+        if len(pts) < max(4, 0.5 * n_t):
+            continue                                  # keep the original line
         line = None
         for _ in range(2):
-            m = pts.mean(axis=0)
-            _, _, vt = np.linalg.svd(pts - m)
-            n_fit = vt[1] if vt[1] @ nrm >= 0 else -vt[1]
+            n_fit, m = _fit_line_normal(pts)
+            if n_fit @ N[i] < 0:
+                n_fit = -n_fit
             line = (n_fit, -float(n_fit @ m))
             r = np.abs(pts @ n_fit + line[1])
             keep = r < 0.75
             if keep.all() or keep.sum() < 4:
                 break
             pts = pts[keep]
-        lines.append(line)
+        lines[i] = line
     out = []
     for i in range(4):
         x = _intersect(lines[(i - 1) % 4], lines[i])  # corner i joins edge i-1 and edge i
