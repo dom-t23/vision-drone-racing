@@ -101,18 +101,18 @@ class FpvCamera:
         self.R_bc = camera_mount(math.radians(cfg.cam_uptilt_deg))
         self.t_bc = np.array([cfg.cam_offset_x, 0.0, cfg.cam_offset_z])
         self.rng = rng
-        self._noise = self._make_noise_bank(8) if cfg.pixel_noise_sigma > 0 else None
+        self._noise = (self._make_noise_bank(8) if cfg.pixel_noise_sigma > 0 and not cfg.pixel_noise_fresh
+                       else None)
         self._gate_polys = None
 
     # ------------------------------------------------------------------ setup
+    def _make_noise(self):
+        """One frame of additive Gaussian noise, split into (positive, negative) uint8 parts."""
+        nz = self.rng.normal(0.0, self.cfg.pixel_noise_sigma, (self.H, self.W, 3))
+        return np.clip(nz, 0, 255).astype(np.uint8), np.clip(-nz, 0, 255).astype(np.uint8)
+
     def _make_noise_bank(self, n: int):
-        bank = []
-        for _ in range(n):
-            nz = self.rng.normal(0.0, self.cfg.pixel_noise_sigma, (self.H, self.W, 3))
-            pos = np.clip(nz, 0, 255).astype(np.uint8)
-            neg = np.clip(-nz, 0, 255).astype(np.uint8)
-            bank.append((pos, neg))
-        return bank
+        return [self._make_noise() for _ in range(n)]
 
     def set_gates(self, gates) -> None:
         """Precompute outer and inner square corners of every gate in world coordinates."""
@@ -211,6 +211,11 @@ class FpvCamera:
 
         if self._noise is not None:
             pos, neg = self._noise[int(self.rng.integers(len(self._noise)))]
+        elif self.cfg.pixel_noise_sigma > 0:
+            pos, neg = self._make_noise()
+        else:
+            pos = neg = None
+        if pos is not None:
             cv2.add(img, pos, dst=img)
             cv2.subtract(img, neg, dst=img)
         return img

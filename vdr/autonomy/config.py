@@ -75,6 +75,7 @@ class AutonomyConfig:
     bearing_yaw_sigma_deg: float = 20.0   # confidence in that prior
     init_yaw_sigma_deg: float = 12.0      # yaw uncertainty when (re)initialising on a gate
     switch_pos_sigma_per_m: float = 0.08  # floor on next-gate position uncertainty, per metre of range
+    yaw_correlated_cov: bool = False      # add a frame's yaw uncertainty to p, v, attitude WITH their cross-covariances
 
     # --- guidance & control -------------------------------------------------------
     cruise_speed: float = 8.0         # m/s through the gates (race pace; see CLAUDE.md before changing)

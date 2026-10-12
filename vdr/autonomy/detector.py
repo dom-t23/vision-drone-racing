@@ -318,7 +318,7 @@ class GateDetector:
                 if inner_q is not None:
                     inner_q = refine_quad_subpix(sig, inner_q, False, cfg.subpix_min_contrast,
                                                  cfg.subpix_max_shift)
-            dets.append(GateDetection(q, OUTER, qa, inner_q, robust))
+            dets.append(GateDetection(q, OUTER, _quad_area(q), inner_q, robust))
         # Pass 2: holes not already used -> inner-opening detections (merged / overlapping gates).
         for i, cnt in enumerate(contours):
             if hier[i][3] == -1 or i in used_holes or areas[i] < cfg.min_area_inner:

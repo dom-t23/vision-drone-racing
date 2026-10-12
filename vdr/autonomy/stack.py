@@ -273,6 +273,10 @@ class Autonomy:
         ez_b = R0.T @ _EZ
         rp = math.radians(2.0) if not e.initialized else math.radians(3.0)
         P0[6:9, 6:9] = rp ** 2 * np.eye(3) + (yaw_sig ** 2 - rp ** 2) * np.outer(ez_b, ez_b)
+        if cfg.yaw_correlated_cov:
+            # the same yaw error moves the position estimate (along dp) and the attitude (about ez_b)
+            P0[0:3, 6:9] = yaw_sig ** 2 * np.outer(dp, ez_b)
+            P0[6:9, 0:3] = P0[0:3, 6:9].T
         if e.initialized:
             P0[9:15, 9:15] = e.P[9:15, 9:15]
             e.initialize(p0, v0, R0, P0, e.ba, e.bg)
@@ -380,7 +384,7 @@ class Autonomy:
         # Sightings of a distant gate share the same depth bias, so averaging many of
         # them doesn't make the estimate as good as 1/sqrt(n) suggests: floor it by range.
         pos_sigma = max(hyp.position_sigma(), cfg.switch_pos_sigma_per_m * float(np.linalg.norm(t - e.p)))
-        e.change_frame(yaw, t, np.eye(3) * pos_sigma ** 2, ysig)
+        e.change_frame(yaw, t, np.eye(3) * pos_sigma ** 2, ysig, correlate_yaw=cfg.yaw_correlated_cov)
         if prev is not None:
             c, s_ = math.cos(yaw), math.sin(yaw)
             d = prev - t

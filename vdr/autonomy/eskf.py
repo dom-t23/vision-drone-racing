@@ -143,11 +143,15 @@ class ESKF:
         return self._apply(H, r, Rn, gate, thresh, PHt, S)
 
     # --------------------------------------------------------- frame change
-    def change_frame(self, yaw: float, t: np.ndarray, pos_cov: np.ndarray, yaw_sigma: float) -> None:
+    def change_frame(self, yaw: float, t: np.ndarray, pos_cov: np.ndarray, yaw_sigma: float,
+                     correlate_yaw: bool = False) -> None:
         """Re-express the state in a new gate frame G2 given G2's pose in the current frame G.
 
-        G2 = (rot_z(yaw), t) expressed in G. Uncertainty of that relative pose is
-        added to the covariance (position block + yaw about the vertical).
+        G2 = (rot_z(yaw), t) expressed in G; `pos_cov` is the covariance of t, also in G.
+        Uncertainty of that relative pose is added to the covariance (position block + yaw
+        about the vertical). An error in `yaw` moves position, velocity and attitude together;
+        `correlate_yaw` adds it as one rank-1 term with those cross-covariances, instead of
+        to each block independently.
         """
         c, s = math.cos(yaw), math.sin(yaw)
         Rt = np.array([[c, s, 0.0], [-s, c, 0.0], [0.0, 0.0, 1.0]])   # rot_z(yaw)^T
@@ -158,12 +162,17 @@ class ESKF:
         J[_P, _P] = Rt
         J[_V, _V] = Rt
         P = J @ self.P @ J.T
+        P[_P, _P] += Rt @ pos_cov @ Rt.T
         ez_b = self.R.T @ np.array([0.0, 0.0, 1.0])      # vertical axis in body frame
-        P[_TH, _TH] += (yaw_sigma ** 2) * np.outer(ez_b, ez_b)
         dp = np.array([-self.p[1], self.p[0], 0.0])      # d(p)/d(yaw) of the new frame
-        P[_P, _P] += pos_cov + (yaw_sigma ** 2) * np.outer(dp, dp)
         dv = np.array([-self.v[1], self.v[0], 0.0])
-        P[_V, _V] += (yaw_sigma ** 2) * np.outer(dv, dv)
+        if correlate_yaw:
+            g = np.concatenate([dp, dv, ez_b])           # d(p, v, theta)/d(yaw), same sign for all
+            P[0:9, 0:9] += (yaw_sigma ** 2) * np.outer(g, g)
+        else:
+            P[_TH, _TH] += (yaw_sigma ** 2) * np.outer(ez_b, ez_b)
+            P[_P, _P] += (yaw_sigma ** 2) * np.outer(dp, dp)
+            P[_V, _V] += (yaw_sigma ** 2) * np.outer(dv, dv)
         self.P = 0.5 * (P + P.T)
 
     def position_std(self) -> np.ndarray:
