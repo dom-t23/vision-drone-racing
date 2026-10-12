@@ -55,13 +55,15 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (C) Write-up
 
-- README results table and a results-history plot generated from committed results files.
-- `docs/WRITEUP.md`: problem, pipeline diagram, ESKF in the gate frame, chi-squared gating
-  (with the ablation: -14 pp without it), the identical-gates problem and the
-  nearest-gate-ahead rule, harness methodology (seeds, race clock, noise threshold),
-  debugging stories from Lessons learned.
+- Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
+  to `vdr/report.py`'s lists and re-run `python -m vdr.report`). Next due by 2026-10-19.
+- Possible additions: a per-stage figure (detection -> PnP error vs range, from a committed
+  diagnostic results file), and a failure-mode breakdown once `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-12 — Write-up (C): `docs/WRITEUP.md`, three figures from committed results
+  (`python -m vdr.report`: history, ablations, paired lap times), README links. No flight change.
 
 - 2026-10-12 — Sub-pixel corners on by default (`subpixel_corners`), refinement vectorised
   (1.17 -> 0.50 ms per quad). Four seed sets: pass rate unchanged (pooled 96.9% -> 96.7%),

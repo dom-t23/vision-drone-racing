@@ -315,3 +315,37 @@ Tests: 56 passed. The seed-15 phantom-handoff scenario test now also pins
 **Next:** (C) the write-up is due by 2026-10-14 (docs/WRITEUP.md). Then (A): look at the three
 new `missed_gate` runs; re-tune `robust_inner_depth_tol` (8%, set on the legacy renderer's
 biases) and the range-noise model now that corners are within ~1-2% at range.
+
+---
+
+## 2026-10-12 — Run 8: (C) write-up
+
+**Baseline confirmed on main (8872bfa):** pytest 56 passed; `--runs 50 --seed 0` = 97.5% pass
+rate, 96% completion, 12.33 s lap, 48 completed / 2 crash_gate — identical to
+`2026-10-12_3b6cbbb_baseline.json`.
+
+**Chunk C (due by 2026-10-14; no write-up since the bootstrap on 2026-10-07):**
+- `docs/WRITEUP.md`: problem and rules, results, pipeline (mermaid diagram), detection, PnP
+  ambiguities, the ESKF in the target gate's frame and the handoff frame change, chi-squared
+  gating, the gate-category table (target / next / nearer / beyond), cubic guidance and
+  geometric control, the simulator, evaluation method (seeds, flags, noise, pace rule, paired
+  lap times, re-baselines), four debugging stories, limitations.
+- `python -m vdr.report` (commit 861bf57) draws three figures into `docs/img/` from a fixed
+  list of committed results files only: headline pass rate after each kept change (with the
+  renderer re-baseline marked), each component off vs on pooled over its seed sets, and the
+  paired lap-time histogram for sub-pixel corners. Numbers it prints match the log: 89.2 /
+  94.5 / 95.2 / 96.2 / 97.5%; chi2 75.5 -> 89.2, recovery 89.1 -> 94.3, robust-outline
+  92.7 -> 95.8, sub-pixel 96.9 -> 96.7; paired laps n = 179, mean -0.155 s, 145 faster.
+- `tests/test_report.py` (+1): every listed file exists and the figures render. 57 tests.
+- README links the write-up and shows the history figure; test count and harness time
+  updated (README and CLAUDE.md said 54 tests / ~65 s; it is 57 / ~130 s since sub-pixel
+  corners).
+
+**Verified:** pytest 57 passed; 8-run harness smoke on 861bf57 100% (64/64). No flight code
+changed, so no new results file.
+
+**Pass rate:** no change (97.5%).
+
+**Next:** (A) ROADMAP item 0 — re-tune `robust_inner_depth_tol` and the range-noise model for
+the new corners, and look at the three `missed_gate` runs (seeds 1005, 1006, 3004). Next (C) due
+by 2026-10-19.
