@@ -106,13 +106,22 @@ as raw bytes, so the 50-run benchmark gives per-run results identical to in-proc
 
 ## Run it
 
+**Desktop launcher (easiest).** On Windows, double-click `run_ui.bat` (the first run sets up
+`.venv` and installs the requirements). Anywhere else, run `python -m vdr.ui` after
+`pip install -r requirements.txt`. From the window you can fly a course and watch it live,
+save a flight as a GIF, or run a quick benchmark, choosing the course seed, playback speed and
+camera noise.
+
+**Command line.**
+
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 57 tests, ~45 s
+python -m pytest -q                         # 58 tests, ~45 s
 python -m vdr.harness --runs 50 --seed 0    # the benchmark (~2 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world
 python -m vdr.harness --runs 8 --link udp                     # autonomy in its own process
+python -m vdr.flightviz --seed 0 --live                       # watch one flight in a window
 ```
 
 Every run is deterministic for a given seed and configuration, so a change can be evaluated
@@ -127,6 +136,7 @@ vdr/autonomy/      detector, PnP, ESKF, guidance/control, the flight stack
 vdr/link/          optional UDP link mode (wire format, autonomy process)
 vdr/harness.py     regression harness -> results/*.json
 vdr/report.py      write-up figures from committed results
+vdr/ui.py          desktop launcher (python -m vdr.ui, or run_ui.bat on Windows)
 tests/             unit and end-to-end tests
 ```
 

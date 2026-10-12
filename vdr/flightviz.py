@@ -177,11 +177,14 @@ def main(argv=None):
     ap.add_argument("--live", action="store_true", help="play the flight in a window")
     ap.add_argument("--speed", type=float, default=1.0, help="live playback speed multiplier")
     ap.add_argument("--stride", type=int, default=5, help="keep every Nth camera frame")
+    ap.add_argument("--sim", action="append", default=[], help="simulator config override key=value")
     args = ap.parse_args(argv)
+    from vdr.harness import parse_kv
+    sim_cfg = SimConfig().override(**parse_kv(args.sim))
     out = args.out
     if args.live and not any(a.startswith("--out") for a in (argv or sys.argv[1:])):
         out = ""
-    print(render(args.seed, out, stride=args.stride, live=args.live, speed=args.speed))
+    print(render(args.seed, out, stride=args.stride, sim_cfg=sim_cfg, live=args.live, speed=args.speed))
 
 
 if __name__ == "__main__":
