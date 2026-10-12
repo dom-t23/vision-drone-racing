@@ -41,7 +41,8 @@ vdr/link/             optional UDP link mode: wire.py (contract <-> bytes), udp.
                       endpoint), autonomy_node.py (autonomy process, no sim imports), sim_side.py
 vdr/runner.py         one episode in lockstep (+ diagnostics from truth, never fed back); link="udp"
 vdr/harness.py        seeded multi-process regression harness -> results/*.json
-tests/                pytest suite (~30 s)
+vdr/report.py         write-up figures (docs/img/*.png) from a fixed list of committed results files
+tests/                pytest suite (~45 s)
 ```
 
 Frames: world/gate frames gravity-aligned z-up; gate frame G has x = pass direction, y = left.
@@ -57,13 +58,14 @@ retarget to it.
 
 ```
 pip install --break-system-packages -r requirements.txt
-python -m pytest -q                                   # ~30 s, must pass before every push
-python -m vdr.harness --runs 50 --seed 0              # benchmark, ~65 s on 2 cores, writes results/
+python -m pytest -q                                   # ~45 s, must pass before every push
+python -m vdr.harness --runs 50 --seed 0              # benchmark, ~130 s on 2 cores, writes results/
 python -m vdr.harness --runs 50 --flag NAME=VALUE     # A/B an AutonomyConfig field
 python -m vdr.harness --runs 50 --sim NAME=VALUE      # change the world (SimConfig field)
 python -m vdr.harness --runs 8 --no-save              # quick smoke test
 python -m vdr.harness --runs 50 --seed 1000           # second seed set to confirm a small gain
 python -m vdr.harness --runs 8 --link udp             # autonomy as a separate process over UDP
+python -m vdr.report                                  # regenerate write-up figures from results/
 ```
 
 `from vdr.runner import run_episode; run_episode(seed, record=True)` returns the trajectory,

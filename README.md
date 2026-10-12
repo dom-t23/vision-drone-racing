@@ -33,6 +33,12 @@ Across four 50-run seed sets (0/1000/2000/3000) sub-pixel corners leave the pool
 unchanged (96.9% off, 96.7% on — within noise) and make completed laps 0.155 s faster on
 average (paired, 145 of 179 runs faster), so they are on by default.
 
+![Headline benchmark after each kept change](docs/img/history.png)
+
+The full write-up — pipeline, filter design, evaluation method, ablations and debugging
+stories — is in [docs/WRITEUP.md](docs/WRITEUP.md). Figures are regenerated from the
+committed results files with `python -m vdr.report`.
+
 Earlier simulator (cv2 anti-aliased fill, which painted gates ~0.7 px too wide on every
 edge; numbers are not comparable with the table above):
 
@@ -102,8 +108,8 @@ as raw bytes, so the 50-run benchmark gives per-run results identical to in-proc
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 54 tests, ~30 s
-python -m vdr.harness --runs 50 --seed 0    # the benchmark (~1 min on 2 cores)
+python -m pytest -q                         # 57 tests, ~45 s
+python -m vdr.harness --runs 50 --seed 0    # the benchmark (~2 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world
 python -m vdr.harness --runs 8 --link udp                     # autonomy in its own process
@@ -120,6 +126,7 @@ vdr/sim/           dynamics, IMU, camera renderer, courses, scoring
 vdr/autonomy/      detector, PnP, ESKF, guidance/control, the flight stack
 vdr/link/          optional UDP link mode (wire format, autonomy process)
 vdr/harness.py     regression harness -> results/*.json
+vdr/report.py      write-up figures from committed results
 tests/             unit and end-to-end tests
 ```
 
