@@ -303,10 +303,10 @@ class Autonomy:
         for s in sols:
             R_meas, _ = pnp.body_pose_in_gate(s, info.R_bc, info.t_bc)
             Rn = np.eye(3) * self._att_sigma(s) ** 2
-            _, m = e.attitude_innovation(R_meas, Rn)
+            r, m = e.attitude_innovation(R_meas, Rn)
             if best is None or m < best[0]:
-                best = (m, R_meas, Rn)
-        ok, _ = e.update_attitude(best[1], best[2], gate=cfg.chi2_gating, thresh=cfg.chi2_threshold)
+                best = (m, R_meas, Rn, r)
+        ok, _ = e.update_attitude(best[1], best[2], gate=cfg.chi2_gating, thresh=cfg.chi2_threshold, r=best[3])
         self.stats["att_updates" if ok else "att_rejects"] += 1
 
     def _add_sighting(self, hyps: list, cand) -> _NextGateEstimate:
@@ -376,7 +376,7 @@ class Autonomy:
             else:
                 yaw, ysig = yaw_b, sb
         ysig = max(ysig, math.radians(5.0))
-        prev = self._prev_gate if self._prev_gate is not None else None
+        prev = self._prev_gate
         # Sightings of a distant gate share the same depth bias, so averaging many of
         # them doesn't make the estimate as good as 1/sqrt(n) suggests: floor it by range.
         pos_sigma = max(hyp.position_sigma(), cfg.switch_pos_sigma_per_m * float(np.linalg.norm(t - e.p)))

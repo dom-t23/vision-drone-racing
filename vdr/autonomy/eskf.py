@@ -83,10 +83,9 @@ class ESKF:
         self.P = 0.5 * (P + P.T)
 
     # ----------------------------------------------------------------- updates
-    def _apply(self, H: np.ndarray, r: np.ndarray, Rn: np.ndarray, gate: bool, thresh: float):
+    def _apply(self, H: np.ndarray, r: np.ndarray, Rn: np.ndarray, gate: bool, thresh: float,
+               PHt: np.ndarray, S: np.ndarray):
         P = self.P
-        PHt = P @ H.T
-        S = H @ PHt + Rn
         Sinv = np.linalg.inv(S)
         chi2 = float(r @ Sinv @ r)
         if gate and chi2 > thresh:
@@ -109,29 +108,39 @@ class ESKF:
 
     def gate_position_innovation(self, t_co, Rn, R_bc, t_bc):
         """Residual, Jacobian and Mahalanobis distance for a gate-centre measurement (no update)."""
+        r, H, _, S = self._gate_position_terms(t_co, Rn, R_bc, t_bc)
+        return r, H, float(r @ np.linalg.solve(S, r))
+
+    def _gate_position_terms(self, t_co, Rn, R_bc, t_bc):
+        """Residual r, Jacobian H, P H^T and innovation covariance S for a gate-centre measurement."""
         w = self.R.T @ (-self.p)
         z_hat = R_bc.T @ (w - t_bc)
         r = t_co - z_hat
         H = np.zeros((3, 15))
         H[:, _P] = -R_bc.T @ self.R.T
         H[:, _TH] = R_bc.T @ skew(w)
-        S = H @ self.P @ H.T + Rn
-        return r, H, float(r @ np.linalg.solve(S, r))
+        PHt = self.P @ H.T
+        S = H @ PHt + Rn
+        return r, H, PHt, S
 
     def update_gate_position(self, t_co, Rn, R_bc, t_bc, gate=True, thresh=CHI2_3DOF_99):
-        r, H, _ = self.gate_position_innovation(t_co, Rn, R_bc, t_bc)
-        return self._apply(H, r, Rn, gate, thresh)
+        r, H, PHt, S = self._gate_position_terms(t_co, Rn, R_bc, t_bc)
+        return self._apply(H, r, Rn, gate, thresh, PHt, S)
 
     def attitude_innovation(self, R_meas, Rn):
         r = log_so3(self.R.T @ R_meas)
         S = self.P[_TH, _TH] + Rn
         return r, float(r @ np.linalg.solve(S, r))
 
-    def update_attitude(self, R_meas, Rn, gate=True, thresh=CHI2_3DOF_99):
-        r, _ = self.attitude_innovation(R_meas, Rn)
+    def update_attitude(self, R_meas, Rn, gate=True, thresh=CHI2_3DOF_99, r=None):
+        """`r` may be passed in if `attitude_innovation` was already evaluated for R_meas."""
+        if r is None:
+            r = log_so3(self.R.T @ R_meas)
+        PHt = self.P[:, _TH].copy()            # P @ H.T for H = [0 I 0]
+        S = self.P[_TH, _TH] + Rn
         H = np.zeros((3, 15))
         H[:, _TH] = np.eye(3)
-        return self._apply(H, r, Rn, gate, thresh)
+        return self._apply(H, r, Rn, gate, thresh, PHt, S)
 
     # --------------------------------------------------------- frame change
     def change_frame(self, yaw: float, t: np.ndarray, pos_cov: np.ndarray, yaw_sigma: float) -> None:

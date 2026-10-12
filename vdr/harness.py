@@ -27,6 +27,7 @@ import time
 from collections import Counter
 from multiprocessing import Pool
 from pathlib import Path
+from statistics import median
 
 from vdr.autonomy import AutonomyConfig
 from vdr.runner import run_episode
@@ -77,7 +78,7 @@ def summarize(runs: list) -> dict:
         "per_gate_pass_rate": per_gate,
         "outcomes": {k: outcomes.get(k, 0) for k in OUTCOMES},
         "mean_lap_time_completed": round(sum(r["time"] for r in completed) / len(completed), 2) if completed else None,
-        "median_pos_err_rms": round(sorted(errs)[len(errs) // 2], 3) if errs else None,
+        "median_pos_err_rms": round(median(errs), 3) if errs else None,
     }
 
 
@@ -105,6 +106,8 @@ def main(argv=None) -> int:
     ap.add_argument("--no-save", action="store_true")
     ap.add_argument("--quiet", action="store_true")
     a = ap.parse_args(argv)
+    if a.runs < 1:
+        ap.error("--runs must be at least 1")
 
     auto_kw = parse_kv(a.flag)
     sim_kw = parse_kv(a.sim)

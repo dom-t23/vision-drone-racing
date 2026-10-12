@@ -86,6 +86,8 @@ def _build_frames(seed: int, stride: int, max_seconds: float, sim_cfg: SimConfig
     n_gates = len(course.gates)
 
     frames = [(t, im) for t, im in res["frames"] if t <= max_seconds]
+    if not frames:
+        raise RuntimeError(f"seed {seed}: no camera frames recorded within {max_seconds} s")
     h_px = frames[0][1].shape[0]
     fig, trail, dot = _topdown_figure(course, sim_cfg.gate_outer / 2.0, h_px)
 
@@ -142,18 +144,21 @@ def play_live(frames, speed: float = 1.0, title: str = "vdr flight") -> None:
 
 def render(seed: int, out: str, stride: int = 5, max_seconds: float = 30.0,
            sim_cfg: SimConfig | None = None, live: bool = False, speed: float = 1.0) -> dict:
-    res, timed = _build_frames(seed, stride, max_seconds, sim_cfg)
-    frames = timed
-    out_imgs = [im for _, im in timed]
+    res, frames = _build_frames(seed, stride, max_seconds, sim_cfg)
+    out_imgs = [im for _, im in frames]
+    summary = {"seed": seed, "outcome": res["outcome"], "gates_passed": res["gates_passed"],
+               "n_gates": res["n_gates"], "frames": len(out_imgs), "file": out or None}
     if live:
-        play_live(timed, speed=speed, title=f"vdr flight - seed {seed}")
+        play_live(frames, speed=speed, title=f"vdr flight - seed {seed}")
         if not out:
-            return {"seed": seed, "outcome": res["outcome"], "gates_passed": res["gates_passed"],
-                    "n_gates": res["n_gates"], "frames": len(out_imgs), "file": None}
+            return summary
 
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     # real-time playback: frame spacing taken from the kept frames' timestamps
-    duration_ms = int(round(1000 * float(np.median(np.diff([t for t, _ in frames])))))
+    if len(frames) > 1:
+        duration_ms = int(round(1000 * float(np.median(np.diff([t for t, _ in frames])))))
+    else:
+        duration_ms = 1000
     # one shared palette, no dithering: the sensor noise would otherwise make every frame unique
     sample = [out_imgs[i] for i in np.linspace(0, len(out_imgs) - 1, 6).astype(int)]
     montage = Image.fromarray(np.vstack([np.asarray(im) for im in sample]))
@@ -161,8 +166,7 @@ def render(seed: int, out: str, stride: int = 5, max_seconds: float = 30.0,
     pal = [im.quantize(palette=palette, dither=Image.Dither.NONE) for im in out_imgs]
     pal[0].save(out, save_all=True, append_images=pal[1:], duration=duration_ms, loop=0,
                 optimize=True)
-    return {"seed": seed, "outcome": res["outcome"], "gates_passed": res["gates_passed"],
-            "n_gates": res["n_gates"], "frames": len(out_imgs), "file": out}
+    return summary
 
 
 def main(argv=None):

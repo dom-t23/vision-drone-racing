@@ -311,8 +311,8 @@ class GateDetector:
             if not 0.25 <= best_area / qa <= 0.95:
                 continue                      # frame proportions are wrong (or merged gates)
             inner_q, _ = self._quad(contours[best], best_area)
-            if inner_q is not None:
-                used_holes.add(best)
+            # used either way: if its quad fit failed here, pass 2 would fail identically on it
+            used_holes.add(best)
             if sig is not None:
                 q = refine_quad_subpix(sig, q, True, cfg.subpix_min_contrast, cfg.subpix_max_shift)
                 if inner_q is not None:
