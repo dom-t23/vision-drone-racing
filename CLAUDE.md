@@ -27,7 +27,7 @@ vdr/sim/              ground truth lives here
   config.py           SimConfig — every "how hard is the world" knob
   dynamics.py         rigid body; acro inner loops as first-order lags; rotor + quadratic drag
   imu.py              white noise + random-walk biases
-  camera.py           pinhole renderer: sky/ground, orange gate frames (outer+inner contour fill), noise
+  camera.py           pinhole renderer: sky/ground, orange gate frames (area-coverage AA fill), noise
   course.py           seeded courses with visibility / nearest-next-gate guarantees
   world.py            Simulator: lockstep stepping, gate pass/crash scoring, race clock
 vdr/autonomy/
@@ -138,6 +138,12 @@ estimate trace and course for one seed — use it to debug a specific failure.
 - 2026-10-11 — To show two execution paths are equivalent, compare `per_run` entries (minus
   `wall_s`), not summaries: identical pass rates can hide different per-seed outcomes. UDP mode
   sends arrays as raw bytes and floats via JSON repr, both exact, so it matches bit-for-bit.
+
+- 2026-10-12 — When a perception fix makes a bias *worse* by a constant number of pixels,
+  check the renderer before the detector: cv2 `fillPoly(LINE_AA)` paints ~0.7 px beyond every
+  edge (a 20 px square covers 456 px², not 400). Measure the renderer against geometry (painted
+  area, half-coverage at an edge) whenever a sub-pixel effect matters; fix the sim, don't tune
+  the autonomy to it. Scenario tests found on an old renderer pin that renderer.
 
 ## Instruction changes
 

@@ -20,9 +20,22 @@ Benchmark: 50 seeded random courses × 8 gates, default configuration, race cloc
 (each run must average ≥ 5 m/s or it times out). Every number links to a committed results
 file; see [NIGHTLY_LOG.md](NIGHTLY_LOG.md) for the history.
 
+Current simulator (area-coverage gate rendering, since 2026-10-12):
+
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline (8 m/s)** | **95.2%** | 94% | 12.1 s |
+| **baseline (8 m/s)** | **96.2%** | 94% | 12.5 s |
+| sub-pixel corners on (experiment, not yet default) | 96.8% | 94% | 12.3 s |
+
+Files: [`baseline`](results/2026-10-12_a1d6b65_rebaseline-coverage-aa.json),
+[`sub-pixel corners`](results/2026-10-12_a1d6b65_ab-subpix.json).
+
+Earlier simulator (cv2 anti-aliased fill, which painted gates ~0.7 px too wide on every
+edge; numbers are not comparable with the table above):
+
+| configuration | gate pass rate | courses completed | mean lap |
+|---|---|---|---|
+| baseline (8 m/s) | 95.2% | 94% | 12.1 s |
 | same, robust-outline check off | 94.5% | 90% | 12.0 s |
 | earlier baseline, lost-target recovery off | 89.2% | 82% | 11.9 s |
 | earlier baseline, chi-squared gating off | 75.5% | 60% | 12.0 s |

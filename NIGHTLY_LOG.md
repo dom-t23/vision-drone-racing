@@ -207,3 +207,61 @@ Wall time 82 s in-process vs 125 s over UDP (process start-up + serialisation).
 
 **Next:** (A) ROADMAP A1/A3 (inner-opening mask-growth range bias) or A4 (both squares). (C) is
 due by 2026-10-14 (7 days since the last write-up on 2026-10-07): docs/WRITEUP.md.
+
+---
+
+## 2026-10-12 — Run 6: (B) renderer realism — area-coverage anti-aliasing (re-baseline)
+
+**Baseline confirmed on main (8c96b4b):** pytest 54 passed; `--runs 50 --seed 0` = 95.2% pass
+rate, 94% completion, 12.1 s lap — identical to `2026-10-11_8d3e44c_baseline.json`.
+
+**Why (started as ROADMAP A3, sub-pixel corners):** scratch diagnostic (truth used offline
+only): 1500 random single-gate views at 2-20 m, detected corners vs true projected corners.
+Contour corners: outer squares +0.3% to +1.7% too big, openings -2.7% to -10.4% too small,
+RMS 0.6 / 1.6 px. A first sub-pixel refinement (half-contrast edge crossings) made it *worse*
+(outer +10%, openings -12% at 14-20 m, RMS exactly 1.0 px at every range) — a constant pixel
+offset, i.e. the edges themselves were drawn in the wrong place. Rendering a 20 x 20 px square
+with cv2 `fillPoly(LINE_AA)` paints 456 px² instead of 400: **the simulator's renderer painted
+every gate ~0.7 px too wide on every edge** (squares too big, openings too small). That is a
+simulator defect, not something the autonomy should be tuned to, so this run became (B).
+
+**Change:** `SimConfig.gate_supersample` (commit dfb2535, default 0 = old renderer): each gate
+is rasterised into an N x N supersampled mask, box-filtered to per-pixel coverage and
+alpha-blended — like a pixel integrating light over its area. cv2's fill also includes
+sub-pixels whose centres lie on/just outside the edge, so the outline is shrunk and the
+opening grown by half a sub-pixel first; with N = 8 a 20 px frame with a 10 px opening paints
+300.0 px² (exact 300)
+and a half-covered edge pixel gets 0.50. Render cost 0.6-1.0 ms -> 1.1-2.4 ms per frame.
+Default flipped to 8 in a separate commit (a1d6b65). Tests: +1 renderer test (coverage and
+area; legacy fill shown too fat). `test_lost_target_recovery_rescues_a_phantom_handoff`
+(seed 15) no longer has a phantom handoff on the new renderer, so it is pinned to
+`gate_supersample=0`, where the scenario was found.
+
+**Corner accuracy on the new renderer (same diagnostic):**
+| range (m) | contour: outer / opening size, RMS | sub-pixel: outer / opening size, RMS |
+|---|---|---|
+| 2-4 | -1.1% / -0.5%, 0.8 / 0.9 px | -0.0% / +0.0%, 0.10 / 0.12 px |
+| 7-10 | -3.3% / -1.2%, 0.8 / 0.9 px | +0.0% / -0.1%, 0.16 / 0.15 px |
+| 14-20 | -6.3% / -1.6%, 0.8 / 0.9 px | +1.7% / -2.5%, 0.32 / 0.33 px |
+(The contour tracer follows the centres of boundary mask pixels, so it now reads gates far.)
+
+**Re-baseline (commit a1d6b65; numbers before/after are NOT comparable):**
+| seeds | pass | completion | outcomes | lap (s) | file |
+|---|---|---|---|---|---|
+| 0 (headline) | **96.2%** | 94% | 47 done, 3 crash_gate | 12.5 | `2026-10-12_a1d6b65_rebaseline-coverage-aa.json` |
+| 1000 | 95.2% | 90% | 45 done, 5 crash_gate | 12.53 | `..._rebaseline-coverage-aa-seed1000.json` |
+Before the flip, the same code with the default renderer reproduced 95.2% exactly. Completed
+runs are on average 0.37 s slower (median 0.30 s, 45 runs completed in both); unverified
+hypothesis: contour corners now read gates 1-6% *far* (before ~1% near), which changes when
+the guidance turns and hands off.
+
+**Preliminary (not a decision): sub-pixel corners** (`subpixel_corners`, commit b6ec22d,
+default False; +1 detector test): seed 0 96.2% -> 96.8% (lap 12.5 -> 12.3 s), seed 1000
+95.2% -> 96.0% (lap 12.53 -> 12.33 s); median estimation error 0.58 -> 0.57 m and
+0.62 -> 0.55 m. Same direction on both sets, but each well under the 8 pp noise threshold.
+Files `2026-10-12_a1d6b65_ab-subpix{,-seed1000}.json`. Harness wall time 73 s -> 107 s (the
+per-profile Python loop; vectorise before flipping).
+
+**Next:** (A) finish the sub-pixel A/B: vectorise, run seeds 2000/3000, decide; then revisit
+`robust_inner_depth_tol` (its 8% was set on the old renderer's biases). (C) write-up is due
+by 2026-10-14.

@@ -3,14 +3,22 @@
 Prioritised. Each overnight run takes ONE item (or a well-argued new one), and updates this
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
-Current baseline: `results/2026-10-11_8d3e44c_baseline.json` (same numbers as
-`2026-10-11_68513f6_baseline.json`; 95.2% pass rate, 94% completion,
-12.10 s lap, 3 failures: 1 crash_gate, 2 missed_gate). Older evidence below cites
-`2026-10-07_c25234a_baseline.json` (89.2%) and `2026-10-10_0181f50_baseline.json` (94.5%).
+Current baseline (area-coverage renderer, since 2026-10-12):
+`results/2026-10-12_a1d6b65_rebaseline-coverage-aa.json` — 96.2% pass rate, 94% completion,
+12.5 s lap, 3 crash_gate (seed 1000: 95.2%). Evidence older than 2026-10-12 was measured on
+the legacy renderer (gates painted ~0.7 px too wide) and is not directly comparable:
+`2026-10-11_8d3e44c_baseline.json` (95.2%), `2026-10-10_0181f50_baseline.json` (94.5%),
+`2026-10-07_c25234a_baseline.json` (89.2%).
 
 ## (A) Pass rate
 
-1. **Remaining next-gate range bias.** The worst source (RANSAC outlines of merged gates,
+0. **Sub-pixel corners: finish the A/B** (`subpixel_corners`, code in, default off). On the
+   new renderer it cuts corner RMS from ~0.8 px to 0.1-0.3 px and size bias from -6% to
+   within +-2.5% at 14-20 m. Preliminary: 96.2 -> 96.8% (seed 0), 95.2 -> 96.0% (seed 1000),
+   laps ~0.2 s faster. Vectorise the profile loop (harness 73 s -> 107 s), run seeds
+   2000/3000, decide. Then re-check `robust_inner_depth_tol` and the range-noise model, both
+   set on the legacy renderer's biases.
+1. **Remaining next-gate range bias.** (Measured on the legacy renderer — re-measure.) The worst source (RANSAC outlines of merged gates,
    ~18% short at 7-16 m) is fixed (robust-outline check, done); handoffs > 1.5 m off along x
    fell from 17.8% to 10.1%. What is left: inner openings read +5-10% far beyond 9 m and clean
    outlines 1-2% near, both from the anti-aliased mask growing the frame by a fraction of a
@@ -22,9 +30,7 @@ Current baseline: `results/2026-10-11_8d3e44c_baseline.json` (same numbers as
    IPPE solutions. Removes most IPPE flips; replace the 3-DoF attitude update with a yaw-only
    update. Evidence: 7% of attitude updates rejected, median yaw error 4.6 deg, up to ~12 deg
    in failing runs; single-square rotation errors of 5-30 deg at 6-11 m (see Lessons learned).
-3. **Sub-pixel corners.** Measured (run 4): outer outlines read 1-2% near, inner openings
-   1-10% far (growing with range) -- the mask is wider than the painted frame. Fit lines
-   to edge points (or `cv2.cornerSubPix` on the grey image) and intersect.
+3. **Sub-pixel corners.** Implemented (see item 0); most of the legacy bias was the renderer.
 4. **Use both squares.** When outer and inner corners are both found, solve with all 8 points
    (IPPE start, then `solvePnPRefineLM` / SQPNP) for lower noise.
 5. **Two-gate lookahead guidance.** At 8 m/s the drone has ~1 s after a pass to line up for
@@ -60,6 +66,10 @@ Current baseline: `results/2026-10-11_8d3e44c_baseline.json` (same numbers as
   debugging stories from Lessons learned.
 
 ## Done
+
+- 2026-10-12 — Renderer realism (B): area-coverage gate anti-aliasing
+  (`SimConfig.gate_supersample=8`); cv2 LINE_AA had painted every gate edge ~0.7 px too wide.
+  Re-baselined: 96.2% (seed 0), 95.2% (seed 1000), lap 12.5 s; not comparable with earlier runs.
 
 - 2026-10-11 — UDP link mode (`--link udp`, `vdr/link/`), the last first-week extra: the
   autonomy runs as a separate process over localhost UDP in lockstep, with fragmentation and
