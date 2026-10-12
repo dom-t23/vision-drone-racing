@@ -2,6 +2,8 @@
 
 from vdr.harness import summarize
 from vdr.runner import run_episode
+from vdr.sim import SimConfig
+from vdr.sim import SimConfig
 
 
 def test_episode_is_deterministic():
@@ -35,6 +37,8 @@ def test_lost_target_recovery_rescues_a_phantom_handoff():
     # Seed 15: the next-gate estimate handed over at gate 1 is ~2.8 m too short, so the
     # real gate 2 never matches the target and (without recovery) the drone declares a
     # pass 2.7 m early and clips the frame. Recovery re-anchors on the gate it does see.
-    r = run_episode(15)
+    # The scenario was found with the legacy renderer (gate_supersample=0), whose
+    # over-wide paint contributed to the short handoff, so the test pins that renderer.
+    r = run_episode(15, sim_cfg=SimConfig(gate_supersample=0))
     assert r["diag"]["recoveries"] >= 1, r["diag"]
     assert r["gates_passed"] >= 3, r
