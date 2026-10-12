@@ -11,6 +11,8 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import sys
+import time
 
 import cv2
 import matplotlib
@@ -72,8 +74,8 @@ def _topdown_figure(course, gate_half, height_px):
     return fig, trail, dot
 
 
-def render(seed: int, out: str, stride: int = 5, max_seconds: float = 30.0,
-           sim_cfg: SimConfig | None = None) -> dict:
+def _build_frames(seed: int, stride: int, max_seconds: float, sim_cfg: SimConfig | None):
+    """Fly one episode and return (episode result, [(t, composite PIL image)])."""
     sim_cfg = sim_cfg or SimConfig()
     res = run_episode(seed, sim_cfg=sim_cfg, record=True, keep_frames=100000, frame_stride=stride)
     course = res["course"]
@@ -107,6 +109,47 @@ def render(seed: int, out: str, stride: int = 5, max_seconds: float = 30.0,
             top = cv2.resize(top, (int(round(top.shape[1] * s)), cam_rgb.shape[0]))
         out_imgs.append(Image.fromarray(np.hstack([cam_rgb, top])))
     plt.close(fig)
+    return res, [(t, im) for (t, _), im in zip(frames, out_imgs)]
+
+
+def play_live(frames, speed: float = 1.0, title: str = "vdr flight") -> None:
+    """Show composite frames in a window at real-time pace (close the window to stop)."""
+    import tkinter as tk
+
+    from PIL import ImageTk
+
+    root = tk.Tk()
+    root.title(title)
+    label = tk.Label(root)
+    label.pack()
+    t0 = frames[0][0]
+
+    def show(i, start):
+        if i >= len(frames):
+            root.title(title + " (finished)")
+            return
+        t, im = frames[i]
+        photo = ImageTk.PhotoImage(im)
+        label.configure(image=photo)
+        label.image = photo
+        nxt = frames[i + 1][0] if i + 1 < len(frames) else t
+        delay = max(1, int(1000 * (start + (nxt - t0) / speed - time.monotonic())))
+        root.after(delay, show, i + 1, start)
+
+    show(0, time.monotonic())
+    root.mainloop()
+
+
+def render(seed: int, out: str, stride: int = 5, max_seconds: float = 30.0,
+           sim_cfg: SimConfig | None = None, live: bool = False, speed: float = 1.0) -> dict:
+    res, timed = _build_frames(seed, stride, max_seconds, sim_cfg)
+    frames = timed
+    out_imgs = [im for _, im in timed]
+    if live:
+        play_live(timed, speed=speed, title=f"vdr flight - seed {seed}")
+        if not out:
+            return {"seed": seed, "outcome": res["outcome"], "gates_passed": res["gates_passed"],
+                    "n_gates": res["n_gates"], "frames": len(out_imgs), "file": None}
 
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     # real-time playback: frame spacing taken from the kept frames' timestamps
@@ -125,10 +168,16 @@ def render(seed: int, out: str, stride: int = 5, max_seconds: float = 30.0,
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--out", default="docs/img/flight.gif")
+    ap.add_argument("--out", default="docs/img/flight.gif",
+                    help="GIF path (with --live, a GIF is only written if --out is given explicitly)")
+    ap.add_argument("--live", action="store_true", help="play the flight in a window")
+    ap.add_argument("--speed", type=float, default=1.0, help="live playback speed multiplier")
     ap.add_argument("--stride", type=int, default=5, help="keep every Nth camera frame")
     args = ap.parse_args(argv)
-    print(render(args.seed, args.out, stride=args.stride))
+    out = args.out
+    if args.live and not any(a.startswith("--out") for a in (argv or sys.argv[1:])):
+        out = ""
+    print(render(args.seed, out, stride=args.stride, live=args.live, speed=args.speed))
 
 
 if __name__ == "__main__":
