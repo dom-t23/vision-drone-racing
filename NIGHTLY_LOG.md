@@ -349,3 +349,31 @@ changed, so no new results file.
 **Next:** (A) ROADMAP item 0 — re-tune `robust_inner_depth_tol` and the range-noise model for
 the new corners, and look at the three `missed_gate` runs (seeds 1005, 1006, 3004). Next (C) due
 by 2026-10-19.
+
+## 2026-10-12 — Interactive session (not a scheduled run): code review fixes
+
+Requested by Dom: review the codebase, fix what was found.
+
+- **bb0d16f** `flightviz --live`: tkinter window that replays a flight at real-time pace.
+- **63ac0b6** cleanups with identical flight results — ESKF computes P Hᵀ and S once per
+  update; detector skips re-fitting a hole whose quad already failed in pass 1; harness
+  reports a true median (was the upper median for even run counts) and rejects `--runs 0`;
+  flightviz handles 0/1 frames. Verified: 50 runs, seed 0, per-run results identical.
+- **49d3f9a** small behaviour changes + two opt-in flags:
+  - `ESKF.change_frame` rotates `pos_cov` (old-frame covariance of t) into the new frame
+    (rounding-only today: callers pass an isotropic covariance);
+  - OUTER detection area measured on the sub-pixel refined quad (INNER already was);
+  - `AutonomyConfig.yaw_correlated_cov` (default False): add a frame's yaw uncertainty to
+    p, v, attitude as one rank-1 term with cross-covariances (init and handoff);
+  - `SimConfig.pixel_noise_fresh` (default False): independent image noise every frame
+    instead of a bank of 8 patterns. Not benchmarked; flipping it needs a re-baseline.
+
+**Defaults after 49d3f9a** (`*_49d3f9a_baseline*.json`): 97.5 / 95.75 / 97.5 / 94.0% on seed
+sets 0/1000/2000/3000, pooled 96.19% (vs 96.69% for `*_06ceff9_ab-subpix*.json`; within
+noise — chaotic per-seed flips). Headline unchanged: 97.5%, 96% completion, 12.33 s.
+
+**A/B `yaw_correlated_cov`** (`*_49d3f9a_ab-yawcorr*.json`): 97.0 / 93.25 / 96.5 / 98.75%,
+pooled 96.38% vs 96.19% off; paired laps n = 179, mean -0.003 s, 87 faster. No clear effect:
+left off (flag kept for later, e.g. under harder sim settings).
+
+**Pass rate:** no change (97.5%).
