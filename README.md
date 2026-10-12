@@ -24,11 +24,14 @@ Current simulator (area-coverage gate rendering, since 2026-10-12):
 
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline (8 m/s)** | **96.2%** | 94% | 12.5 s |
-| sub-pixel corners on (experiment, not yet default) | 96.8% | 94% | 12.3 s |
+| **baseline (8 m/s)** | **97.5%** | 96% | 12.33 s |
+| same, sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Files: [`baseline`](results/2026-10-12_a1d6b65_rebaseline-coverage-aa.json),
-[`sub-pixel corners`](results/2026-10-12_a1d6b65_ab-subpix.json).
+Files: [`baseline`](results/2026-10-12_3b6cbbb_baseline.json),
+[`sub-pixel corners off`](results/2026-10-12_06ceff9_baseline.json).
+Across four 50-run seed sets (0/1000/2000/3000) sub-pixel corners leave the pooled pass rate
+unchanged (96.9% off, 96.7% on — within noise) and make completed laps 0.155 s faster on
+average (paired, 145 of 179 runs faster), so they are on by default.
 
 Earlier simulator (cv2 anti-aliased fill, which painted gates ~0.7 px too wide on every
 edge; numbers are not comparable with the table above):

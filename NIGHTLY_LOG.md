@@ -265,3 +265,53 @@ per-profile Python loop; vectorise before flipping).
 **Next:** (A) finish the sub-pixel A/B: vectorise, run seeds 2000/3000, decide; then revisit
 `robust_inner_depth_tol` (its 8% was set on the old renderer's biases). (C) write-up is due
 by 2026-10-14.
+
+---
+
+## 2026-10-12 — Run 7: (A) sub-pixel corners — finish the A/B, now default
+
+**Baseline confirmed on main (66a635a):** pytest 56 passed; `--runs 50 --seed 0` = 96.2% pass
+rate, 94% completion, 12.5 s lap, 3 crash_gate — identical to
+`2026-10-12_a1d6b65_rebaseline-coverage-aa.json`.
+
+**Speed-up first (commit 06ceff9):** `refine_quad_subpix` now samples all four edges' profiles
+with one `cv2.remap`, finds every half-level crossing at once (argmax over the "above half"
+mask instead of a per-profile Python loop) and fits each edge line in closed form (2x2 scatter
+angle) instead of an SVD. On 386 calls recorded from seed 3 it returns the same corners to
+1e-13 px, 1.17 -> 0.50 ms per quad. Whole episodes: sub-pixel overhead 9.1 s -> 4.8 s per 4
+episodes; harness wall time with the flag on is now ~+20% (114 -> 137 s) instead of ~+50%.
+The flag-off path is bit-identical to a1d6b65 (all 50 `per_run` entries equal).
+
+**A/B (commit 06ceff9, same seeds, flag off vs on):**
+| seeds | pass off -> on | completion | lap (s) off -> on | median est. error (m) |
+|---|---|---|---|---|
+| 0 | 96.2% -> 97.5% | 94% -> 96% | 12.50 -> 12.33 | 0.583 -> 0.558 |
+| 1000 | 95.2% -> 94.8% | 90% -> 88% | 12.53 -> 12.34 | 0.622 -> 0.564 |
+| 2000 | 98.5% -> 98.0% | 96% -> 96% | 12.46 -> 12.29 | 0.536 -> 0.424 |
+| 3000 | 97.5% -> 96.5% | 96% -> 94% | 12.30 -> 12.15 | 0.571 -> 0.645 |
+| pooled (1600 gates) | 96.9% -> 96.7% | 94% -> 93.5% | 12.44 -> 12.28 | |
+Files `results/2026-10-12_06ceff9_{baseline,ab-subpix}{,-seed1000,-seed2000,-seed3000}.json`.
+Pass rate: no change (all four differences within noise, two up, two down). Lap time: faster
+on all four sets; paired over the 179 runs completed both ways, -0.155 s mean (median -0.147,
+s.e. 0.016), 145 of 179 faster. Per the pace rule, faster at equal pass rate is an improvement,
+so **`subpixel_corners` is now True by default** (commit 3b6cbbb; the flag stays for ablation).
+Why the laps get faster is not verified; hypothesis: contour corners read gates 1-6% far, so
+the guidance was planning against a gate further away than it is.
+
+Outcome churn is large: 8 runs rescued and 10 broken across the four sets, including 3 new
+`missed_gate` outcomes (seeds 1005, 1006, 3004; none with the flag off) — worth a look.
+
+**Noise lesson:** the earlier preliminary A/B (a1d6b65, SVD line fit) gave 96.8% / 96.0% on
+seeds 0 / 1000; the same algorithm with the closed-form fit (corners equal to 1e-13 px) gives
+97.5% / 94.8%. 40+ of 50 runs have different traces and 1-2 outcomes flip per set. Per-seed
+outcomes are chaotic, so only pooled multi-set numbers mean anything below ~8 pp.
+
+**New headline (commit 3b6cbbb, default config):** `--runs 50 --seed 0` = **97.5%** pass rate,
+96% completion, 48 completed / 2 crash_gate, 12.33 s lap
+(`results/2026-10-12_3b6cbbb_baseline.json`; per-run identical to `06ceff9_ab-subpix.json`).
+Tests: 56 passed. The seed-15 phantom-handoff scenario test now also pins
+`subpixel_corners=False` (it was found with contour corners and the legacy renderer).
+
+**Next:** (C) the write-up is due by 2026-10-14 (docs/WRITEUP.md). Then (A): look at the three
+new `missed_gate` runs; re-tune `robust_inner_depth_tol` (8%, set on the legacy renderer's
+biases) and the range-noise model now that corners are within ~1-2% at range.

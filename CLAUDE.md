@@ -144,6 +144,11 @@ estimate trace and course for one seed — use it to debug a specific failure.
   edge (a 20 px square covers 456 px², not 400). Measure the renderer against geometry (painted
   area, half-coverage at an edge) whenever a sub-pixel effect matters; fix the sim, don't tune
   the autonomy to it. Scenario tests found on an old renderer pin that renderer.
+- 2026-10-12 — Per-seed outcomes are chaotic: swapping an SVD line fit for a closed-form one
+  (corners equal to 1e-13 px) changed 40+ of 50 trajectories and flipped 1-2 outcomes per seed
+  set (seed 0 96.8% -> 97.5%, seed 1000 96.0% -> 94.8%). Judge sub-8 pp changes only pooled
+  over several seed sets, and use paired per-run lap times (runs completed both ways) for
+  speed — sub-pixel corners: pass rate flat, -0.155 s on 145/179 paired runs.
 
 ## Instruction changes
 
