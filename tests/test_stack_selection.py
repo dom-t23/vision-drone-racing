@@ -52,3 +52,18 @@ def test_flag_off_keeps_old_behaviour():
     det = GateDetection(_square(info, 10.0, info.gate_outer_size, scale=1.2), OUTER, 1.0,
                         _square(info, 10.0, info.gate_inner_size), robust=True)
     assert math.isclose(auto._detection_solutions(det, up_c)[0].size, info.gate_outer_size)
+
+
+def test_lone_robust_outline_dropped_only_when_far():
+    on = AutonomyConfig(drop_lone_robust_far=True, lone_robust_max_range=6.0)
+    info, auto, up_c = _setup(on)
+    far = GateDetection(_square(info, 10.0, info.gate_outer_size), OUTER, 1.0, None, robust=True)
+    near = GateDetection(_square(info, 4.0, info.gate_outer_size), OUTER, 1.0, None, robust=True)
+    clean = GateDetection(_square(info, 10.0, info.gate_outer_size), OUTER, 1.0, None, robust=False)
+    with_inner = GateDetection(_square(info, 10.0, info.gate_outer_size), OUTER, 1.0,
+                               _square(info, 10.0, info.gate_inner_size), robust=True)
+    assert auto._detection_solutions(far, up_c) == []
+    for det in (near, clean, with_inner):
+        assert auto._detection_solutions(det, up_c)
+    _, off, _ = _setup(AutonomyConfig(drop_lone_robust_far=False))
+    assert off._detection_solutions(far, up_c)

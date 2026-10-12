@@ -226,6 +226,14 @@ class Autonomy:
             inner = self._valid_solutions(d.inner, info.gate_inner_size, up_c)
             if inner and abs(sols[0].distance / inner[0].distance - 1.0) > cfg.robust_inner_depth_tol:
                 sols = inner
+        if (sols and cfg.drop_lone_robust_far and d.kind == OUTER and d.robust
+                and sols[0].distance > cfg.lone_robust_max_range
+                and (d.inner is None or not self._valid_solutions(d.inner, info.gate_inner_size, up_c))):
+            # A RANSAC outline with no usable opening of its own has nothing to cross-check
+            # its range against, and beyond ~6 m such outlines read gates ~12% too near
+            # (median; merged gates). Drop them rather than feed a biased range to the
+            # filter or to the next-gate hypotheses.
+            return []
         if not sols and d.inner is not None:
             # the outline fit was bad (often two gates merged) -- try the gate's own opening
             sols = self._valid_solutions(d.inner, info.gate_inner_size, up_c)
