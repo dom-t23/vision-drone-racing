@@ -14,6 +14,21 @@ map). Regenerate with `python -m vdr.flightviz --seed 0`.*
 
 [![tests](https://github.com/dom-t23/vision-drone-racing/actions/workflows/tests.yml/badge.svg)](https://github.com/dom-t23/vision-drone-racing/actions/workflows/tests.yml)
 
+## Try it
+
+- **In the browser, nothing to install:** [flight replay](https://dom-t23.github.io/vision-drone-racing/)
+  — recorded flights with the onboard camera, the detector's gate outlines and the drone's
+  own position estimate, for both sensing modes (source: [`docs/demo/`](docs/demo/)).
+- **Desktop app, no Python needed:** download the zip for Windows, macOS or Linux from
+  [Releases](https://github.com/dom-t23/vision-drone-racing/releases), unzip, and run
+  `vdr-racing` (`vdr-racing.exe` on Windows) inside the `vdr-racing` folder. It opens the
+  launcher: fly a course and watch it, save a GIF, or run a benchmark. The builds are not
+  code-signed: on macOS right-click → Open the first time; on Windows choose
+  "More info → Run anyway".
+- **With Python 3.10+:** `pipx install git+https://github.com/dom-t23/vision-drone-racing`
+  (or `pip install` the same URL), then `vdr-racing`, `vdr-racing fly --seed 3 --live`,
+  `vdr-racing bench --runs 8`.
+
 ## Results
 
 Benchmark: 50 seeded random courses × 8 gates, default configuration, race clock on
@@ -121,7 +136,7 @@ camera noise.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 58 tests, ~45 s
+python -m pytest -q                         # 63 tests, ~60 s
 python -m vdr.harness --runs 50 --seed 0    # the benchmark (~2 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world
@@ -131,6 +146,28 @@ python -m vdr.flightviz --seed 0 --live                       # watch one flight
 
 Every run is deterministic for a given seed and configuration, so a change can be evaluated
 by re-running the same 50 courses with it switched on and off.
+
+**Camera-only mode.** `--flag camera_only=true` drops the IMU entirely: between camera
+frames the filter predicts motion from the drone's own thrust and body-rate commands through
+an assumed vehicle model (rate and thrust lags, linear drag). It flies, but less reliably:
+
+| seed set | camera + IMU (default) | camera only |
+|---|---|---|
+| 0 | 96.8% | 98.0% |
+| 1000 | 100.0% | 96.8% |
+| 2000 | 97.2% | 89.5% |
+| 3000 | 98.0% | 92.2% |
+| pooled (1600 gates) | **98.0%** | **94.1%** |
+
+Files: `results/2026-10-13_db88370_{baseline,ab-camonly}[-seedN].json`. Seed set 0 alone
+would suggest the opposite; pooled, camera-only loses 20 runs and rescues 5. Its vehicle model
+uses the airframe's nominal values; a real drone's model would be less exact.
+
+**Building the app.** `pip install . pyinstaller && python packaging/build.py` makes
+`dist/vdr-racing/` for the OS you run it on. Pushing a `v*` tag runs
+`.github/workflows/release.yml`, which builds Windows, macOS and Linux and attaches them to a
+GitHub release. `python -m vdr.demo --benchmark-out docs/demo/benchmark.js` regenerates the
+browser replay's recordings.
 
 ## Layout
 
@@ -142,6 +179,9 @@ vdr/link/          optional UDP link mode (wire format, autonomy process)
 vdr/harness.py     regression harness -> results/*.json
 vdr/report.py      write-up figures from committed results
 vdr/ui.py          desktop launcher (python -m vdr.ui, or run_ui.bat on Windows)
+vdr/app.py         `vdr-racing` entry point: launcher, fly, bench, demo-data
+vdr/demo.py        records flights for the browser replay (docs/demo/)
+packaging/         PyInstaller build of the standalone app
 tests/             unit and end-to-end tests
 ```
 

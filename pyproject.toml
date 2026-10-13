@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vision-drone-racing"
+version = "0.1.0"
+description = "Vision-based autonomous drone racing in a self-contained Python simulator"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "opencv-python-headless>=4.8",
+    "pillow>=10",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pyinstaller>=6.6"]
+
+[project.scripts]
+vdr-racing = "vdr.app:main"
+
+[tool.setuptools.packages.find]
+include = ["vdr*"]

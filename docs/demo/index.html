@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vision Drone Racing Replay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a ground-station screen. Flight picker on top, FPV feed beside a top-down
+   course plot, one transport bar under both, explanation and benchmark below. */
+:root {
+  --bg: #f3f4f1;
+  --panel: #ffffff;
+  --ink: #1b1f1d;
+  --muted: #5d6661;
+  --line: #d6dad5;
+  --gate: #e0661b;          /* the paint the detector looks for */
+  --truth: #2c6e9c;
+  --est: #e0661b;
+  --ok: #2f7d4f;
+  --bad: #b3362a;
+  --screen: #101412;
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121614; --panel: #1a1f1c; --ink: #e7ebe8; --muted: #9aa49e; --line: #2d3530;
+    --gate: #f07a2e; --truth: #6fb0dd; --est: #f07a2e; --ok: #5cbf86; --bad: #ef7466; --screen: #0b0e0c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121614; --panel: #1a1f1c; --ink: #e7ebe8; --muted: #9aa49e; --line: #2d3530;
+  --gate: #f07a2e; --truth: #6fb0dd; --est: #f07a2e; --ok: #5cbf86; --bad: #ef7466; --screen: #0b0e0c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 20px; }
+h1, h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.05; }
+h2 { font-size: 24px; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--muted); }
+.label { font: 600 12px/1 var(--font-display); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+header { display: grid; gap: 8px; }
+
+.pick { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: end; }
+.group { display: grid; gap: 6px; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { font: 500 13px/1 var(--font-data); padding: 8px 11px; border: 1px solid var(--line); background: var(--panel);
+  color: var(--ink); border-radius: 4px; cursor: pointer; }
+.seg button[aria-pressed="true"] { border-color: var(--gate); box-shadow: inset 0 -3px 0 var(--gate); }
+.seg button:focus-visible, .transport button:focus-visible, input:focus-visible { outline: 2px solid var(--gate); outline-offset: 2px; }
+
+.stage { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 3fr); gap: 12px; }
+@media (max-width: 760px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+.view { background: var(--screen); border-radius: 6px; overflow: hidden; position: relative; }
+.view canvas { display: block; width: 100%; height: auto; max-width: 100%; }
+.view .tag { position: absolute; left: 10px; top: 8px; font: 600 11px/1 var(--font-display); letter-spacing: .12em;
+  text-transform: uppercase; color: #cfd6d2; opacity: .85; }
+.map { background: var(--panel); border: 1px solid var(--line); }
+.map .tag { color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 12px/1.4 var(--font-data); color: var(--muted); padding: 0 10px 8px; }
+.legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
+
+.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.transport button { font: 600 14px/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; padding: 9px 16px;
+  background: var(--ink); color: var(--bg); border: 0; border-radius: 4px; cursor: pointer; min-width: 84px; }
+.transport input[type=range] { flex: 1 1 220px; accent-color: var(--gate); min-width: 0; }
+.transport select { font: 13px var(--font-data); padding: 6px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; }
+.clock { font: 500 14px var(--font-data); font-variant-numeric: tabular-nums; min-width: 9ch; }
+
+.readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.readout div { padding: 10px 12px 10px 0; display: grid; gap: 4px; }
+.readout b { font: 500 18px/1.1 var(--font-data); font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font: 600 12px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; padding: 4px 7px; border-radius: 3px; border: 1px solid currentColor; }
+.pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px 32px; }
+.cols section { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; font: 13px/1.4 var(--font-data); font-variant-numeric: tabular-nums; width: 100%; }
+th, td { text-align: left; padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font: 600 12px var(--font-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+code { font: 13px var(--font-data); }
+a { color: var(--truth); }
+footer { color: var(--muted); font-size: 13px; }
+.empty { padding: 40px 16px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="label">Recorded flights · 8 identical gates · 8 m/s</span>
+    <h1>Vision Drone Racing Replay</h1>
+    <p class="lede">A simulated racing quadrotor flies a course of identical orange gates using only what its own
+      camera sees (plus, in the default mode, its IMU). It has no map and is never told where the gates are.
+      Pick a course and a sensing mode, then play the flight back.</p>
+  </header>
+
+  <div class="pick">
+    <div class="group"><span class="label" id="lbl-seed">Course</span><div class="seg" id="seeds" role="group" aria-labelledby="lbl-seed"></div></div>
+    <div class="group"><span class="label" id="lbl-method">Sensing</span><div class="seg" id="methods" role="group" aria-labelledby="lbl-method"></div></div>
+  </div>
+
+  <div class="stage">
+    <div class="view"><span class="tag">Onboard camera · detector output</span><canvas id="fpv" width="640" height="480" aria-label="Onboard camera view"></canvas></div>
+    <div class="view map"><span class="tag">Top view (drawn from the recording)</span><canvas id="map" width="600" height="480" aria-label="Top-down course view"></canvas>
+      <div class="legend"><span><i style="background:var(--truth)"></i>true path</span><span><i style="background:var(--est)"></i>drone's own estimate</span><span><i style="background:var(--muted)"></i>gates</span></div>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button id="play" type="button">Play</button>
+    <input id="scrub" type="range" min="0" max="0" value="0" step="1" aria-label="Flight time">
+    <span class="clock" id="clock">0.00 s</span>
+    <label class="label" for="speed">Speed</label>
+    <select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+  </div>
+
+  <div class="readout">
+    <div><span class="label">Result</span><b id="r-out">–</b></div>
+    <div><span class="label">Gates passed</span><b id="r-gates">–</b></div>
+    <div><span class="label">Speed</span><b id="r-speed">–</b></div>
+    <div><span class="label">Estimate error</span><b id="r-err">–</b></div>
+    <div><span class="label">Mode</span><b id="r-mode">–</b></div>
+  </div>
+
+  <div class="cols">
+    <section>
+      <h2>What the drone does</h2>
+      <ol class="steps">
+        <li><b>Find gates in the image.</b> Threshold the orange paint, fit a four-cornered outline to each gate and to its opening (outlined in the camera view).</li>
+        <li><b>Measure where the gate is.</b> A gate's known size and its four corners give its position relative to the camera (perspective-n-point).</li>
+        <li><b>Fuse.</b> An error-state Kalman filter tracks position, velocity and attitude <em>in the frame of the gate it is flying to</em>, so no map is needed. Bad measurements are rejected with a chi-squared test.</li>
+        <li><b>Hand off.</b> Once past a gate, the state is re-expressed in the next gate's frame, estimated from sightings made on the approach.</li>
+        <li><b>Fly.</b> Guidance aims through the gate centre at race pace and is turned into thrust and body-rate commands, like an FPV pilot in acro mode.</li>
+      </ol>
+      <p><b>Camera only</b> drops the IMU. Between camera frames the filter predicts motion from the drone's own commands through a simple vehicle model.</p>
+    </section>
+    <section>
+      <h2>Benchmark</h2>
+      <p class="lede">50 random courses per seed set, 400 gates each. A run ends at the first crash or missed gate.</p>
+      <div class="tablebox"><table id="bench"><thead><tr><th>Seed set</th><th>Camera + IMU</th><th>Camera only</th></tr></thead><tbody></tbody></table></div>
+      <p class="lede" id="bench-note"></p>
+    </section>
+  </div>
+
+  <footer>Every flight here was simulated in Python and recorded; this page only plays the recording back. The top view and the
+    estimate error use ground truth for display only — the flight never sees it.
+    Source and install instructions: <a href="https://github.com/dom-t23/vision-drone-racing">github.com/dom-t23/vision-drone-racing</a>.</footer>
+</div>
+
+<script src="flights.js"></script>
+<script src="benchmark.js"></script>
+<script>
+(function () {
+  "use strict";
+  var FL = window.FLIGHTS || [];
+  var BENCH = window.BENCHMARK || null;
+  var css = function (n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
+  var $ = function (id) { return document.getElementById(id); };
+  var fpv = $("fpv"), fctx = fpv.getContext("2d"), map = $("map"), mctx = map.getContext("2d");
+  if (!FL.length) {
+    document.querySelector(".stage").innerHTML = '<p class="empty">No recorded flights found. Generate them with <code>python -m vdr.demo</code>.</p>';
+    return;
+  }
+  var seeds = [], methods = [];
+  FL.forEach(function (f) {
+    if (seeds.indexOf(f.seed) < 0) seeds.push(f.seed);
+    if (!methods.some(function (m) { return m.id === f.method; })) methods.push({ id: f.method, label: f.label });
+  });
+  var cur = { seed: seeds[0], method: methods[0].id }, flight = null, idx = 0, playing = false, t0 = 0, tStart = 0;
+  var imgs = [], bounds = null;
+
+  function seg(el, items, key) {
+    el.innerHTML = "";
+    items.forEach(function (it) {
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = it.label;
+      b.setAttribute("aria-pressed", String(cur[key] === it.id));
+      b.addEventListener("click", function () { cur[key] = it.id; render(); load(); });
+      el.appendChild(b);
+    });
+  }
+  function render() {
+    seg($("seeds"), seeds.map(function (s) { return { id: s, label: "seed " + s }; }), "seed");
+    seg($("methods"), methods, "method");
+  }
+
+  function load() {
+    flight = FL.filter(function (f) { return f.seed === cur.seed && f.method === cur.method; })[0] || null;
+    stop(); idx = 0;
+    if (!flight) return;
+    imgs = flight.frames.map(function (fr) { var im = new Image(); im.src = "data:image/jpeg;base64," + fr.img; return im; });
+    // map bounds: gates, start and path, padded, equal scale on both axes
+    var xs = [flight.start[0]], ys = [flight.start[1]];
+    flight.gates.forEach(function (g) { xs.push(g.c[0]); ys.push(g.c[1]); });
+    flight.frames.forEach(function (fr) { xs.push(fr.p[0]); ys.push(fr.p[1]); });
+    bounds = { x0: Math.min.apply(null, xs) - 3, x1: Math.max.apply(null, xs) + 3, y0: Math.min.apply(null, ys) - 3, y1: Math.max.apply(null, ys) + 3 };
+    $("scrub").max = String(flight.frames.length - 1);
+    var ok = flight.outcome === "completed";
+    $("r-out").innerHTML = '<span class="pill ' + (ok ? "ok" : "bad") + '">' + flight.outcome.replace("_", " ") + "</span>" +
+      (ok && flight.time ? " " + flight.time.toFixed(2) + " s" : "");
+    imgs[0].onload = function () { draw(); };
+    draw();
+  }
+
+  function toMap(x, y) {
+    var w = map.width, h = map.height, pad = 18;
+    var sx = (w - 2 * pad) / (bounds.x1 - bounds.x0), sy = (h - 2 * pad) / (bounds.y1 - bounds.y0), s = Math.min(sx, sy);
+    var cx = (bounds.x0 + bounds.x1) / 2, cy = (bounds.y0 + bounds.y1) / 2;
+    // world y (left) points up on screen
+    return [w / 2 + (x - cx) * s, h / 2 - (y - cy) * s, s];
+  }
+
+  function drawMap() {
+    var c = mctx, w = map.width, h = map.height, fr = flight.frames;
+    c.fillStyle = css("--panel"); c.fillRect(0, 0, w, h);
+    // 5 m grid
+    c.strokeStyle = css("--line"); c.lineWidth = 1;
+    for (var gx = Math.ceil(bounds.x0 / 5) * 5; gx <= bounds.x1; gx += 5) { var a = toMap(gx, bounds.y0), b = toMap(gx, bounds.y1); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+    for (var gy = Math.ceil(bounds.y0 / 5) * 5; gy <= bounds.y1; gy += 5) { var a2 = toMap(bounds.x0, gy), b2 = toMap(bounds.x1, gy); c.beginPath(); c.moveTo(a2[0], a2[1]); c.lineTo(b2[0], b2[1]); c.stroke(); }
+    var g = fr[idx].g;
+    flight.gates.forEach(function (gt, k) {
+      var half = flight.gate_outer / 2, ly = Math.cos(gt.yaw), lx = -Math.sin(gt.yaw);   // gate's left axis
+      var p = toMap(gt.c[0] + lx * half, gt.c[1] + ly * half), q = toMap(gt.c[0] - lx * half, gt.c[1] - ly * half);
+      c.strokeStyle = k < g ? css("--muted") : css("--gate"); c.lineWidth = k === g ? 5 : 3; c.lineCap = "round";
+      c.beginPath(); c.moveTo(p[0], p[1]); c.lineTo(q[0], q[1]); c.stroke();
+      var m = toMap(gt.c[0], gt.c[1]);
+      c.fillStyle = css("--muted"); c.font = "12px " + css("--font-data"); c.fillText(String(k + 1), m[0] + 7, m[1] - 7);
+    });
+    function path(key, color, dash) {
+      c.strokeStyle = color; c.lineWidth = 2; c.setLineDash(dash); c.beginPath();
+      var started = false;
+      for (var i = 0; i <= idx; i++) {
+        var v = fr[i][key]; if (!v) { started = false; continue; }
+        var pt = toMap(v[0], v[1]);
+        if (!started) { c.moveTo(pt[0], pt[1]); started = true; } else c.lineTo(pt[0], pt[1]);
+      }
+      c.stroke(); c.setLineDash([]);
+    }
+    path("p", css("--truth"), []);
+    path("e", css("--est"), [5, 4]);
+    var now = toMap(fr[idx].p[0], fr[idx].p[1]);
+    c.fillStyle = css("--truth"); c.beginPath(); c.arc(now[0], now[1], 5, 0, 2 * Math.PI); c.fill();
+    if (fr[idx].e) { var en = toMap(fr[idx].e[0], fr[idx].e[1]); c.strokeStyle = css("--est"); c.lineWidth = 2; c.beginPath(); c.arc(en[0], en[1], 6, 0, 2 * Math.PI); c.stroke(); }
+  }
+
+  function drawFpv() {
+    var c = fctx, fr = flight.frames[idx], im = imgs[idx], W = fpv.width, H = fpv.height;
+    var s = W / flight.image_size[0];
+    c.fillStyle = "#000"; c.fillRect(0, 0, W, H);
+    if (im.complete && im.naturalWidth) { c.imageSmoothingEnabled = true; c.drawImage(im, 0, 0, W, H); }
+    fr.q.forEach(function (q) {
+      c.strokeStyle = q.k === "o" ? "#4cf08f" : "#ffe14d"; c.lineWidth = 2; c.setLineDash(q.k === "o" ? [] : [6, 4]);
+      c.beginPath();
+      for (var i = 0; i < 4; i++) { var x = q.c[2 * i] * s, y = q.c[2 * i + 1] * s; if (i === 0) c.moveTo(x, y); else c.lineTo(x, y); }
+      c.closePath(); c.stroke(); c.setLineDash([]);
+    });
+    // OSD
+    c.font = "500 16px " + css("--font-data"); c.textBaseline = "bottom";
+    var spd = speedAt(idx), txt = [fr.t.toFixed(2) + " s", spd.toFixed(1) + " m/s", "gate " + Math.min(fr.g + 1, flight.n_gates) + "/" + flight.n_gates];
+    c.fillStyle = "rgba(0,0,0,.55)"; c.fillRect(0, H - 30, W, 30);
+    c.fillStyle = "#f1f4f2"; c.fillText(txt.join("    "), 12, H - 7);
+  }
+
+  function speedAt(i) {
+    var fr = flight.frames, a = Math.max(0, i - 1), b = Math.min(fr.length - 1, i + 1);
+    if (a === b) return 0;
+    var dx = fr[b].p[0] - fr[a].p[0], dy = fr[b].p[1] - fr[a].p[1], dz = fr[b].p[2] - fr[a].p[2];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz) / (fr[b].t - fr[a].t);
+  }
+
+  var MODES = { w: "waiting", t: "tracking", s: "searching" };
+  function draw() {
+    if (!flight) return;
+    drawFpv(); drawMap();
+    var fr = flight.frames[idx];
+    $("scrub").value = String(idx);
+    $("clock").textContent = fr.t.toFixed(2) + " s";
+    $("r-gates").textContent = Math.min(fr.g, flight.n_gates) + " / " + flight.n_gates;
+    $("r-speed").textContent = speedAt(idx).toFixed(1) + " m/s";
+    if (fr.e) { var dx = fr.e[0] - fr.p[0], dy = fr.e[1] - fr.p[1], dz = fr.e[2] - fr.p[2]; $("r-err").textContent = Math.sqrt(dx * dx + dy * dy + dz * dz).toFixed(2) + " m"; }
+    else $("r-err").textContent = "–";
+    $("r-mode").textContent = MODES[fr.m] || fr.m;
+  }
+
+  function tick(now) {
+    if (!playing) return;
+    var rate = parseFloat($("speed").value), fr = flight.frames;
+    var t = tStart + (now - t0) / 1000 * rate;
+    while (idx < fr.length - 1 && fr[idx + 1].t <= t) idx++;
+    draw();
+    if (idx >= fr.length - 1) { stop(); return; }
+    requestAnimationFrame(tick);
+  }
+  function play() {
+    if (!flight) return;
+    if (idx >= flight.frames.length - 1) idx = 0;
+    playing = true; $("play").textContent = "Pause"; t0 = performance.now(); tStart = flight.frames[idx].t;
+    requestAnimationFrame(tick);
+  }
+  function stop() { playing = false; $("play").textContent = "Play"; }
+  $("play").addEventListener("click", function () { playing ? stop() : play(); });
+  $("speed").addEventListener("change", function () { if (playing) { stop(); play(); } });
+  $("scrub").addEventListener("input", function () { idx = parseInt(this.value, 10) || 0; if (playing) { t0 = performance.now(); tStart = flight.frames[idx].t; } draw(); });
+
+  function benchTable() {
+    var tb = document.querySelector("#bench tbody");
+    if (!BENCH) { tb.innerHTML = '<tr><td colspan="3">Benchmark numbers not included in this build.</td></tr>'; return; }
+    tb.innerHTML = BENCH.rows.map(function (r) {
+      return "<tr><td>" + r.set + "</td><td>" + r.imu + "</td><td>" + r.cam + "</td></tr>";
+    }).join("");
+    $("bench-note").textContent = BENCH.note || "";
+  }
+
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    var redraw = function () { draw(); };
+    if (mq.addEventListener) mq.addEventListener("change", redraw);
+  }
+  new MutationObserver(function () { draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  render(); load(); benchTable();
+})();
+</script>
+</body>
+</html>

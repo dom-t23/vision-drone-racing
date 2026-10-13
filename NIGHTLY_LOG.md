@@ -435,3 +435,50 @@ Tests: 59 passed.
 **Next:** (A) the remaining failures are all `crash_gate`; look at what the estimate was doing
 before each (a failure-analysis tool, ROADMAP (B), would make this quick). Then ROADMAP items
 2/4 (upright PnP, both squares). (C) due by 2026-10-19.
+
+## 2026-10-13 — Interactive session (not a scheduled run): camera-only mode, standalone app, browser replay
+
+Requested by Dom: a fully vision-based option with no map and no IMU, and a version viewers can
+install or open easily. He chose: camera-only as an A/B'd option (default only if it holds up);
+standalone executables and a browser demo.
+
+**Camera-only (commit d26fe46, flag `camera_only`, default False).** The IMU fields of the
+observation are never read (`tests/test_camera_only.py` feeds NaN accel / 1e6 gyro and checks
+identical commands). Between frames the ESKF is propagated with a predicted specific force and
+body rate from the drone's own last command: first-order rate (40 ms) and thrust (30 ms) lags
+and linear drag (0.35 / 0.1 1/s), model-error noise 1.0 m/s²/√Hz and 0.05 rad/s/√Hz. The
+filter assumes it starts level. These are the autonomy's own model assumptions, set to the
+nominal airframe (the sim also has quadratic drag the model omits); no sensitivity test with a
+deliberately wrong model was run.
+
+A/B (commit db88370 — d26fe46 plus the app entry point, no flight-code change), off -> on:
+| seeds | pass | completion | lap (s) | median est. error (m) |
+|---|---|---|---|---|
+| 0 | 96.8% -> 98.0% | 94 -> 96% | 12.27 -> 12.28 | 0.394 -> 0.441 |
+| 1000 | 100.0% -> 96.8% | 100 -> 92% | 12.38 -> 12.47 | 0.459 -> 0.535 |
+| 2000 | 97.2% -> 89.5% | 96 -> 82% | 12.32 -> 12.47 | 0.402 -> 0.453 |
+| 3000 | 98.0% -> 92.2% | 96 -> 86% | 12.18 -> 12.25 | 0.538 -> 0.545 |
+| pooled (1600 gates) | **98.00% -> 94.12%** | | | |
+Files `results/2026-10-13_db88370_{baseline,ab-camonly}{,-seed1000,-seed2000,-seed3000}.json`.
+Paired laps (173 runs): +0.064 s mean. 5 runs rescued, 20 broken; estimation error worse on all
+four sets. **Left off** — camera + IMU stays the default. Seed set 0 alone pointed the other way.
+
+Baseline check at db88370: seed 0 96.75% (= `2026-10-13_0f1e256_baseline.json`, per-run).
+
+**Standalone app.** `vdr/app.py` is one entry point (`vdr-racing`: launcher; `fly`, `bench`,
+`demo-data` sub-commands). The launcher re-runs its own executable with a sub-command when
+frozen; harness workers call `freeze_support`. `pyproject.toml` (pip/pipx install, console
+script `vdr-racing`); `packaging/build.py` (PyInstaller one-folder build + zip);
+`.github/workflows/release.yml` builds Windows/macOS/Linux on a `v*` tag, smoke-tests each
+executable with a 1-course benchmark and attaches the zips to a release. Linux build verified
+here: 185 MB zip; `bench`, `fly --out x.gif` and `demo-data` run from the executable (the tk
+launcher window could not be opened here — no display/tkinter in this container). Harness writes
+`results/` into the current folder and records commit "unknown" when not run from a git checkout.
+
+**Browser replay** (`docs/demo/`, published by `.github/workflows/pages.yml` once Pages is set to
+"GitHub Actions"): `python -m vdr.demo` records flights (JPEG frames, detector quads re-run on the
+same pixels, true and estimated positions); the page plays them back with a top view and the
+camera-only benchmark table read from the committed results. Seeds 0, 1017, 2034, both modes
+(camera-only crashes on 1017 and 2034, matching the results files).
+
+Tests: 63 passed. **Pass rate:** no change to the default (headline 96.8%).

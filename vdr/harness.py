@@ -56,6 +56,8 @@ def _run(args):
 
 
 def _git(*args) -> str:
+    if not (REPO / ".git").exists():          # installed package or standalone executable
+        return "unknown"
     try:
         return subprocess.check_output(["git", *args], cwd=REPO, stderr=subprocess.DEVNULL, text=True).strip()
     except Exception:
@@ -157,7 +159,8 @@ def main(argv=None) -> int:
         if out is None:
             date = _dt.date.today().isoformat()
             name = f"{date}_{commit}{'-dirty' if dirty else ''}{('_' + a.tag) if a.tag else ''}.json"
-            base = Path.cwd() if getattr(sys, "frozen", False) else REPO   # standalone exe: next to the user
+            # in a source checkout results/ lives in the repo; installed or frozen: the current folder
+            base = REPO if (REPO / ".git").exists() else Path.cwd()
             out = base / "results" / name
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=1))

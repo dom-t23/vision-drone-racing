@@ -56,6 +56,9 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   - wind gusts; unknown thrust scaling (battery sag)
   - higher-resolution camera option (and runtime budget check)
 
+- **Camera-only follow-ups:** test with a deliberately wrong vehicle model (drag, lags); estimate
+  thrust scale/drag online; a vision-only attitude cue (horizon line) to replace the accelerometer.
+
 ## (C) Write-up
 
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
@@ -64,6 +67,10 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   diagnostic results file), and a failure-mode breakdown once `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-13 — Camera-only mode (`camera_only`, no IMU, command-driven prediction): pooled
+  98.0% -> 94.1% on 4 seed sets, left off. Standalone app (`vdr-racing`, PyInstaller release
+  workflow for Windows/macOS/Linux, pip/pipx install) and browser replay (`docs/demo/`, Pages).
 
 - 2026-10-13 — Drop far lone RANSAC outlines (`drop_lone_robust_far`, > 6 m with no valid
   opening; they read ~12% near). Pooled 5 seed sets 96.25% -> 97.50%, missed_gate 4 -> 0,
