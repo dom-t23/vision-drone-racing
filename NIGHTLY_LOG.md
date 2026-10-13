@@ -377,3 +377,61 @@ pooled 96.38% vs 96.19% off; paired laps n = 179, mean -0.003 s, 87 faster. No c
 left off (flag kept for later, e.g. under harder sim settings).
 
 **Pass rate:** no change (97.5%).
+
+---
+
+## 2026-10-13 — Run 9: (A) drop far RANSAC outlines that have no opening to cross-check
+
+**Baseline confirmed on main (41a2fe0):** pytest 58 passed; `--runs 50 --seed 0` = 97.5% pass
+rate, 96% completion, 12.33 s lap, 48 completed / 2 crash_gate — identical to
+`2026-10-12_3b6cbbb_baseline.json`.
+
+**Measure first (ROADMAP item 0).** Scratch script (not committed): wrap
+`Autonomy._detection_solutions` and compare every PnP range with the true range to the gate
+nearest the estimate, seeds 0-19, default config, ~20 000 detections:
+| type | 7-10 m | 10-13 m | 13-20 m | 20-40 m |
+|---|---|---|---|---|
+| clean outline | -0.1% | -0.3% | -1.3% | -4.2% |
+| opening (of an outline) | -0.1% | +0.1% | +1.3% | +3.5% |
+| RANSAC outline, any | -17.3% | -10.6% | -12.5% | -9.6% |
+(medians.) RANSAC outlines with no valid opening of their own, binned by true range: 4-6 m
++0.0%, 6-7 m -0.5% (p10 -15%), 7-8 m -7.1%, 8-10 m -11.1%, 10-15 m -13.2%, 15-40 m -12.4%;
+72-75% of them > 5% near beyond 8 m. With sub-pixel corners and the fixed renderer, clean
+squares are good to ~1% out to 13 m. Re-tuning `robust_inner_depth_tol` would not help: over
+RANSAC outlines beyond 7 m the chosen range is -2.8% median at tol 0 vs -3.5% at 8%, ~half
+still > 5% off either way, because 455 of 819 of them have no valid opening to compare with.
+
+**Change (commit b6a6a31, flag `drop_lone_robust_far`, default False; +1 test):** a RANSAC
+outline with no valid opening of its own, measured beyond `lone_robust_max_range` = 6 m, is
+dropped instead of being used as a target update or next-gate sighting.
+
+**A/B (commit b6a6a31, same seeds, off -> on):**
+| seeds | pass | completion | lap (s) | median est. error (m) |
+|---|---|---|---|---|
+| 0 | 97.5% -> 96.8% | 96 -> 94% | 12.33 -> 12.27 | 0.556 -> 0.394 |
+| 1000 | 94.8% -> 100.0% | 88 -> 100% | 12.35 -> 12.38 | 0.545 -> 0.459 |
+| 2000 | 98.0% -> 97.2% | 96 -> 96% | 12.29 -> 12.32 | 0.414 -> 0.402 |
+| 3000 | 96.5% -> 98.0% | 94 -> 96% | 12.15 -> 12.18 | 0.643 -> 0.538 |
+| 4000 (held out, run after the first four) | 94.5% -> 95.5% | 92 -> 94% | 12.29 -> 12.26 | 0.625 -> 0.482 |
+| pooled (2000 gates) | **96.25% -> 97.50%** | | | |
+Files `results/2026-10-1{2,3}_b6a6a31_{baseline,ab-droplone}{,-seed1000,...,-seed4000}.json`.
+Paired laps (229 runs completed both ways): mean -0.007 s, median 0.000, s.e. 0.008 — unchanged.
+11 runs rescued, 4 broken (seeds 4, 2015, 3036, 4010, all crash_gate). `missed_gate`
+outcomes 4 -> 0 (incl. seeds 1005, 1006, 3004 from run 7). Estimation error lower on all five
+sets. Every per-set difference is under the 8 pp noise threshold (3 up, 2 down), so the
+decision rests on the pooled number, the held-out set agreeing, and the consistent error drop.
+**Kept: default True** (commit 0f1e256). The seed-15 recovery scenario test now pins the flag
+off: with it on, that seed completes all 8 gates with no recovery needed.
+
+**New headline (commit 0f1e256):** `--runs 50 --seed 0` = **96.8%** pass rate, 94% completion,
+47 completed / 3 crash_gate, 12.27 s lap, median est. error 0.394 m
+(`results/2026-10-13_0f1e256_baseline.json`; per-run identical to `b6a6a31_ab-droplone.json`).
+The seed-0 set drops one run (seed 4) — noise against a pooled +1.25 pp; reported as is.
+README, WRITEUP (results table, ablation row, section 6.5) and figures updated.
+Tests: 59 passed.
+
+**Pass rate:** headline 97.5% -> 96.8% (seed 0); pooled over five seed sets 96.25% -> 97.50%.
+
+**Next:** (A) the remaining failures are all `crash_gate`; look at what the estimate was doing
+before each (a failure-analysis tool, ROADMAP (B), would make this quick). Then ROADMAP items
+2/4 (upright PnP, both squares). (C) due by 2026-10-19.

@@ -4,18 +4,21 @@ Prioritised. Each overnight run takes ONE item (or a well-argued new one), and u
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
 Current baseline (area-coverage renderer, since 2026-10-12):
-`results/2026-10-12_3b6cbbb_baseline.json` — 97.5% pass rate, 96% completion, 12.33 s lap,
-2 crash_gate (sub-pixel corners on; pooled over seeds 0/1000/2000/3000: 96.7%). Evidence older than 2026-10-12 was measured on
+`results/2026-10-13_0f1e256_baseline.json` — 96.8% pass rate, 94% completion, 12.27 s lap,
+3 crash_gate, median est. error 0.394 m (pooled over seeds 0/1000/2000/3000/4000: 97.50%).
+Evidence older than 2026-10-12 was measured on
 the legacy renderer (gates painted ~0.7 px too wide) and is not directly comparable:
 `2026-10-11_8d3e44c_baseline.json` (95.2%), `2026-10-10_0181f50_baseline.json` (94.5%),
 `2026-10-07_c25234a_baseline.json` (89.2%).
 
 ## (A) Pass rate
 
-0. **Re-tune for the new corners.** `robust_inner_depth_tol` (8%) and the range-noise model
-   were set on the legacy renderer's biases; corners are now within ~1-2% at range. Also look
-   at the 3 new `missed_gate` runs with sub-pixel corners on (seeds 1005, 1006, 3004).
-1. **Remaining next-gate range bias.** (Measured on the legacy renderer — re-measure.) The worst source (RANSAC outlines of merged gates,
+0. **Look at the remaining crashes.** All failures are now `crash_gate` (pooled 5 sets: 10
+   failed runs of 250). Check estimate vs truth before each (needs the failure-analysis tool
+   below, or `run_episode(seed, record=True)`): estimation error, or guidance/control at 8 m/s?
+1. **Remaining next-gate range bias.** Re-measured 2026-10-13 (run 9): clean outlines and
+   openings are within ~1% to 13 m; beyond 13 m outlines read 1-4% near and openings 1-4% far
+   (opposite signs -> item 4). Far lone RANSAC outlines are now dropped. Older notes: the worst source (RANSAC outlines of merged gates,
    ~18% short at 7-16 m) is fixed (robust-outline check, done); handoffs > 1.5 m off along x
    fell from 17.8% to 10.1%. What is left: inner openings read +5-10% far beyond 9 m and clean
    outlines 1-2% near, both from the anti-aliased mask growing the frame by a fraction of a
@@ -61,6 +64,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   diagnostic results file), and a failure-mode breakdown once `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-13 — Drop far lone RANSAC outlines (`drop_lone_robust_far`, > 6 m with no valid
+  opening; they read ~12% near). Pooled 5 seed sets 96.25% -> 97.50%, missed_gate 4 -> 0,
+  laps unchanged (paired -0.007 s), est. error down on all sets; seed 0 alone 97.5% -> 96.8%.
+  Re-tuning `robust_inner_depth_tol` was measured to be pointless (see NIGHTLY_LOG run 9).
 
 - 2026-10-12 — Write-up (C): `docs/WRITEUP.md`, three figures from committed results
   (`python -m vdr.report`: history, ablations, paired lap times), README links. No flight change.

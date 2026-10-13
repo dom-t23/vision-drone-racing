@@ -152,6 +152,12 @@ estimate trace and course for one seed — use it to debug a specific failure.
   over several seed sets, and use paired per-run lap times (runs completed both ways) for
   speed — sub-pixel corners: pass rate flat, -0.155 s on 145/179 paired runs.
 
+- 2026-10-13 — Before tuning a threshold, check how many of the bad cases it can even reach:
+  re-tuning the 8% outline/opening agreement check was pointless because more than half of
+  the biased RANSAC outlines had no opening to compare against. Dropping those beyond 6 m
+  (no cross-check possible) gave pooled 96.25% -> 97.50% on 5 seed sets while seed 0 alone
+  went *down* one run; report the pooled number and the per-set ones, not just seed 0.
+
 ## Instruction changes
 
 (none yet)

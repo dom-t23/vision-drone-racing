@@ -29,6 +29,7 @@ HISTORY = [
     ("2026-10-11_68513f6_baseline.json", "robust-outline\ncheck", 0),
     ("2026-10-12_a1d6b65_rebaseline-coverage-aa.json", "renderer fix\n(re-baseline)", 1),
     ("2026-10-12_3b6cbbb_baseline.json", "sub-pixel\ncorners", 1),
+    ("2026-10-13_0f1e256_baseline.json", "drop far lone\nRANSAC outlines", 1),
 ]
 
 # Component A/Bs: (label, [(off file, on file), ...] one pair per seed set).
@@ -50,6 +51,13 @@ ABLATIONS = [
         ("2026-10-12_06ceff9_baseline-seed1000.json", "2026-10-12_06ceff9_ab-subpix-seed1000.json"),
         ("2026-10-12_06ceff9_baseline-seed2000.json", "2026-10-12_06ceff9_ab-subpix-seed2000.json"),
         ("2026-10-12_06ceff9_baseline-seed3000.json", "2026-10-12_06ceff9_ab-subpix-seed3000.json"),
+    ]),
+    ("drop far lone RANSAC outlines", [
+        ("2026-10-12_b6a6a31_baseline.json", "2026-10-12_b6a6a31_ab-droplone.json"),
+        ("2026-10-12_b6a6a31_baseline-seed1000.json", "2026-10-12_b6a6a31_ab-droplone-seed1000.json"),
+        ("2026-10-13_b6a6a31_baseline-seed2000.json", "2026-10-13_b6a6a31_ab-droplone-seed2000.json"),
+        ("2026-10-13_b6a6a31_baseline-seed3000.json", "2026-10-13_b6a6a31_ab-droplone-seed3000.json"),
+        ("2026-10-13_b6a6a31_baseline-seed4000.json", "2026-10-13_b6a6a31_ab-droplone-seed4000.json"),
     ]),
 ]
 

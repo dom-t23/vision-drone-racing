@@ -24,14 +24,19 @@ Current simulator (area-coverage gate rendering, since 2026-10-12):
 
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline (8 m/s)** | **97.5%** | 96% | 12.33 s |
-| same, sub-pixel corners off | 96.2% | 94% | 12.5 s |
+| **baseline (8 m/s)** | **96.8%** | 94% | 12.27 s |
+| same, far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
+| same, also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Files: [`baseline`](results/2026-10-12_3b6cbbb_baseline.json),
+Files: [`baseline`](results/2026-10-13_0f1e256_baseline.json),
+[`far lone RANSAC outlines kept`](results/2026-10-12_3b6cbbb_baseline.json),
 [`sub-pixel corners off`](results/2026-10-12_06ceff9_baseline.json).
-Across four 50-run seed sets (0/1000/2000/3000) sub-pixel corners leave the pooled pass rate
-unchanged (96.9% off, 96.7% on — within noise) and make completed laps 0.155 s faster on
-average (paired, 145 of 179 runs faster), so they are on by default.
+Single 50-run sets differ by one or two runs from noise alone, so components are judged pooled
+over several seed sets. Dropping RANSAC outlines that have no opening of their own to
+cross-check beyond 6 m (they read gates ~12% too near) raises the pooled pass rate over five
+sets from 96.25% to 97.50% at unchanged lap time, although seed set 0 happens to lose one run.
+Sub-pixel corners leave the pooled pass rate unchanged (96.9% off, 96.7% on, four sets) and
+make completed laps 0.155 s faster (paired, 145 of 179 runs faster).
 
 ![Headline benchmark after each kept change](docs/img/history.png)
 

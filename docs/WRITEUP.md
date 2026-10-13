@@ -24,12 +24,16 @@ default configuration.
 
 | configuration (current simulator) | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **default** | **97.5%** | 96% | 12.33 s |
-| sub-pixel corners off | 96.2% | 94% | 12.5 s |
+| **default** | **96.8%** | 94% | 12.27 s |
+| far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
+| also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Source: [`2026-10-12_3b6cbbb_baseline.json`](../results/2026-10-12_3b6cbbb_baseline.json),
-[`2026-10-12_06ceff9_baseline.json`](../results/2026-10-12_06ceff9_baseline.json). The two
-failures in the headline set are both `crash_gate` (clipping a frame).
+Source: [`2026-10-13_0f1e256_baseline.json`](../results/2026-10-13_0f1e256_baseline.json),
+[`2026-10-12_3b6cbbb_baseline.json`](../results/2026-10-12_3b6cbbb_baseline.json),
+[`2026-10-12_06ceff9_baseline.json`](../results/2026-10-12_06ceff9_baseline.json). The three
+failures in the headline set are all `crash_gate` (clipping a frame). The latest change lowers
+this one set by one run but raises the pass rate pooled over five sets (section 6.5); single
+sets of 50 courses move by a run or two from noise alone.
 
 ![Headline benchmark after each kept change](img/history.png)
 
@@ -48,6 +52,7 @@ sets named; each grey line is one 50-course set):
 | lost-target recovery | 3 | 89.1% → 94.3% | `2026-10-10_0181f50_` |
 | robust-outline check | 4 | 92.7% → 95.8% | `2026-10-11_68513f6_` |
 | sub-pixel corners | 4 | 96.9% → 96.7% (laps 0.155 s faster) | `2026-10-12_06ceff9_` |
+| drop far lone RANSAC outlines | 5 | 96.25% → 97.50% (laps unchanged) | `2026-10-1{2,3}_b6a6a31_` |
 
 The first three were measured on the earlier renderer. Sub-pixel corners did not change the
 pass rate; they were kept because they made laps faster at equal pass rate (section 5).
@@ -244,6 +249,20 @@ every range. A constant pixel offset meant the edges were drawn in the wrong pla
 400). The detector had been tuned to a renderer defect. The fix went into the simulator
 (area-coverage anti-aliasing, 8× supersampled), followed by a re-baseline. With the corrected
 renderer, sub-pixel corners have 0.1–0.3 px RMS error at 2–20 m.
+
+### 6.5 A cue with nothing to check it against (pooled 96.25% → 97.50%)
+After the renderer fix and sub-pixel corners, the same per-type bias measurement (seeds 0-19,
+about 20 000 detections) showed clean outlines and openings within ~1% of the true range up
+to 13 m. What was still wrong were RANSAC outlines with *no valid opening of their own*: the
+6.3 check cannot run on them, and beyond 7 m they read gates a median 12% too near (about
+three in four more than 5% near). Dropping them beyond 6 m measured range lowered the median
+estimation error on all five seed sets (seed 0: 0.556 → 0.394 m), removed every
+`missed_gate` outcome (4 → 0) and raised the pooled pass rate from 96.25% to 97.50% (11 runs
+rescued, 4 broken) with unchanged lap times (paired mean −0.007 s over 229 runs). Re-tuning
+the 8% disagreement threshold instead would have done little: on the same data, RANSAC
+outlines beyond 7 m read a median 2.8% near with a 0% threshold and 3.5% near with 8%, and
+about half stay more than 5% off either way, because more than half of them have no opening
+to compare against.
 
 ## 7. Limitations and next steps
 
