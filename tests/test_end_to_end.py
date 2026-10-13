@@ -39,8 +39,10 @@ def test_lost_target_recovery_rescues_a_phantom_handoff():
     # pass 2.7 m early and clips the frame. Recovery re-anchors on the gate it does see.
     # The scenario was found with the legacy renderer (gate_supersample=0), whose
     # over-wide paint contributed to the short handoff, so the test pins that renderer
-    # (and the contour-only corners it was found with; sub-pixel corners became default later).
+    # (and the contour-only corners it was found with; sub-pixel corners became default later),
+    # and keeps far lone RANSAC outlines (with them dropped, the default since 2026-10-13,
+    # this seed completes all 8 gates without needing a recovery).
     r = run_episode(15, sim_cfg=SimConfig(gate_supersample=0),
-                    auto_cfg=AutonomyConfig(subpixel_corners=False))
+                    auto_cfg=AutonomyConfig(subpixel_corners=False, drop_lone_robust_far=False))
     assert r["diag"]["recoveries"] >= 1, r["diag"]
     assert r["gates_passed"] >= 3, r
