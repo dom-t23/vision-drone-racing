@@ -80,7 +80,13 @@ class Autonomy:
         self.cfg = cfg or AutonomyConfig()
         c = self.cfg
         self.detector = GateDetector(c, info.image_width, info.image_height)
-        self.eskf = ESKF(c.accel_noise, c.gyro_noise, c.accel_bias_walk, c.gyro_bias_walk)
+        if c.camera_only:
+            self.eskf = ESKF(c.cam_only_accel_noise, c.cam_only_gyro_noise, c.accel_bias_walk, c.gyro_bias_walk)
+        else:
+            self.eskf = ESKF(c.accel_noise, c.gyro_noise, c.accel_bias_walk, c.gyro_bias_walk)
+        self._model_rates = np.zeros(3)                  # camera-only: modelled body rates
+        self._model_thrust = info.gravity                # camera-only: modelled collective thrust
+        self._last_cmd = Command.hover(info.gravity)
         self.mode = WAIT
         self.t = 0.0
         self._last_t: Optional[float] = None
@@ -107,7 +113,13 @@ class Autonomy:
         self._last_t = obs.t
         self.t = obs.t
 
-        if self.eskf.initialized:
+        if self.cfg.camera_only:
+            # The IMU fields of the observation are never read in this mode.
+            if dt > 0:
+                accel, gyro = self._model_inertial(dt)
+                if self.eskf.initialized:
+                    self.eskf.predict(accel, gyro, dt)
+        elif self.eskf.initialized:
             if dt > 0:
                 self.eskf.predict(obs.accel, obs.gyro, dt)
         else:
@@ -119,7 +131,25 @@ class Autonomy:
 
         if self.mode == TRACK and self.eskf.p[0] >= self.cfg.pass_x:
             self._handoff()
-        return self._command()
+        cmd = self._command()
+        self._last_cmd = cmd
+        return cmd
+
+    def _model_inertial(self, dt: float):
+        """Camera-only mode: what an IMU *would* read, predicted from our own last command.
+
+        Body rates and thrust follow the commands through first-order lags; the specific
+        force is thrust along body z plus linear drag on the estimated body velocity.
+        """
+        c, info, e = self.cfg, self.info, self.eskf
+        cmd = self._last_cmd
+        thrust_cmd = min(max(float(cmd.thrust), 0.0), info.thrust_max)
+        self._model_rates += (np.asarray(cmd.rates, float) - self._model_rates) * min(dt / c.cam_only_rate_tau, 1.0)
+        self._model_thrust += (thrust_cmd - self._model_thrust) * min(dt / c.cam_only_thrust_tau, 1.0)
+        v_b = e.R.T @ e.v if e.initialized else np.zeros(3)
+        drag = np.array([c.cam_only_drag_xy, c.cam_only_drag_xy, c.cam_only_drag_z]) * v_b
+        accel = np.array([0.0, 0.0, self._model_thrust]) - drag
+        return accel, self._model_rates.copy()
 
     def debug(self) -> dict:
         e = self.eskf
@@ -130,6 +160,8 @@ class Autonomy:
     def _up_body(self) -> np.ndarray:
         if self.eskf.initialized:
             return self.eskf.R.T @ _EZ
+        if self.cfg.camera_only:
+            return _EZ.copy()        # no accelerometer: assume we start level (on the pad / hovering)
         a = self._acc_sum / max(self._acc_n, 1)
         return a / np.linalg.norm(a)
 
@@ -150,7 +182,7 @@ class Autonomy:
             return
 
         if self.mode == WAIT:
-            if self._acc_n < cfg.init_min_imu_samples:
+            if not cfg.camera_only and self._acc_n < cfg.init_min_imu_samples:
                 return          # keep hovering until the accelerometer gives a clean gravity vector
             d, sols = max(cands, key=lambda c: c[0].area)
             self._init_on_gate(sols[0], keep_velocity=False)

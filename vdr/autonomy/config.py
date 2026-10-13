@@ -54,6 +54,18 @@ class AutonomyConfig:
     init_accel_bias_sigma: float = 0.2
     init_min_imu_samples: int = 40    # average this many accel samples (hovering) before initialising level
     init_gyro_bias_sigma: float = 0.03
+    # Camera-only mode: ignore the IMU entirely. Between camera frames the filter is
+    # propagated with the drone's OWN commands (thrust + body rates) through an assumed
+    # vehicle model -- first-order rate/thrust lags and linear drag. These are the
+    # autonomy's identified-model assumptions (like the IMU noise values above), set to
+    # the nominal airframe; they are not read from the simulator config.
+    camera_only: bool = False
+    cam_only_rate_tau: float = 0.04       # s, assumed body-rate response lag
+    cam_only_thrust_tau: float = 0.03     # s, assumed thrust response lag
+    cam_only_drag_xy: float = 0.35        # 1/s, assumed linear drag (body x, y)
+    cam_only_drag_z: float = 0.1          # 1/s, assumed linear drag (body z)
+    cam_only_accel_noise: float = 1.0     # m/s^2/sqrt(Hz), model error replacing accel noise
+    cam_only_gyro_noise: float = 0.05     # rad/s/sqrt(Hz), model error replacing gyro noise
     chi2_gating: bool = True          # reject measurements whose innovation fails a chi-squared test
     chi2_threshold: float = 11.345    # 3-DoF updates (gate position, attitude): 99% quantile
     max_consecutive_rejects: int = 8  # then re-initialise from the measurement (lock-out recovery)
