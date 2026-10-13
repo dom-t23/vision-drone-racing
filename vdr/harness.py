@@ -157,7 +157,8 @@ def main(argv=None) -> int:
         if out is None:
             date = _dt.date.today().isoformat()
             name = f"{date}_{commit}{'-dirty' if dirty else ''}{('_' + a.tag) if a.tag else ''}.json"
-            out = REPO / "results" / name
+            base = Path.cwd() if getattr(sys, "frozen", False) else REPO   # standalone exe: next to the user
+            out = base / "results" / name
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=1))
         if not a.quiet:

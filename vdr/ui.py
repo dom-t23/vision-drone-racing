@@ -3,7 +3,7 @@
     python -m vdr.ui
 
 A small tkinter window (tkinter ships with Python, no extra dependencies). Each button
-runs the existing command-line tools (vdr.flightviz, vdr.harness) as a subprocess and
+runs the existing command-line tools (vdr.flightviz, vdr.harness, via vdr.app) as a subprocess and
 streams their output into the window, so the UI adds no new code paths to the sim or
 the flight stack.
 """
@@ -17,7 +17,10 @@ import sys
 import threading
 from pathlib import Path
 
+from vdr.app import frozen, self_command
+
 REPO = Path(__file__).resolve().parent.parent
+WORKDIR = Path.home() if frozen() else REPO      # where sub-commands run (relative paths land here)
 
 
 def _sim_args(noise: float, fresh_noise: bool) -> list:
@@ -33,20 +36,20 @@ def _sim_args(noise: float, fresh_noise: bool) -> list:
 
 def fly_cmd(seed: int, speed: float, stride: int, noise: float, fresh_noise: bool) -> list:
     """Command that flies one course and plays it in a window."""
-    return [sys.executable, "-m", "vdr.flightviz", "--live", "--seed", str(seed),
-            "--speed", f"{speed:g}", "--stride", str(stride), *_sim_args(noise, fresh_noise)]
+    return self_command("fly", "--live", "--seed", str(seed), "--speed", f"{speed:g}",
+                        "--stride", str(stride), *_sim_args(noise, fresh_noise))
 
 
 def gif_cmd(seed: int, stride: int, noise: float, fresh_noise: bool, out: str) -> list:
     """Command that flies one course and saves it as an animated GIF."""
-    return [sys.executable, "-m", "vdr.flightviz", "--seed", str(seed), "--stride", str(stride),
-            "--out", out, *_sim_args(noise, fresh_noise)]
+    return self_command("fly", "--seed", str(seed), "--stride", str(stride), "--out", out,
+                        *_sim_args(noise, fresh_noise))
 
 
 def bench_cmd(seed: int, runs: int, noise: float, fresh_noise: bool) -> list:
     """Command that runs the benchmark harness without writing a results file."""
-    return [sys.executable, "-m", "vdr.harness", "--runs", str(runs), "--seed", str(seed),
-            "--no-save", *_sim_args(noise, fresh_noise)]
+    return self_command("bench", "--runs", str(runs), "--seed", str(seed), "--no-save",
+                        *_sim_args(noise, fresh_noise))
 
 
 class App:
@@ -164,13 +167,13 @@ class App:
     def _start(self, cmd: list, status: str):
         if self.proc and self.proc.poll() is None:
             return
-        self._write(f"\n$ {' '.join(cmd[1:])}\n")
+        self._write(f"\n$ {' '.join(cmd[1:] if frozen() else cmd[3:])}\n")
         self.status.set(status)
         for b in self.buttons:
             b.configure(state="disabled")
         self.stop_btn.configure(state="normal")
         env = dict(os.environ, PYTHONUNBUFFERED="1")
-        self.proc = subprocess.Popen(cmd, cwd=str(REPO), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        self.proc = subprocess.Popen(cmd, cwd=str(WORKDIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                      stdin=subprocess.DEVNULL, text=True, env=env)
         threading.Thread(target=self._pump, args=(self.proc,), daemon=True).start()
 

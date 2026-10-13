@@ -5,8 +5,8 @@ from vdr.ui import bench_cmd, fly_cmd, gif_cmd
 
 
 def _cli_args(cmd):
-    assert cmd[1] == "-m"
-    return cmd[3:]
+    assert cmd[1:3] == ["-m", "vdr.app"] and cmd[3] in ("fly", "bench")
+    return cmd[4:]
 
 
 def test_buttons_build_commands_the_tools_accept(monkeypatch, tmp_path):
