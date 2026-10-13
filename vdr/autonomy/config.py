@@ -100,6 +100,9 @@ class AutonomyConfig:
     max_accel: float = 14.0           # m/s^2, commanded acceleration limit
     k_vel: float = 3.0                # 1/s, velocity loop gain (terminal / search)
     k_lat: float = 3.0                # 1/s^2, lateral position gain (terminal)
+    # When the guidance asks for more than max_accel, keep the lateral (gate y/z) part and
+    # shorten the along-track part first, instead of scaling all axes down together.
+    lateral_accel_priority: bool = False
     k_att_rp: float = 10.0            # 1/s, attitude -> body-rate gain (roll, pitch)
     k_att_yaw: float = 4.0            # 1/s (yaw)
     search_yaw_rate: float = 0.6      # rad/s while searching for the next gate

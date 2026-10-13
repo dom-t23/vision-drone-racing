@@ -46,8 +46,26 @@ def gate_guidance(p: np.ndarray, v: np.ndarray, cfg: AutonomyConfig) -> tuple:
         a = cfg.k_vel * (vf - v)
         a[1] -= cfg.k_lat * p[1]
         a[2] -= cfg.k_lat * p[2]
+    if cfg.lateral_accel_priority:
+        a = _prioritise_lateral(a, cfg.max_accel)
     yaw = math.atan2(-p[1], cfg.look_ahead_x - p[0])
     return a, yaw
+
+
+def _prioritise_lateral(a: np.ndarray, a_max: float) -> np.ndarray:
+    """Saturate an acceleration (gate frame) so that missing the opening costs more than
+    speed: the lateral part (y, z) gets up to a_max, the along-track x part what is left."""
+    n = float(np.linalg.norm(a))
+    if n <= a_max:
+        return a
+    a = np.array(a, float)
+    lat = float(math.hypot(a[1], a[2]))
+    if lat >= a_max:
+        a[1:] *= a_max / lat
+        a[0] = 0.0
+    else:
+        a[0] = math.copysign(math.sqrt(a_max * a_max - lat * lat), a[0])
+    return a
 
 
 def hold_guidance(p: np.ndarray, v: np.ndarray, target: np.ndarray, cfg: AutonomyConfig) -> np.ndarray:
