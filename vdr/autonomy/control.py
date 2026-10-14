@@ -36,11 +36,14 @@ def gate_guidance(p: np.ndarray, v: np.ndarray, cfg: AutonomyConfig) -> tuple:
     V = cfg.cruise_speed
     vf = np.array([V, 0.0, 0.0])
     if p[0] < cfg.terminal_x:
-        dist = float(np.linalg.norm(p))
-        # time-to-go if speed changes linearly from the current closing speed to V
-        closing = max(float(-(v @ p)) / max(dist, 1e-6), 0.0)
-        T = max(2.0 * dist / (closing + V), cfg.t_go_min)
-        a = (6.0 * (-p) - 2.0 * T * (2.0 * v + vf)) / (T * T)
+        if cfg.along_track_tgo:
+            a = _cubic_split_tgo(p, v, vf, cfg.t_go_min)
+        else:
+            dist = float(np.linalg.norm(p))
+            # time-to-go if speed changes linearly from the current closing speed to V
+            closing = max(float(-(v @ p)) / max(dist, 1e-6), 0.0)
+            T = max(2.0 * dist / (closing + V), cfg.t_go_min)
+            a = _cubic_accel(p, v, vf, T)
     else:
         # Terminal phase: hold the line through the opening at cruise speed.
         a = cfg.k_vel * (vf - v)
@@ -50,6 +53,25 @@ def gate_guidance(p: np.ndarray, v: np.ndarray, cfg: AutonomyConfig) -> tuple:
         a = _prioritise_lateral(a, cfg.max_accel)
     yaw = math.atan2(-p[1], cfg.look_ahead_x - p[0])
     return a, yaw
+
+
+def _cubic_accel(p: np.ndarray, v: np.ndarray, vf: np.ndarray, T) -> np.ndarray:
+    """Initial acceleration of the cubic reaching the origin with velocity vf after T
+    (T may be a scalar or a per-axis array)."""
+    return (6.0 * (-p) - 2.0 * T * (2.0 * v + vf)) / (T * T)
+
+
+def _cubic_split_tgo(p: np.ndarray, v: np.ndarray, vf: np.ndarray, t_go_min: float) -> np.ndarray:
+    """Cubic guidance with time-to-go taken from the along-track motion alone.
+
+    The arrival time is when x reaches 0, assuming x-speed changes linearly from v_x to V:
+    T = 2 (-p_x) / (v_x + V). The along-track axis uses that T unfloored, so at cruise speed
+    on the line the along-track demand is zero instead of a large spurious braking term.
+    The lateral axes keep the t_go_min floor (their gain grows as 1/T^2)."""
+    V = float(vf[0])
+    T_x = max(2.0 * max(-float(p[0]), 0.0) / (max(float(v[0]), 0.0) + V), 0.05)
+    T_lat = max(T_x, t_go_min)
+    return _cubic_accel(p, v, vf, np.array([T_x, T_lat, T_lat]))
 
 
 def _prioritise_lateral(a: np.ndarray, a_max: float) -> np.ndarray:

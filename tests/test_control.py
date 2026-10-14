@@ -1,4 +1,4 @@
-"""Guidance saturation: lateral-priority clipping (flag lateral_accel_priority)."""
+"""Guidance: lateral-priority clipping (lateral_accel_priority) and split time-to-go (along_track_tgo)."""
 
 import dataclasses
 
@@ -38,3 +38,24 @@ def test_flag_off_leaves_guidance_unchanged():
     # the lateral share of the commanded acceleration grows
     lat = lambda a: np.hypot(a[1], a[2]) / np.linalg.norm(a)
     assert lat(a_on) > lat(a_off)
+
+
+def test_along_track_tgo_removes_spurious_braking():
+    """On the line at cruise speed the split time-to-go asks for no along-track acceleration;
+    the default floored T asks for heavy braking close to the gate."""
+    off = AutonomyConfig()
+    on = dataclasses.replace(off, along_track_tgo=True)
+    p, v = np.array([-1.5, 0.6, -0.2]), np.array([off.cruise_speed, 0.0, 0.0])
+    a_off, _ = gate_guidance(p, v, off)
+    a_on, _ = gate_guidance(p, v, on)
+    assert a_off[0] < -20.0
+    assert abs(a_on[0]) < 1e-9
+    assert np.allclose(a_on[1:], a_off[1:])      # lateral part unchanged (both floored at t_go_min)
+
+
+def test_along_track_tgo_far_matches_cubic():
+    """Far out on the axis, with no lateral offset, both time-to-go rules agree."""
+    off = AutonomyConfig()
+    on = dataclasses.replace(off, along_track_tgo=True)
+    p, v = np.array([-8.0, 0.0, 0.0]), np.array([6.0, 0.0, 0.0])
+    assert np.allclose(gate_guidance(p, v, off)[0], gate_guidance(p, v, on)[0])

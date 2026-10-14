@@ -103,6 +103,12 @@ class AutonomyConfig:
     # When the guidance asks for more than max_accel, keep the lateral (gate y/z) part and
     # shorten the along-track part first, instead of scaling all axes down together.
     lateral_accel_priority: bool = False
+    # Time-to-go from the along-track distance and speed only, without the t_go_min floor in
+    # the along-track (x) part; the floor still applies to the lateral (y, z) part. With the
+    # floored, range-based T the cubic asks for spurious braking of 20-70 m/s^2 inside ~2.4 m
+    # (T stuck at 0.3 s while the gate is ~0.2 s away), which uniform clipping then takes out of
+    # the lateral correction.
+    along_track_tgo: bool = False
     k_att_rp: float = 10.0            # 1/s, attitude -> body-rate gain (roll, pitch)
     k_att_yaw: float = 4.0            # 1/s (yaw)
     search_yaw_rate: float = 0.6      # rad/s while searching for the next gate
