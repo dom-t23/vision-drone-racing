@@ -13,9 +13,14 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (A) Pass rate
 
-0. **Look at the remaining crashes.** All failures are now `crash_gate` (pooled 5 sets: 10
-   failed runs of 250). Check estimate vs truth before each (needs the failure-analysis tool
-   below, or `run_episode(seed, record=True)`): estimation error, or guidance/control at 8 m/s?
+0. **Guidance that plans within its acceleration limit.** Crash analysis (run 10, 10 failed
+   runs over 5 seed sets): every crash hits the target gate's frame 0.5-0.8 m off centre, and in
+   8/10 the estimate was within 6 cm at impact — the drone runs out of lateral authority (often
+   after a late post-handoff correction, 5/10). Clipping lateral-first (`lateral_accel_priority`)
+   rescued 8 and broke 8 by bang-bang overshoot (pooled 97.50% -> 98.25%, completed 240 -> 240;
+   left off). Next: a lateral profile whose peak acceleration respects `max_accel` (choose T or
+   brake x only when needed), keep vertical demand from starving the tilt budget, and maybe
+   replace the weak terminal hold-the-line law with a miss-distance law.
 1. **Remaining next-gate range bias.** Re-measured 2026-10-13 (run 9): clean outlines and
    openings are within ~1% to 13 m; beyond 13 m outlines read 1-4% near and openings 1-4% far
    (opposite signs -> item 4). Far lone RANSAC outlines are now dropped. Older notes: the worst source (RANSAC outlines of merged gates,
@@ -42,7 +47,8 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (B) Robustness, realism, tooling
 
-- **Failure analysis tool:** `python -m vdr.analyze results/<file>.json` -> failure modes by
+- **Failure analysis tool** (the run-10 scratch analysis — estimate vs truth in the target
+  frame and logged guidance accelerations before each crash — is what it should automate): `python -m vdr.analyze results/<file>.json` -> failure modes by
   gate index, outcome, pre-crash estimation error; `--seed N` re-runs one seed with a
   trajectory/estimate plot saved to `docs/img/`.
 - **Stack unit tests:** handoff, retarget and search logic with scripted detections.
@@ -67,6 +73,10 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   diagnostic results file), and a failure-mode breakdown once `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-14 — Crash analysis (A0): crashes are guidance saturation, not estimation error at
+  impact. `lateral_accel_priority` A/B on 5 seed sets: pooled 97.50% -> 98.25%, completed runs
+  240 -> 240 (8 rescued / 8 broken), laps -0.04 s; left off (see NIGHTLY_LOG run 10).
 
 - 2026-10-13 — Camera-only mode (`camera_only`, no IMU, command-driven prediction): pooled
   98.0% -> 94.1% on 4 seed sets, left off. Standalone app (`vdr-racing`, PyInstaller release

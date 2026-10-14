@@ -482,3 +482,57 @@ camera-only benchmark table read from the committed results. Seeds 0, 1017, 2034
 (camera-only crashes on 1017 and 2034, matching the results files).
 
 Tests: 63 passed. **Pass rate:** no change to the default (headline 96.8%).
+
+## 2026-10-14 — Run 10: (A) what the remaining crashes are; lateral-priority saturation (left off)
+
+**Baseline check** at ef43188: tests 63 passed; `--runs 50 --seed 0` 96.8% (387/400), 47 completed /
+3 crash_gate, 12.27 s — same as `2026-10-13_0f1e256_baseline.json`.
+
+**Crash analysis (ROADMAP A0).** Re-flew the 10 failed runs of the current default over seed sets
+0/1000/2000/3000/4000 (seeds 4, 14, 47, 2015, 2049, 3018, 3036, 4008, 4010, 4042) with
+`run_episode(record=True)`, comparing the estimate with truth in the target gate's frame, and
+logged the guidance acceleration with a monkeypatched `gate_guidance` (scratch scripts, not committed):
+- All 10 hit the frame of the gate they were aiming at, 0.5-0.8 m off centre laterally.
+- In 8 of 10 the estimate was within 6 cm of truth at impact (exceptions: 47 and 2015, 0.4-0.5 m
+  along x). So it is not estimation error at the moment of the crash.
+- In 5 of 10 (4, 2015, 3018, 3036, 4010) the estimate had been 1.7-3.5 m off about 0.8-1.0 s
+  before impact and was corrected with ~0.6 s to go — late after a handoff.
+- Either way the drone then needs more lateral acceleration than it has: close to `terminal_x`
+  the cubic asks for 30-75 m/s² and `attitude_command` scales *all* axes down to 14 m/s², so a
+  large spurious along-track braking term (-20 to -39 m/s² at x ≈ -1.3 m) eats most of the
+  budget. The terminal "hold the line" law (k_lat = 3 1/s² for ~0.15 s) barely moves the drone.
+
+**A/B: `lateral_accel_priority`** (commit 2d7e3f6, default False). When the gate guidance asks for
+more than `max_accel`, keep the lateral (gate y/z) part and shorten the along-track part first.
+| seeds | pass off -> on | completion | lap (s) | median est. error (m) |
+|---|---|---|---|---|
+| 0 | 96.8% -> 96.2% | 94 -> 94% | 12.27 -> 12.29 | 0.394 -> 0.434 |
+| 1000 | 100.0% -> 100.0% | 100 -> 100% | 12.38 -> 12.32 | 0.459 -> 0.445 |
+| 2000 | 97.2% -> 95.2% | 96 -> 88% | 12.32 -> 12.25 | 0.402 -> 0.362 |
+| 3000 | 98.0% -> 99.8% | 96 -> 98% | 12.18 -> 12.19 | 0.538 -> 0.515 |
+| 4000 | 95.5% -> 100.0% | 94 -> 100% | 12.26 -> 12.20 | 0.482 -> 0.478 |
+| pooled (2000 gates) | **97.50% -> 98.25%** | 240 -> 240 runs | | |
+Files `results/2026-10-1{3,4}_2d7e3f6_{baseline,ab-latprio}{,-seed1000,...,-seed4000}.json`.
+Paired laps (232 runs completed both ways): mean -0.040 s. 8 runs rescued (4, 14, 2015, 3018,
+3036, 4008, 4010, 4042 — 8 of the 10 analysed crashes; 47 and 2049 still crash) and 8 broken
+(5, 11, 2003, 2010, 2030, 2042, 2046, 3019; 5 of them on set 2000), so completed runs are
+unchanged (240/250 both ways); the gate-count gain is broken runs failing later. Not a clear
+win -> **left off**.
+
+Why it breaks runs (guidance traces of 5, 2003, 2030, 3019 with the flag on): with lateral
+priority the saturated cubic becomes bang-bang — full 14 m/s² sideways until ~1.8 m out builds
+4-5 m/s of lateral speed that can't be removed in time, so the drone overshoots through the
+centre line into the other side of the frame. In 3019 the guidance asked for -9 to -12 m/s²
+vertically; `f_z` then nearly vanishes and the tilt limit in `attitude_command` clips the
+horizontal part anyway (commanded -13 m/s² laterally, achieved ~3). Reordering the clip is not
+enough: the guidance must *plan* within its acceleration limit (braking-aware / time-optimal
+lateral profile, or start the correction earlier), and vertical demand must not starve the tilt
+budget.
+
+Added `tests/test_control.py` (4 tests on the saturation helper and flag-off equivalence).
+Tests: 67 passed. **Pass rate:** no change to the default (headline 96.8%, pooled 97.50%).
+
+**Next:** (A) a guidance law that respects the acceleration limit — e.g. lateral cubic with T
+chosen so its peak acceleration stays under `max_accel` (slowing x only when needed), or a
+min-time bang-bang with a braking switch; A/B pooled over 5 sets. Also: the 5 late corrections
+point at handoff accuracy (ROADMAP A1/A4). (C) write-up due by 2026-10-19.

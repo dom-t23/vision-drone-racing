@@ -158,6 +158,13 @@ estimate trace and course for one seed — use it to debug a specific failure.
   (no cross-check possible) gave pooled 96.25% -> 97.50% on 5 seed sets while seed 0 alone
   went *down* one run; report the pooled number and the per-set ones, not just seed 0.
 
+- 2026-10-14 — The remaining crashes are control, not perception: 8/10 had < 6 cm estimation
+  error when they hit the frame; the guidance asked for 30-75 m/s² and uniform clipping to
+  `max_accel` spent the budget on along-track braking. Re-ordering the clip (lateral first) just
+  traded those crashes for bang-bang overshoots (8 rescued, 8 broken). Saturation must be
+  planned for in the guidance law, and check the tilt limit too (a downward request shrinks
+  `f_z` and with it the horizontal authority).
+
 ## Instruction changes
 
 (none yet)
