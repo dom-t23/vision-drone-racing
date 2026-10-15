@@ -41,8 +41,11 @@ def test_lost_target_recovery_rescues_a_phantom_handoff():
     # over-wide paint contributed to the short handoff, so the test pins that renderer
     # (and the contour-only corners it was found with; sub-pixel corners became default later),
     # and keeps far lone RANSAC outlines (with them dropped, the default since 2026-10-13,
-    # this seed completes all 8 gates without needing a recovery).
+    # this seed completes all 8 gates without needing a recovery), and the floored
+    # time-to-go guidance it was found with (with along_track_tgo, the default since
+    # 2026-10-15, the flight path changes and no recovery is needed either).
     r = run_episode(15, sim_cfg=SimConfig(gate_supersample=0),
-                    auto_cfg=AutonomyConfig(subpixel_corners=False, drop_lone_robust_far=False))
+                    auto_cfg=AutonomyConfig(subpixel_corners=False, drop_lone_robust_far=False,
+                                            along_track_tgo=False))
     assert r["diag"]["recoveries"] >= 1, r["diag"]
     assert r["gates_passed"] >= 3, r

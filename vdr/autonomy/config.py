@@ -107,8 +107,9 @@ class AutonomyConfig:
     # the along-track (x) part; the floor still applies to the lateral (y, z) part. With the
     # floored, range-based T the cubic asks for spurious braking of 20-70 m/s^2 inside ~2.4 m
     # (T stuck at 0.3 s while the gate is ~0.2 s away), which uniform clipping then takes out of
-    # the lateral correction.
-    along_track_tgo: bool = False
+    # the lateral correction. On since 2026-10-15: pass rate flat (pooled 97.50% -> 97.75%),
+    # laps -1.03 s (paired, 233 runs).
+    along_track_tgo: bool = True
     k_att_rp: float = 10.0            # 1/s, attitude -> body-rate gain (roll, pitch)
     k_att_yaw: float = 4.0            # 1/s (yaw)
     search_yaw_rate: float = 0.6      # rad/s while searching for the next gate

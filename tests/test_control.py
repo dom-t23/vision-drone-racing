@@ -43,7 +43,7 @@ def test_flag_off_leaves_guidance_unchanged():
 def test_along_track_tgo_removes_spurious_braking():
     """On the line at cruise speed the split time-to-go asks for no along-track acceleration;
     the default floored T asks for heavy braking close to the gate."""
-    off = AutonomyConfig()
+    off = dataclasses.replace(AutonomyConfig(), along_track_tgo=False)
     on = dataclasses.replace(off, along_track_tgo=True)
     p, v = np.array([-1.5, 0.6, -0.2]), np.array([off.cruise_speed, 0.0, 0.0])
     a_off, _ = gate_guidance(p, v, off)
@@ -55,7 +55,7 @@ def test_along_track_tgo_removes_spurious_braking():
 
 def test_along_track_tgo_far_matches_cubic():
     """Far out on the axis, with no lateral offset, both time-to-go rules agree."""
-    off = AutonomyConfig()
+    off = dataclasses.replace(AutonomyConfig(), along_track_tgo=False)
     on = dataclasses.replace(off, along_track_tgo=True)
     p, v = np.array([-8.0, 0.0, 0.0]), np.array([6.0, 0.0, 0.0])
     assert np.allclose(gate_guidance(p, v, off)[0], gate_guidance(p, v, on)[0])
