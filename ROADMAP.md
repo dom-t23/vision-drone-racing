@@ -3,9 +3,10 @@
 Prioritised. Each overnight run takes ONE item (or a well-argued new one), and updates this
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
-Current baseline (area-coverage renderer, since 2026-10-12):
-`results/2026-10-13_0f1e256_baseline.json` — 96.8% pass rate, 94% completion, 12.27 s lap,
-3 crash_gate, median est. error 0.394 m (pooled over seeds 0/1000/2000/3000/4000: 97.50%).
+Current baseline (since 2026-10-15, along-track time-to-go):
+`results/2026-10-15_1d4bb7f_baseline.json` — 100.0% pass rate, 100% completion, 11.26 s lap,
+median est. error 0.401 m (pooled over seeds 0/1000/2000/3000/4000: 97.75%; seed 0 is a lucky set).
+Previous: `results/2026-10-13_0f1e256_baseline.json` — 96.8%, 12.27 s (pooled 97.50%).
 Evidence older than 2026-10-12 was measured on
 the legacy renderer (gates painted ~0.7 px too wide) and is not directly comparable:
 `2026-10-11_8d3e44c_baseline.json` (95.2%), `2026-10-10_0181f50_baseline.json` (94.5%),
@@ -18,7 +19,9 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
    8/10 the estimate was within 6 cm at impact — the drone runs out of lateral authority (often
    after a late post-handoff correction, 5/10). Clipping lateral-first (`lateral_accel_priority`)
    rescued 8 and broke 8 by bang-bang overshoot (pooled 97.50% -> 98.25%, completed 240 -> 240;
-   left off). Next: a lateral profile whose peak acceleration respects `max_accel` (choose T or
+   left off). Run 11 removed the spurious along-track braking (the t_go_min floor;
+   `along_track_tgo`, kept: pass flat, laps -1.03 s); the 7 runs it broke are again lateral
+   saturation 0.5-1.2 m off centre with < 0.12 m estimate error. Next: a lateral profile whose peak acceleration respects `max_accel` (choose T or
    brake x only when needed), keep vertical demand from starving the tilt budget, and maybe
    replace the weak terminal hold-the-line law with a miss-distance law.
 1. **Remaining next-gate range bias.** Re-measured 2026-10-13 (run 9): clean outlines and
@@ -73,6 +76,10 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   diagnostic results file), and a failure-mode breakdown once `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-15 — Along-track time-to-go (`along_track_tgo`, default on): the 0.3 s T floor made the
+  cubic brake at 20-70 m/s² inside x ≈ -2.4 m. Pooled pass 97.50% -> 97.75% (flat), completed
+  240 -> 241, paired laps -1.03 s (233 runs); headline seed 0 96.8% -> 100.0%, 12.27 -> 11.26 s.
 
 - 2026-10-14 — Crash analysis (A0): crashes are guidance saturation, not estimation error at
   impact. `lateral_accel_priority` A/B on 5 seed sets: pooled 97.50% -> 98.25%, completed runs

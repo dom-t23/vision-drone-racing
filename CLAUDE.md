@@ -165,6 +165,12 @@ estimate trace and course for one seed — use it to debug a specific failure.
   planned for in the guidance law, and check the tilt limit too (a downward request shrinks
   `f_z` and with it the horizontal authority).
 
+- 2026-10-15 — Before changing how a saturated command is clipped, print the guidance demand per
+  axis on a nominal state (on the line, at cruise speed): the "braking" eating the lateral budget
+  was the `t_go_min` floor making the cubic think it arrived early, not a real need. Taking
+  time-to-go from along-track motion (floor on lateral only) kept pass rate and cut laps by 1 s.
+  Old scenario tests found with the floored law need `along_track_tgo=False` pinned.
+
 ## Instruction changes
 
 (none yet)

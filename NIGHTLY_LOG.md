@@ -536,3 +536,55 @@ Tests: 67 passed. **Pass rate:** no change to the default (headline 96.8%, poole
 chosen so its peak acceleration stays under `max_accel` (slowing x only when needed), or a
 min-time bang-bang with a braking switch; A/B pooled over 5 sets. Also: the 5 late corrections
 point at handoff accuracy (ROADMAP A1/A4). (C) write-up due by 2026-10-19.
+
+## 2026-10-15 — Run 11: (A) along-track time-to-go (kept: pass rate flat, laps -1.03 s)
+
+**Baseline check** at 1e0fdb1: tests 67 passed; `--runs 50 --seed 0` 96.8% (387/400), 47 completed /
+3 crash_gate, 12.27 s — same as `2026-10-13_0f1e256_baseline.json`.
+
+**Where the spurious braking came from.** Run 10 found the cubic asking for -20 to -39 m/s²
+along-track near x ≈ -1.3 m. The cause is the `t_go_min` = 0.3 s floor on time-to-go: at 8 m/s
+the floor is active from x ≈ -2.4 m to `terminal_x` = -1.2 m, where the gate is really
+0.15-0.3 s away, so the cubic "arrives too early" and brakes hard (at 8 m/s on the line with
+0.6 m lateral offset: a_x = -27 m/s² at x = -2 m, -73 m/s² at -1.3 m, against a lateral demand of
+-40). Uniform clipping to 14 m/s² then left 12 and 7 m/s² for the lateral correction.
+Range-based T (it includes the lateral offset) adds a smaller braking term further out.
+
+**A/B: `along_track_tgo`** (commit 131d93c). Time-to-go from the along-track motion only,
+T_x = 2(-p_x)/(v_x + V); the x axis uses T_x unfloored (zero demand at cruise on the line), the
+lateral axes keep the 0.3 s floor.
+| seeds | pass off -> on | completion | lap (s) |
+|---|---|---|---|
+| 0 | 96.8% -> 100.0% | 94 -> 100% | 12.27 -> 11.26 |
+| 1000 | 100.0% -> 96.5% | 100 -> 96% | 12.38 -> 11.31 |
+| 2000 | 97.2% -> 98.8% | 96 -> 96% | 12.32 -> 11.28 |
+| 3000 | 98.0% -> 96.5% | 96 -> 94% | 12.18 -> 11.14 |
+| 4000 | 95.5% -> 97.0% | 94 -> 96% | 12.26 -> 11.21 |
+| pooled (2000 gates) | **97.50% -> 97.75%** | 240 -> 241 runs | |
+Off: `results/2026-10-14_131d93c_baseline.json` (seed 0, identical per-run to the 0f1e256 file) and
+`results/2026-10-1{3,4}_2d7e3f6_baseline-seed{1000..4000}.json` (flag-off code path unchanged).
+On: `results/2026-10-1{4,5}_131d93c_ab-attgo{,-seed1000,...,-seed4000}.json`.
+Paired laps (233 runs completed both ways): mean -1.03 s (-8.4%), median -1.03 s, worst +0.085 s.
+Pass rate is flat (within noise), so by the pace rule (faster at equal pass rate) it is an
+improvement -> **kept**, default flipped in 1d4bb7f. Post-flip headline:
+`results/2026-10-15_1d4bb7f_baseline.json` — 100.0% (400/400), 50/50 completed, 11.26 s,
+median est. error 0.401 m. UDP smoke test (8 runs) passes.
+
+Rescued 8 runs (4, 14, 47, 3018, 3036, 4008, 4010, 4042), broke 7 (1020, 1033, 3001, 3004, 3010,
+4004, 4011). The broken ones (re-flown with `run_episode(record=True)`) are the same failure as
+run 10, now at a higher average speed: all hit / miss the target gate 0.54-1.19 m off centre
+laterally; estimate error at impact <= 0.12 m in all 7; in 1020 and 1033 it was 3.5-3.9 m off
+0.8 s before (late post-handoff correction). So lateral authority close to the gate is still
+the limit — the cubic's lateral demand saturates.
+
+Tests: `tests/test_control.py` +2 (no along-track demand on the line at cruise; agrees with
+the old law far out on the axis). `test_lost_target_recovery_rescues_a_phantom_handoff` now pins
+`along_track_tgo=False` (the new flight path no longer produces that phantom handoff). 69 passed.
+
+**Pass rate (headline, seed 0):** 96.8% -> 100.0% (pooled 5 sets 97.50% -> 97.75%, i.e. flat);
+lap 12.27 -> 11.26 s.
+
+**Next:** (A) lateral demand that respects `max_accel`: e.g. pick lateral T so the cubic's peak
+lateral acceleration (6|Δy|/T² for a rest-to-rest move) stays under the limit and slow along x
+only when that T exceeds the arrival time; pooled over 5 sets, paired laps. (C) write-up is due
+by 2026-10-19 — README/WRITEUP still quote the 96.8% / 12.27 s baseline (true for its file).
