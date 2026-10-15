@@ -1,4 +1,4 @@
-"""Guidance: lateral-priority clipping (lateral_accel_priority) and split time-to-go (along_track_tgo)."""
+"""Guidance: lateral-priority clipping, split time-to-go (along_track_tgo), feasible lateral planning."""
 
 import dataclasses
 
@@ -59,3 +59,30 @@ def test_along_track_tgo_far_matches_cubic():
     on = dataclasses.replace(off, along_track_tgo=True)
     p, v = np.array([-8.0, 0.0, 0.0]), np.array([6.0, 0.0, 0.0])
     assert np.allclose(gate_guidance(p, v, off)[0], gate_guidance(p, v, on)[0])
+
+
+def test_lateral_min_tgo_respects_budget():
+    from vdr.autonomy.control import lateral_min_tgo
+    y, vy = np.array([1.0, 0.0]), np.zeros(2)
+    T = lateral_min_tgo(y, vy, 11.0, 0.3)
+    assert 6.0 * 1.0 / T ** 2 <= 11.0                 # rest-to-rest peak within budget
+    assert T < 1.05 * np.sqrt(6.0 / 11.0)             # and not much longer than needed
+    assert lateral_min_tgo(np.zeros(2), np.zeros(2), 11.0, 0.4) == 0.4   # nothing to do
+
+
+def test_feasible_lateral_brakes_only_when_needed():
+    off = AutonomyConfig()
+    on = dataclasses.replace(off, feasible_lateral=True)
+    v = np.array([off.cruise_speed, 0.0, 0.0])
+    # small offset far out: identical to the default law
+    p = np.array([-8.0, 0.5, 0.0])
+    assert np.allclose(gate_guidance(p, v, off)[0], gate_guidance(p, v, on)[0])
+    # 1 m off at 4 m: default asks 24 m/s^2 sideways (saturates); flag brakes and stays in budget
+    p = np.array([-4.0, 1.0, 0.0])
+    a_off, a_on = gate_guidance(p, v, off)[0], gate_guidance(p, v, on)[0]
+    assert abs(a_off[1]) > off.max_accel and a_off[0] == 0.0
+    assert a_on[0] < -3.0
+    assert np.linalg.norm(a_on) <= off.max_accel + 1e-9
+    # arrival speed implied by the braking stays >= feasible_min_speed
+    T = 2.0 * 4.0 / (off.cruise_speed + on.feasible_min_speed)
+    assert a_on[0] >= 2.0 * (4.0 - off.cruise_speed * T) / T ** 2 - 1e-9

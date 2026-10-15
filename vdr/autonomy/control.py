@@ -36,7 +36,9 @@ def gate_guidance(p: np.ndarray, v: np.ndarray, cfg: AutonomyConfig) -> tuple:
     V = cfg.cruise_speed
     vf = np.array([V, 0.0, 0.0])
     if p[0] < cfg.terminal_x:
-        if cfg.along_track_tgo:
+        if cfg.along_track_tgo and cfg.feasible_lateral:
+            a = _cubic_feasible_lateral(p, v, vf, cfg)
+        elif cfg.along_track_tgo:
             a = _cubic_split_tgo(p, v, vf, cfg.t_go_min)
         else:
             dist = float(np.linalg.norm(p))
@@ -72,6 +74,49 @@ def _cubic_split_tgo(p: np.ndarray, v: np.ndarray, vf: np.ndarray, t_go_min: flo
     T_x = max(2.0 * max(-float(p[0]), 0.0) / (max(float(v[0]), 0.0) + V), 0.05)
     T_lat = max(T_x, t_go_min)
     return _cubic_accel(p, v, vf, np.array([T_x, T_lat, T_lat]))
+
+
+_T_GRID = 0.05 * 1.04 ** np.arange(120)     # 0.05 s .. ~5.3 s
+
+
+def lateral_min_tgo(y: np.ndarray, vy: np.ndarray, a_lat: float, T_min: float) -> float:
+    """Shortest T >= T_min for which the cubic taking the lateral state (y, vy) to rest on the
+    axis (0, 0) never needs more than a_lat. Its acceleration is linear in time, so the peak is
+    at one of the ends: a(0) = (-6 y - 4 T vy) / T^2, a(T) = (6 y + 2 T vy) / T^2."""
+    T = np.concatenate(([T_min], _T_GRID[_T_GRID > T_min]))[:, None]
+    a0 = np.linalg.norm(-6.0 * y - 4.0 * T * vy, axis=1) / T[:, 0] ** 2
+    aT = np.linalg.norm(6.0 * y + 2.0 * T * vy, axis=1) / T[:, 0] ** 2
+    ok = np.nonzero(np.maximum(a0, aT) <= a_lat)[0]
+    return float(T[ok[0], 0]) if len(ok) else float(T[-1, 0])
+
+
+def _cubic_feasible_lateral(p: np.ndarray, v: np.ndarray, vf: np.ndarray, cfg: AutonomyConfig) -> np.ndarray:
+    """Along-track time-to-go guidance whose lateral part is planned within cfg.feasible_lat_accel.
+
+    If the lateral move cannot be done by the along-track arrival time T_x without exceeding
+    the budget, the lateral cubic uses the (longer) feasible T_lat and the along-track axis
+    brakes at constant deceleration so that x reaches 0 at T_lat (arrival speed is left free,
+    but T_lat is capped so it stays >= cfg.feasible_min_speed and the braking within what
+    max_accel leaves after the lateral budget)."""
+    a = _cubic_split_tgo(p, v, vf, cfg.t_go_min)
+    V = float(vf[0])
+    dx = max(-float(p[0]), 0.0)
+    vx = max(float(v[0]), 0.0)
+    T_x = max(2.0 * dx / (vx + V), 0.05)
+    T_lat0 = max(T_x, cfg.t_go_min)
+    T_req = lateral_min_tgo(np.asarray(p[1:], float), np.asarray(v[1:], float), cfg.feasible_lat_accel, T_lat0)
+    if T_req <= T_lat0 + 1e-9:
+        return a
+    # Longest T we accept: arrival speed 2 dx / T - vx >= v_min.
+    T_cap = 2.0 * dx / (vx + cfg.feasible_min_speed) if vx + cfg.feasible_min_speed > 0 else T_req
+    T = max(min(T_req, T_cap), T_lat0)
+    if T <= T_lat0 + 1e-9:
+        return a
+    a_lat = _cubic_accel(p[1:], v[1:], np.zeros(2), T)
+    ax = 2.0 * (dx - vx * T) / (T * T)        # constant acceleration reaching x = 0 at T
+    ax_budget = math.sqrt(max(cfg.max_accel ** 2 - float(a_lat @ a_lat), 0.0))
+    ax = max(min(ax, float(a[0])), -ax_budget)
+    return np.array([ax, a_lat[0], a_lat[1]])
 
 
 def _prioritise_lateral(a: np.ndarray, a_max: float) -> np.ndarray:

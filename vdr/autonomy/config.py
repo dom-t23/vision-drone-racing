@@ -110,6 +110,14 @@ class AutonomyConfig:
     # the lateral correction. On since 2026-10-15: pass rate flat (pooled 97.50% -> 97.75%),
     # laps -1.03 s (paired, 233 runs).
     along_track_tgo: bool = True
+    # Plan the lateral correction within an acceleration budget instead of letting it saturate:
+    # pick the shortest lateral time-to-go whose cubic (rest-to-rest in y/z, both ends) never
+    # needs more than feasible_lat_accel, and if that is later than the along-track arrival,
+    # brake along x (constant deceleration, free arrival speed >= feasible_min_speed) so the
+    # gate is reached when the lateral move is done. Needs along_track_tgo.
+    feasible_lateral: bool = False
+    feasible_lat_accel: float = 11.0  # m/s^2, lateral budget (leaves ~8.7 m/s^2 of max_accel for braking)
+    feasible_min_speed: float = 3.0   # m/s, never plan to arrive slower than this
     k_att_rp: float = 10.0            # 1/s, attitude -> body-rate gain (roll, pitch)
     k_att_yaw: float = 4.0            # 1/s (yaw)
     search_yaw_rate: float = 0.6      # rad/s while searching for the next gate
