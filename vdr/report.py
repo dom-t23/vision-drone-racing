@@ -10,6 +10,7 @@ runs the simulator.
 from __future__ import annotations
 
 import argparse
+import textwrap
 import json
 import os
 from statistics import mean, median
@@ -30,6 +31,7 @@ HISTORY = [
     ("2026-10-12_a1d6b65_rebaseline-coverage-aa.json", "renderer fix\n(re-baseline)", 1),
     ("2026-10-12_3b6cbbb_baseline.json", "sub-pixel\ncorners", 1),
     ("2026-10-13_0f1e256_baseline.json", "drop far lone\nRANSAC outlines", 1),
+    ("2026-10-15_1d4bb7f_baseline.json", "along-track\ntime-to-go", 1),
 ]
 
 # Component A/Bs: (label, [(off file, on file), ...] one pair per seed set).
@@ -59,10 +61,33 @@ ABLATIONS = [
         ("2026-10-13_b6a6a31_baseline-seed3000.json", "2026-10-13_b6a6a31_ab-droplone-seed3000.json"),
         ("2026-10-13_b6a6a31_baseline-seed4000.json", "2026-10-13_b6a6a31_ab-droplone-seed4000.json"),
     ]),
+    # Off: seed 0 re-flown at 131d93c (per-run identical to 0f1e256); other sets from 2d7e3f6
+    # with the flag off (code path unchanged by 131d93c).
+    ("along-track time-to-go", [
+        ("2026-10-14_131d93c_baseline.json", "2026-10-14_131d93c_ab-attgo.json"),
+        ("2026-10-14_2d7e3f6_baseline-seed1000.json", "2026-10-14_131d93c_ab-attgo-seed1000.json"),
+        ("2026-10-14_2d7e3f6_baseline-seed2000.json", "2026-10-14_131d93c_ab-attgo-seed2000.json"),
+        ("2026-10-14_2d7e3f6_baseline-seed3000.json", "2026-10-15_131d93c_ab-attgo-seed3000.json"),
+        ("2026-10-14_2d7e3f6_baseline-seed4000.json", "2026-10-15_131d93c_ab-attgo-seed4000.json"),
+    ]),
 ]
 
-# Paired lap-time comparison (same seeds, flag off vs on).
-PAIRED = ("sub-pixel corners", ABLATIONS[3][1])
+# A/Bs that were tried and left off (shown in the write-up, not in the ablation figure).
+REJECTED = [
+    ("lateral-first saturation", [
+        ("2026-10-13_2d7e3f6_baseline.json", "2026-10-13_2d7e3f6_ab-latprio.json"),
+        ("2026-10-14_2d7e3f6_baseline-seed1000.json", "2026-10-14_2d7e3f6_ab-latprio-seed1000.json"),
+        ("2026-10-14_2d7e3f6_baseline-seed2000.json", "2026-10-14_2d7e3f6_ab-latprio-seed2000.json"),
+        ("2026-10-14_2d7e3f6_baseline-seed3000.json", "2026-10-14_2d7e3f6_ab-latprio-seed3000.json"),
+        ("2026-10-14_2d7e3f6_baseline-seed4000.json", "2026-10-14_2d7e3f6_ab-latprio-seed4000.json"),
+    ]),
+]
+
+# Paired lap-time comparisons (same seeds, flag off vs on): (label, pairs, output file name).
+PAIRED = [
+    ("sub-pixel corners", ABLATIONS[3][1], "paired_laps.png"),
+    ("along-track time-to-go", ABLATIONS[5][1], "paired_laps_tgo.png"),
+]
 
 C_OFF, C_ON, C_INK, C_GRID = "#9aa5b1", "#d9480f", "#212529", "#e9ecef"
 
@@ -130,7 +155,7 @@ def plot_ablations(path, root=RESULTS) -> list:
         on = pooled_pass([p[1] for p in pairs], root)
         per_set = [(100 * load(a, root)["pass_rate"], 100 * load(b, root)["pass_rate"]) for a, b in pairs]
         rows.append((label, len(pairs), 100 * off[0] / off[1], 100 * on[0] / on[1], per_set))
-    fig, ax = plt.subplots(figsize=(8, 4))
+    fig, ax = plt.subplots(figsize=(10, 4.4))
     w = 0.36
     for i, (label, n, off, on, per_set) in enumerate(rows):
         ax.bar(i - w / 2, off, w, color=C_OFF, label="off" if i == 0 else None)
@@ -141,7 +166,8 @@ def plot_ablations(path, root=RESULTS) -> list:
         ax.text(i + w / 2, 71, f"{on:.1f}", ha="center", fontsize=9, color="white", weight="bold")
     sim = ["legacy renderer" if pairs[0][0] < "2026-10-12" else "current renderer" for _, pairs in ABLATIONS]
     ax.set_xticks(range(len(rows)),
-                  [f"{r[0]}\n{r[1]} seed set{'s' if r[1] > 1 else ''}, {sim[i]}" for i, r in enumerate(rows)],
+                  [f"{textwrap.fill(r[0], 16)}\n{r[1]} set{'s' if r[1] > 1 else ''}, {sim[i]}"
+                   for i, r in enumerate(rows)],
                   fontsize=8)
     ax.set_ylim(70, 101)
     ax.set_ylabel("gate pass rate, % (pooled)")
@@ -154,8 +180,8 @@ def plot_ablations(path, root=RESULTS) -> list:
     return rows
 
 
-def plot_paired(path, root=RESULTS) -> dict:
-    label, pairs = PAIRED
+def plot_paired(path, root=RESULTS, which: int = 0) -> dict:
+    label, pairs, _ = PAIRED[which]
     diffs = paired_laps(pairs, root)
     stats = {"n": len(diffs), "mean": mean(diffs), "median": median(diffs),
              "faster": sum(d < 0 for d in diffs)}
@@ -184,8 +210,15 @@ def main(argv=None):
         print(f"history   {r[0]!r:28} pass {r[2]:.1f}%  completion {r[3]:.0f}%  {r[4]}")
     for r in plot_ablations(os.path.join(a.out, "ablations.png"), a.results):
         print(f"ablation  {r[0]:22} {r[1]} set(s)  off {r[2]:.1f}%  on {r[3]:.1f}%")
-    s = plot_paired(os.path.join(a.out, "paired_laps.png"), a.results)
-    print(f"paired    n={s['n']} mean {s['mean']:+.3f} s  median {s['median']:+.3f} s  faster {s['faster']}")
+    for label, pairs in REJECTED:
+        off = pooled_pass([p[0] for p in pairs], a.results)
+        on = pooled_pass([p[1] for p in pairs], a.results)
+        print(f"rejected  {label:22} {len(pairs)} set(s)  off {100 * off[0] / off[1]:.2f}%  "
+              f"on {100 * on[0] / on[1]:.2f}%")
+    for i, (label, _, fname) in enumerate(PAIRED):
+        s = plot_paired(os.path.join(a.out, fname), a.results, i)
+        print(f"paired    {label:22} n={s['n']} mean {s['mean']:+.3f} s  median {s['median']:+.3f} s  "
+              f"faster {s['faster']}")
 
 
 if __name__ == "__main__":

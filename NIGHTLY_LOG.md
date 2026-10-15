@@ -588,3 +588,43 @@ lap 12.27 -> 11.26 s.
 lateral acceleration (6|Δy|/T² for a rest-to-rest move) stays under the limit and slow along x
 only when that T exceeds the arrival time; pooled over 5 sets, paired laps. (C) write-up is due
 by 2026-10-19 — README/WRITEUP still quote the 96.8% / 12.27 s baseline (true for its file).
+
+## 2026-10-15 — Run 12: (C) write-up refresh
+
+Chunk choice: runs 10 and 11 were both (A), and README/WRITEUP still quoted the pre-run-11
+baseline (96.8% / 12.27 s), so this run is (C).
+
+**Baseline check** at 1c03a85 (local `main` had been 35 commits behind `origin/main`;
+fast-forwarded before starting): tests 69 passed; `--runs 50 --seed 0` 100.0% (400/400),
+50/50 completed, 11.26 s, median est. error 0.401 m — identical to
+`results/2026-10-15_1d4bb7f_baseline.json` (run not saved; no code change since).
+
+**What changed (docs and figures only; no autonomy or sim code touched):**
+- `vdr/report.py`: 1d4bb7f baseline added to the history; along-track time-to-go added to the
+  ablation figure (5 sets: 97.50% -> 97.75%); new `REJECTED` list (lateral-first saturation,
+  97.50% -> 98.25%, printed, not plotted); `PAIRED` is now a list, giving a second figure
+  `docs/img/paired_laps_tgo.png` (233 paired runs, 232 faster, mean -1.025 s, median -1.033 s).
+  Ablation tick labels wrapped (they overlapped with 6 bars). `tests/test_report.py` covers the
+  new lists and both paired figures.
+- README: results table leads with seed set 0 (100.0%) *and* the pooled 5-set number
+  (97.75%, 241/250 completed, from `results/2026-10-1{4,5}_131d93c_ab-attgo[-seedN].json`,
+  same code as the default), says plainly that seed 0 is a lucky set; camera-only table
+  labelled as measured before along-track time-to-go; test count 63 -> 69.
+- WRITEUP: section 2 (pooled number, failure outcomes 8 crash_gate + 1 missed_gate), ablation
+  table rows for along-track time-to-go and the left-off lateral-first A/B, section 3.6
+  describes the current time-to-go law, section 5 adds the second paired-laps figure, new
+  debugging story 6.6 (crashes were control, not perception; phantom braking from the T floor),
+  section 7 names lateral saturation as the main remaining failure.
+- `docs/img/flight.gif` re-recorded (seed 0, current default: completed 8/8).
+
+All numbers checked against `python -m vdr.report` output and the results files.
+Tests: 69 passed; 8-run smoke test 100.0%. **Pass rate:** no change (headline 100.0%, pooled
+97.75%).
+
+Not done: the browser replay recordings (`docs/demo/flights.js`) and the camera-only A/B
+predate along-track time-to-go; re-running camera-only on the current default should come
+first so the replay and its table match (ROADMAP C).
+
+**Next:** (A) lateral guidance that plans within `max_accel` (ROADMAP A0), pooled over 5 sets
+with paired laps.
+

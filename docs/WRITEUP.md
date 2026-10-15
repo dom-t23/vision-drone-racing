@@ -24,16 +24,23 @@ default configuration.
 
 | configuration (current simulator) | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **default** | **96.8%** | 94% | 12.27 s |
-| far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
+| **default** | **100.0%** | 100% | 11.26 s |
+| along-track time-to-go off | 96.8% | 94% | 12.27 s |
+| also far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
 | also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Source: [`2026-10-13_0f1e256_baseline.json`](../results/2026-10-13_0f1e256_baseline.json),
+Source: [`2026-10-15_1d4bb7f_baseline.json`](../results/2026-10-15_1d4bb7f_baseline.json),
+[`2026-10-13_0f1e256_baseline.json`](../results/2026-10-13_0f1e256_baseline.json),
 [`2026-10-12_3b6cbbb_baseline.json`](../results/2026-10-12_3b6cbbb_baseline.json),
-[`2026-10-12_06ceff9_baseline.json`](../results/2026-10-12_06ceff9_baseline.json). The three
-failures in the headline set are all `crash_gate` (clipping a frame). The latest change lowers
-this one set by one run but raises the pass rate pooled over five sets (section 6.5); single
-sets of 50 courses move by a run or two from noise alone.
+[`2026-10-12_06ceff9_baseline.json`](../results/2026-10-12_06ceff9_baseline.json).
+
+**Seed set 0 is a lucky set; the pooled number is the honest one.** Over five sets of 50
+courses (seeds 0, 1000, 2000, 3000, 4000; 2000 gates) the default passes **97.75%** of gates
+and completes 241 of 250 courses (per set 100.0 / 96.5 / 98.8 / 96.5 / 97.0%, laps 11.1–11.3 s;
+`results/2026-10-1{4,5}_131d93c_ab-attgo[-seedN].json`, flown with the same code as the
+default). The nine failures are 8 `crash_gate` (clipping a frame) and 1 `missed_gate`. The
+latest change made laps a second faster at an unchanged pooled pass rate (97.50% → 97.75%,
+section 6.6); its +3.2 points on seed set 0 alone are noise.
 
 ![Headline benchmark after each kept change](img/history.png)
 
@@ -53,9 +60,14 @@ sets named; each grey line is one 50-course set):
 | robust-outline check | 4 | 92.7% → 95.8% | `2026-10-11_68513f6_` |
 | sub-pixel corners | 4 | 96.9% → 96.7% (laps 0.155 s faster) | `2026-10-12_06ceff9_` |
 | drop far lone RANSAC outlines | 5 | 96.25% → 97.50% (laps unchanged) | `2026-10-1{2,3}_b6a6a31_` |
+| along-track time-to-go | 5 | 97.50% → 97.75% (laps 1.03 s faster) | `2026-10-1{4,5}_131d93c_ab-attgo` |
+| *tried, left off:* lateral-first saturation | 5 | 97.50% → 98.25% (completed 240 → 240) | `2026-10-1{3,4}_2d7e3f6_` |
 
 The first three were measured on the earlier renderer. Sub-pixel corners did not change the
-pass rate; they were kept because they made laps faster at equal pass rate (section 5).
+pass rate; they were kept because they made laps faster at equal pass rate (section 5), and
+the same holds for along-track time-to-go. Lateral-first saturation raised the gate count but
+not the number of completed courses (it rescued 8 runs and broke 8, which then failed later in
+the course), so it was not counted as a clear win (section 6.6).
 
 Two reference points from the bootstrap: at 4 m/s with no race clock the stack passes 97.8% of
 gates ([`0423930_ablation-4mps-noclock`](../results/2026-10-07_0423930_ablation-4mps-noclock.json))
@@ -177,9 +189,12 @@ v_f = (8 m/s, 0, 0) along the gate normal. Its initial acceleration has a closed
 
   a = (6 (p_f − p) − 2T (2v + v_f)) / T²
 
-with T estimated from distance and closing speed. Inside x > −1.2 m it switches to "hold the
-line": a velocity loop towards v_f plus lateral and vertical position feedback. (A floor on T
-used instead made the drone brake to a stop 0.7 m short of the gate.)
+Time-to-go comes from the along-track motion only, T = 2(−p_x)/(v_x + |v_f|), so a drone on the
+gate axis at cruise speed gets zero along-track demand. The lateral and vertical axes use the
+same T floored at 0.3 s (their gain grows as 1/T²); the along-track axis is not floored. Inside
+x > −1.2 m guidance switches to "hold the line": a velocity loop towards v_f plus lateral and
+vertical position feedback. (A floor on T used instead made the drone brake to a stop 0.7 m
+short of the gate.) The total demand is clipped to 14 m/s².
 
 Control turns the desired acceleration into acro commands: thrust along the required specific
 force (with a 55° tilt limit), a desired attitude from that axis plus the desired heading, and
@@ -205,7 +220,7 @@ live in `AutonomyConfig` and are deliberately not copied from the simulator.
   one changed corners by 1e-13 px yet altered 40+ of 50 trajectories and flipped 1–2 outcomes
   per seed set. Because a run ends at its first failure, one early crash can cost up to 2% of
   the 400 gates. So differences under ~8 percentage points on one set are treated as noise,
-  and smaller effects are judged only pooled over several seed sets (0, 1000, 2000, 3000), with
+  and smaller effects are judged only pooled over several seed sets (0, 1000, 2000, 3000, 4000), with
   a set held out when a threshold was tuned on the others.
 * **Pace rule.** A change counts only if the pass rate rises without the mean lap time getting
   more than 5% worse; going faster at equal pass rate also counts.
@@ -215,6 +230,11 @@ live in `AutonomyConfig` and are deliberately not copied from the simulator.
 ![Paired lap-time differences, sub-pixel corners on minus off](img/paired_laps.png)
 
   Sub-pixel corners: 145 of 179 paired runs faster, mean −0.155 s (median −0.147 s).
+
+![Paired lap-time differences, along-track time-to-go on minus off](img/paired_laps_tgo.png)
+
+  Along-track time-to-go: 232 of 233 paired runs faster, mean −1.025 s (median −1.033 s),
+  about 8% of a lap.
 * **Simulator changes** go in as a `SimConfig` field defaulting to the old behaviour, then the
   default is flipped in a separate commit and the benchmark re-baselined.
 
@@ -264,12 +284,38 @@ outlines beyond 7 m read a median 2.8% near with a 0% threshold and 3.5% near wi
 about half stay more than 5% off either way, because more than half of them have no opening
 to compare against.
 
+### 6.6 The crashes were control, not perception (laps −1.03 s)
+With perception fixed up, the remaining failures looked different. Re-flying the 10 failed
+runs over five seed sets with truth logged showed every crash hitting the target gate's frame
+0.5–0.8 m off centre, and in 8 of 10 the estimate was within 6 cm of the truth at impact: the
+drone knew where the gate was but could not get there. The guidance was asking for 30–75 m/s²
+against a 14 m/s² limit, and clipping the vector uniformly spent most of the budget on
+along-track *braking*.
+
+The first try reordered the clip (lateral first, along-track gets what is left). It rescued 8
+runs and broke 8 others: with the full budget sideways until about 1.8 m out, the drone built
+4–5 m/s of lateral speed it could not remove and overshot into the other side of the frame.
+Left off.
+
+The better question was why there was braking at all. Printing the demand per axis on a
+nominal state (on the gate axis, at cruise speed) showed it: the 0.3 s floor on time-to-go is
+active from about 2.4 m out at 8 m/s, so the cubic believes it will arrive *early* and brakes
+(−27 m/s² at x = −2 m with 0.6 m lateral offset). Taking T from the along-track motion and
+dropping the floor on that axis removed the phantom braking. Pooled pass rate stayed flat
+(97.50% → 97.75%; 8 runs rescued, 7 broken) and laps got 1.03 s faster on 233 paired runs,
+which counts as an improvement under the pace rule. The 7 broken runs are the same failure at
+higher speed: lateral demand saturating close to the gate, often after a late correction
+following a handoff.
+
 ## 7. Limitations and next steps
 
 * Next-gate estimates are still the weak point; with the earlier renderer about 10% of
   handoffs were more than 1.5 m off along x. Using both squares in one PnP (8 points), a
   gravity-constrained 4-DoF PnP (position + yaw only), and a measurement covariance from the
   PnP Jacobian are the planned attacks.
+* Most remaining failures are lateral saturation near the gate (section 6.6). The guidance
+  should plan within its acceleration limit (choose T so the lateral cubic's peak acceleration
+  stays under 14 m/s², slowing along x only when it must) instead of relying on clipping.
 * Guidance plans one gate at a time; a lookahead through the current *and* next gate would
   start turns earlier.
 * The world is still clean: no latency, motion blur, lens distortion, lighting changes,

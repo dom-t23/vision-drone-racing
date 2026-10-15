@@ -39,19 +39,26 @@ Current simulator (area-coverage gate rendering, since 2026-10-12):
 
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline (8 m/s)** | **96.8%** | 94% | 12.27 s |
-| same, far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
+| **baseline (8 m/s)**, seed set 0 | **100.0%** | 100% | 11.26 s |
+| **baseline, pooled over 5 seed sets (250 courses)** | **97.75%** | 96.4% | 11.1–11.3 s per set |
+| same, along-track time-to-go off | 96.8% | 94% | 12.27 s |
+| same, also far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
 | same, also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Files: [`baseline`](results/2026-10-13_0f1e256_baseline.json),
+Files: [`baseline`](results/2026-10-15_1d4bb7f_baseline.json),
+pooled: `results/2026-10-1{4,5}_131d93c_ab-attgo[-seedN].json` (same code as the baseline),
+[`along-track time-to-go off`](results/2026-10-13_0f1e256_baseline.json),
 [`far lone RANSAC outlines kept`](results/2026-10-12_3b6cbbb_baseline.json),
 [`sub-pixel corners off`](results/2026-10-12_06ceff9_baseline.json).
-Single 50-run sets differ by one or two runs from noise alone, so components are judged pooled
-over several seed sets. Dropping RANSAC outlines that have no opening of their own to
-cross-check beyond 6 m (they read gates ~12% too near) raises the pooled pass rate over five
-sets from 96.25% to 97.50% at unchanged lap time, although seed set 0 happens to lose one run.
-Sub-pixel corners leave the pooled pass rate unchanged (96.9% off, 96.7% on, four sets) and
-make completed laps 0.155 s faster (paired, 145 of 179 runs faster).
+Seed set 0 happens to be a lucky set: single 50-run sets differ by one or two runs from noise
+alone, so the pooled row is the number to quote and components are judged pooled over several
+seed sets. The latest change takes the guidance's time-to-go from along-track motion: it
+removed spurious braking near each gate and made completed laps 1.03 s faster (232 of 233
+paired runs) at an unchanged pooled pass rate (97.50% → 97.75%). Before it, dropping RANSAC
+outlines that have no opening to cross-check beyond 6 m raised the pooled pass rate from
+96.25% to 97.50%, and sub-pixel corners made laps 0.155 s faster at equal pass rate. Most
+remaining failures are the drone running out of sideways acceleration just before a gate
+(details in the write-up).
 
 ![Headline benchmark after each kept change](docs/img/history.png)
 
@@ -136,7 +143,7 @@ camera noise.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 63 tests, ~60 s
+python -m pytest -q                         # 69 tests, ~60 s
 python -m vdr.harness --runs 50 --seed 0    # the benchmark (~2 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world
@@ -159,7 +166,8 @@ an assumed vehicle model (rate and thrust lags, linear drag). It flies, but less
 | 3000 | 98.0% | 92.2% |
 | pooled (1600 gates) | **98.0%** | **94.1%** |
 
-Files: `results/2026-10-13_db88370_{baseline,ab-camonly}[-seedN].json`. Seed set 0 alone
+Files: `results/2026-10-13_db88370_{baseline,ab-camonly}[-seedN].json` (measured before
+along-track time-to-go, so the default column is the older 96.8% baseline). Seed set 0 alone
 would suggest the opposite; pooled, camera-only loses 20 runs and rescues 5. Its vehicle model
 uses the airframe's nominal values; a real drone's model would be less exact.
 

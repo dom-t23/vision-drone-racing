@@ -71,12 +71,21 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 ## (C) Write-up
 
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
-  to `vdr/report.py`'s lists and re-run `python -m vdr.report`). Next due by 2026-10-19.
+  to `vdr/report.py`'s lists and re-run `python -m vdr.report`). Next due by 2026-10-22.
 - Possible additions: a per-stage figure (detection -> PnP error vs range, from a committed
   diagnostic results file), and a failure-mode breakdown once `vdr.analyze` exists.
+- The browser replay (`docs/demo/flights.js`) and the camera-only table were recorded before
+  along-track time-to-go. Re-run the camera-only A/B on 5 sets with the current default, then
+  regenerate the replay (`python -m vdr.demo --benchmark-out docs/demo/benchmark.js`) so the
+  flights and the table match the same code.
 
 ## Done
 
+- 2026-10-15 — Write-up refresh (run 12): README/WRITEUP report the 1d4bb7f baseline (seed 0
+  100.0%, pooled over 5 sets 97.75%, 11.26 s), along-track time-to-go in the history, ablation
+  and a second paired-laps figure (`docs/img/paired_laps_tgo.png`), the lateral-first A/B as a
+  "tried, left off" row, guidance section rewritten, debugging story 6.6 (crashes were control).
+  Flight GIF re-recorded with the current default.
 - 2026-10-15 — Along-track time-to-go (`along_track_tgo`, default on): the 0.3 s T floor made the
   cubic brake at 20-70 m/s² inside x ≈ -2.4 m. Pooled pass 97.50% -> 97.75% (flat), completed
   240 -> 241, paired laps -1.03 s (233 runs); headline seed 0 96.8% -> 100.0%, 12.27 -> 11.26 s.
