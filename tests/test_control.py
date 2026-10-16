@@ -29,7 +29,7 @@ def test_prioritise_lateral_when_lateral_alone_saturates():
 
 def test_flag_off_leaves_guidance_unchanged():
     p, v = np.array([-1.5, 0.7, 0.0]), np.array([5.4, 0.8, -0.1])
-    off = AutonomyConfig()
+    off = dataclasses.replace(AutonomyConfig(), feasible_lateral=False)
     on = dataclasses.replace(off, lateral_accel_priority=True)
     a_off, _ = gate_guidance(p, v, off)
     a_on, _ = gate_guidance(p, v, on)
@@ -71,7 +71,7 @@ def test_lateral_min_tgo_respects_budget():
 
 
 def test_feasible_lateral_brakes_only_when_needed():
-    off = AutonomyConfig()
+    off = dataclasses.replace(AutonomyConfig(), feasible_lateral=False)
     on = dataclasses.replace(off, feasible_lateral=True)
     v = np.array([off.cruise_speed, 0.0, 0.0])
     # small offset far out: identical to the default law
