@@ -628,3 +628,57 @@ first so the replay and its table match (ROADMAP C).
 **Next:** (A) lateral guidance that plans within `max_accel` (ROADMAP A0), pooled over 5 sets
 with paired laps.
 
+
+## 2026-10-16 — Run 13: (A) lateral guidance planned within an acceleration budget
+
+Chunk choice: run 12 was (C), so (A), ROADMAP item A0.
+
+**Baseline check** at b408312: tests 69 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.26 s, median est. error 0.401 m — identical to `results/2026-10-15_1d4bb7f_baseline.json`.
+
+**Idea (`feasible_lateral`, commit d37cf14).** The cubic's lateral acceleration is linear in
+time, so its peak is at one end: a(0) = (-6y - 4T v_y)/T², a(T) = (6y + 2T v_y)/T². Pick the
+shortest lateral time-to-go T_lat whose peak stays within `feasible_lat_accel` = 11 m/s². If
+T_lat is later than the along-track arrival T_x, brake along x at constant deceleration so x
+reaches 0 at T_lat (arrival speed free but >= `feasible_min_speed` = 3 m/s; braking capped by
+what `max_accel` leaves). Example: 1 m off at 4 m and 8 m/s, the old law asks 24 m/s² sideways
+(clipped to 14); the new one asks 11.3 sideways and brakes at 6.9.
+
+**A/B** (off = current default; `results/2026-10-15_1d4bb7f_baseline.json` for seed 0 and
+`results/2026-10-1{4,5}_131d93c_ab-attgo-seed{1000..4000}.json`, same code path;
+on = `results/2026-10-1{5,6}_d37cf14_ab-feaslat[-seedN].json`):
+| seeds | pass off -> on | completed | lap (s) |
+|---|---|---|---|
+| 0 | 100.0% -> 97.8% | 50 -> 48 | 11.26 -> 11.59 |
+| 1000 | 96.5% -> 97.2% | 48 -> 48 | 11.31 -> 11.67 |
+| 2000 | 98.8% -> 100.0% | 48 -> 50 | 11.28 -> 11.65 |
+| 3000 | 96.5% -> 99.5% | 47 -> 49 | 11.14 -> 11.53 |
+| 4000 | 97.0% -> 100.0% | 48 -> 50 | 11.21 -> 11.55 |
+| 5000 (held out) | 98.8% -> 100.0% | 49 -> 50 | 11.28 -> 11.64 |
+| pooled (2400 gates) | **97.92% -> 99.08%** | 290 -> 295 | |
+Seed 5000 off: `results/2026-10-16_d37cf14_baseline-seed5000.json` (flag off at d37cf14).
+Rescued 9 (1020, 2015, 2049, 3001, 3004, 3010, 4004, 4011, 5022 — 8 of them the lateral-saturation
+crashes from run 11), broke 4 (1, 20, 1043, 3019). Paired laps (286 runs): mean +0.344 s (+3%),
+median +0.324 s, 271 slower — within the pace rule (< 5%), so **kept**, default flipped in
+3395fb0. Post-flip headline `results/2026-10-16_3395fb0_baseline.json`: 97.8% (391/400), 48/50,
+11.59 s, median est. error 0.382 m. Seed 0 alone went down (it was the lucky set); the pooled
+number is the one to quote. UDP 8-run smoke test matches in-process (seed 1 missed in both).
+
+A lateral budget of 13.5 instead of 11 on seed 0 (not saved): 96.8%, 11.45 s — not pursued.
+
+**Broken runs** (re-flown with `run_episode(record=True)`): 1, 20 and 3019 are phantom
+handoffs — right after the pass the next-gate estimate is 2-4 m off laterally (and short); the
+new law brakes and chases it, and by the time sightings correct it (~0.6-0.8 s later) the drone
+has lateral velocity the wrong way. 1043 crashed with 0.33 m estimate error. So the remaining
+failures are perception again (post-handoff next-gate estimates), not control.
+
+Tests: `tests/test_control.py` +2 (`lateral_min_tgo` stays in budget; flag brakes only when
+the lateral move can't fit and keeps |a| <= max_accel and arrival speed >= 3 m/s). 71 passed.
+
+**Pass rate (headline, seed 0):** 100.0% -> 97.8%; pooled 6 sets 97.92% -> 99.08%;
+lap 11.26 -> 11.59 s.
+
+**Next:** (A) don't plan hard on a fresh handoff estimate — e.g. limit braking/lateral demand
+while the target's position covariance is still the handoff floor, until a close sighting is
+accepted (attacks the 3 phantom-handoff breaks). (C) README/WRITEUP still quote the 1d4bb7f
+numbers (100.0% / 11.26 s / pooled 97.75%); refresh with this result (due by 2026-10-22).

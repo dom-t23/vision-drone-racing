@@ -3,10 +3,11 @@
 Prioritised. Each overnight run takes ONE item (or a well-argued new one), and updates this
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
-Current baseline (since 2026-10-15, along-track time-to-go):
-`results/2026-10-15_1d4bb7f_baseline.json` — 100.0% pass rate, 100% completion, 11.26 s lap,
-median est. error 0.401 m (pooled over seeds 0/1000/2000/3000/4000: 97.75%; seed 0 is a lucky set).
-Previous: `results/2026-10-13_0f1e256_baseline.json` — 96.8%, 12.27 s (pooled 97.50%).
+Current baseline (since 2026-10-16, feasible lateral guidance):
+`results/2026-10-16_3395fb0_baseline.json` — 97.8% pass rate, 96% completion, 11.59 s lap,
+median est. error 0.382 m (pooled over seeds 0/1000/.../5000: 99.08%; quote the pooled number).
+Previous: `results/2026-10-15_1d4bb7f_baseline.json` — 100.0%, 11.26 s (pooled 6 sets 97.92%).
+Before that: `results/2026-10-13_0f1e256_baseline.json` — 96.8%, 12.27 s (pooled 97.50%).
 Evidence older than 2026-10-12 was measured on
 the legacy renderer (gates painted ~0.7 px too wide) and is not directly comparable:
 `2026-10-11_8d3e44c_baseline.json` (95.2%), `2026-10-10_0181f50_baseline.json` (94.5%),
@@ -14,16 +15,12 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (A) Pass rate
 
-0. **Guidance that plans within its acceleration limit.** Crash analysis (run 10, 10 failed
-   runs over 5 seed sets): every crash hits the target gate's frame 0.5-0.8 m off centre, and in
-   8/10 the estimate was within 6 cm at impact — the drone runs out of lateral authority (often
-   after a late post-handoff correction, 5/10). Clipping lateral-first (`lateral_accel_priority`)
-   rescued 8 and broke 8 by bang-bang overshoot (pooled 97.50% -> 98.25%, completed 240 -> 240;
-   left off). Run 11 removed the spurious along-track braking (the t_go_min floor;
-   `along_track_tgo`, kept: pass flat, laps -1.03 s); the 7 runs it broke are again lateral
-   saturation 0.5-1.2 m off centre with < 0.12 m estimate error. Next: a lateral profile whose peak acceleration respects `max_accel` (choose T or
-   brake x only when needed), keep vertical demand from starving the tilt budget, and maybe
-   replace the weak terminal hold-the-line law with a miss-distance law.
+0. **Don't over-trust a fresh handoff estimate.** After run 13 the remaining failures are
+   mostly phantom handoffs: the next-gate estimate right after a pass is 2-4 m off laterally,
+   and the (now feasible, braking) guidance chases it for ~0.7 s (seeds 1, 20, 3019). Ideas:
+   cap lateral demand / braking while the target position covariance is still at the handoff
+   floor; require one accepted close sighting before committing; or Two-gate lookahead (item 5).
+   Also: replace the weak terminal hold-the-line law with a miss-distance law.
 1. **Remaining next-gate range bias.** Re-measured 2026-10-13 (run 9): clean outlines and
    openings are within ~1% to 13 m; beyond 13 m outlines read 1-4% near and openings 1-4% far
    (opposite signs -> item 4). Far lone RANSAC outlines are now dropped. Older notes: the worst source (RANSAC outlines of merged gates,
@@ -71,7 +68,9 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 ## (C) Write-up
 
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
-  to `vdr/report.py`'s lists and re-run `python -m vdr.report`). Next due by 2026-10-22.
+  to `vdr/report.py`'s lists and re-run `python -m vdr.report`). Next due by 2026-10-22; it
+  still quotes the 1d4bb7f numbers — add `feasible_lateral` (run 13: pooled 6 sets
+  97.92% -> 99.08%, laps +3%) to the history/ablation figures and the guidance section.
 - Possible additions: a per-stage figure (detection -> PnP error vs range, from a committed
   diagnostic results file), and a failure-mode breakdown once `vdr.analyze` exists.
 - The browser replay (`docs/demo/flights.js`) and the camera-only table were recorded before
@@ -80,6 +79,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   flights and the table match the same code.
 
 ## Done
+
+- 2026-10-16 — Feasible lateral guidance (`feasible_lateral`, default on): shortest lateral
+  time-to-go whose cubic peak stays within 11 m/s², braking along x when that is later than the
+  along-track arrival. Pooled 6 sets 97.92% -> 99.08%, completed 290 -> 295 (9 rescued, 4 broken),
+  paired laps +0.34 s (+3%); headline seed 0 100.0% -> 97.8%.
 
 - 2026-10-15 — Write-up refresh (run 12): README/WRITEUP report the 1d4bb7f baseline (seed 0
   100.0%, pooled over 5 sets 97.75%, 11.26 s), along-track time-to-go in the history, ablation

@@ -171,6 +171,12 @@ estimate trace and course for one seed — use it to debug a specific failure.
   time-to-go from along-track motion (floor on lateral only) kept pass rate and cut laps by 1 s.
   Old scenario tests found with the floored law need `along_track_tgo=False` pinned.
 
+- 2026-10-16 — A saturating guidance law should plan around the limit, not clip at it: the
+  cubic's acceleration is linear in time, so its peak (one of the two ends) has a closed form;
+  choose the time-to-go that keeps it in budget and buy that time by braking. It rescued 8 of 9
+  lateral-saturation crashes (pooled 97.92% -> 99.08%) but costs ~3% lap time and hands more
+  time to phantom handoff estimates — what breaks next is usually the other subsystem.
+
 ## Instruction changes
 
 (none yet)
