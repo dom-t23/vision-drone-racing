@@ -39,26 +39,28 @@ Current simulator (area-coverage gate rendering, since 2026-10-12):
 
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline (8 m/s)**, seed set 0 | **100.0%** | 100% | 11.26 s |
-| **baseline, pooled over 5 seed sets (250 courses)** | **97.75%** | 96.4% | 11.1–11.3 s per set |
-| same, along-track time-to-go off | 96.8% | 94% | 12.27 s |
+| **baseline, pooled over 6 seed sets (300 courses)** | **99.08%** | 98.3% | 11.5–11.7 s per set |
+| **baseline (8 m/s)**, seed set 0 | **97.8%** | 96% | 11.59 s |
+| same, feasible lateral guidance off | 100.0% | 100% | 11.26 s |
+| same, also along-track time-to-go off | 96.8% | 94% | 12.27 s |
 | same, also far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
 | same, also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Files: [`baseline`](results/2026-10-15_1d4bb7f_baseline.json),
-pooled: `results/2026-10-1{4,5}_131d93c_ab-attgo[-seedN].json` (same code as the baseline),
+Files: [`baseline`](results/2026-10-16_3395fb0_baseline.json),
+pooled: the baseline plus `results/2026-10-16_d37cf14_ab-feaslat-seed{1000..5000}.json` (same
+code as the baseline), [`feasible lateral guidance off`](results/2026-10-15_1d4bb7f_baseline.json),
 [`along-track time-to-go off`](results/2026-10-13_0f1e256_baseline.json),
 [`far lone RANSAC outlines kept`](results/2026-10-12_3b6cbbb_baseline.json),
 [`sub-pixel corners off`](results/2026-10-12_06ceff9_baseline.json).
-Seed set 0 happens to be a lucky set: single 50-run sets differ by one or two runs from noise
-alone, so the pooled row is the number to quote and components are judged pooled over several
-seed sets. The latest change takes the guidance's time-to-go from along-track motion: it
-removed spurious braking near each gate and made completed laps 1.03 s faster (232 of 233
-paired runs) at an unchanged pooled pass rate (97.50% → 97.75%). Before it, dropping RANSAC
-outlines that have no opening to cross-check beyond 6 m raised the pooled pass rate from
-96.25% to 97.50%, and sub-pixel corners made laps 0.155 s faster at equal pass rate. Most
-remaining failures are the drone running out of sideways acceleration just before a gate
-(details in the write-up).
+Single 50-run sets differ by one or two runs from noise alone, so the pooled row is the number
+to quote and components are judged pooled over several seed sets. The latest change makes the
+guidance plan its sideways correction within the acceleration limit (braking along the track
+when a correction would not fit) instead of clipping an impossible request: pooled pass rate
+97.92% → 99.08% and 5 more completed courses, for laps 3% slower (+0.34 s on 286 paired runs).
+On seed set 0 alone it went 100.0% → 97.8%, because that set had been the lucky one. Before it,
+taking the time-to-go from along-track motion made laps 1.03 s faster at an unchanged pass
+rate. Most remaining failures start at a handoff, when the next gate's estimated *yaw* is off
+by 16–46° in the failing runs (details in the write-up).
 
 ![Headline benchmark after each kept change](docs/img/history.png)
 
@@ -113,7 +115,9 @@ Files: [`baseline`](results/2026-10-11_68513f6_baseline.json),
   re-expressed in the next gate's frame. If a nearer gate appears in front, the drone
   retargets.
 - **Guidance and control.** A receding-horizon cubic brings the drone to the gate centre with
-  its velocity along the gate normal; a geometric attitude controller turns the desired
+  its velocity along the gate normal, choosing its time-to-go so the sideways acceleration it
+  needs stays within the drone's limit (braking along the track when it must); a geometric
+  attitude controller turns the desired
   acceleration into collective thrust and body-rate commands, as a pilot would in acro mode.
 
 ## Simulator
@@ -143,7 +147,7 @@ camera noise.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 69 tests, ~60 s
+python -m pytest -q                         # 73 tests, ~45 s
 python -m vdr.harness --runs 50 --seed 0    # the benchmark (~2 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world

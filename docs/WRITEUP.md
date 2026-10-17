@@ -24,23 +24,28 @@ default configuration.
 
 | configuration (current simulator) | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **default** | **100.0%** | 100% | 11.26 s |
-| along-track time-to-go off | 96.8% | 94% | 12.27 s |
+| **default** | **97.8%** | 96% | 11.59 s |
+| feasible lateral guidance off | 100.0% | 100% | 11.26 s |
+| also along-track time-to-go off | 96.8% | 94% | 12.27 s |
 | also far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
 | also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Source: [`2026-10-15_1d4bb7f_baseline.json`](../results/2026-10-15_1d4bb7f_baseline.json),
+Source: [`2026-10-16_3395fb0_baseline.json`](../results/2026-10-16_3395fb0_baseline.json),
+[`2026-10-15_1d4bb7f_baseline.json`](../results/2026-10-15_1d4bb7f_baseline.json),
 [`2026-10-13_0f1e256_baseline.json`](../results/2026-10-13_0f1e256_baseline.json),
 [`2026-10-12_3b6cbbb_baseline.json`](../results/2026-10-12_3b6cbbb_baseline.json),
 [`2026-10-12_06ceff9_baseline.json`](../results/2026-10-12_06ceff9_baseline.json).
 
-**Seed set 0 is a lucky set; the pooled number is the honest one.** Over five sets of 50
-courses (seeds 0, 1000, 2000, 3000, 4000; 2000 gates) the default passes **97.75%** of gates
-and completes 241 of 250 courses (per set 100.0 / 96.5 / 98.8 / 96.5 / 97.0%, laps 11.1–11.3 s;
-`results/2026-10-1{4,5}_131d93c_ab-attgo[-seedN].json`, flown with the same code as the
-default). The nine failures are 8 `crash_gate` (clipping a frame) and 1 `missed_gate`. The
-latest change made laps a second faster at an unchanged pooled pass rate (97.50% → 97.75%,
-section 6.6); its +3.2 points on seed set 0 alone are noise.
+**One seed set is not enough; the pooled number is the honest one.** Over six sets of 50
+courses (seeds 0, 1000, 2000, 3000, 4000, 5000; 2400 gates) the default passes **99.08%** of
+gates and completes 295 of 300 courses (per set 97.8 / 97.2 / 100.0 / 99.5 / 100.0 / 100.0%,
+laps 11.5–11.7 s; `results/2026-10-16_3395fb0_baseline.json` and
+`results/2026-10-16_d37cf14_ab-feaslat-seed{1000..5000}.json`, flown with the same code as the
+default). The five failures are 2 `crash_gate` (clipping a frame) and 3 `missed_gate`. The
+latest change, guidance that plans its sideways correction within the acceleration limit
+(section 6.7), raised the pooled pass rate from 97.92% to 99.08% and cost 3% of lap time. On
+seed set 0 alone the same change went *down*, 100.0% → 97.8%: that set had been the lucky one,
+and two runs either way is within noise for one set.
 
 ![Headline benchmark after each kept change](img/history.png)
 
@@ -61,13 +66,17 @@ sets named; each grey line is one 50-course set):
 | sub-pixel corners | 4 | 96.9% → 96.7% (laps 0.155 s faster) | `2026-10-12_06ceff9_` |
 | drop far lone RANSAC outlines | 5 | 96.25% → 97.50% (laps unchanged) | `2026-10-1{2,3}_b6a6a31_` |
 | along-track time-to-go | 5 | 97.50% → 97.75% (laps 1.03 s faster) | `2026-10-1{4,5}_131d93c_ab-attgo` |
+| feasible lateral guidance | 6 | 97.92% → 99.08% (laps 0.34 s slower, +3%) | `2026-10-1{5,6}_d37cf14_ab-feaslat` |
 | *tried, left off:* lateral-first saturation | 5 | 97.50% → 98.25% (completed 240 → 240) | `2026-10-1{3,4}_2d7e3f6_` |
+| *tried, left off:* handoff yaw sigma floor | 6 | 99.08% → 99.17% (1 run rescued, 0 broken) | `2026-10-17_cbd0150_ab-yawfloor` |
 
 The first three were measured on the earlier renderer. Sub-pixel corners did not change the
 pass rate; they were kept because they made laps faster at equal pass rate (section 5), and
-the same holds for along-track time-to-go. Lateral-first saturation raised the gate count but
-not the number of completed courses (it rescued 8 runs and broke 8, which then failed later in
-the course), so it was not counted as a clear win (section 6.6).
+the same holds for along-track time-to-go. Feasible lateral guidance is slower but within the
+5% the pace rule allows, and it completed 5 more of 300 courses (9 rescued, 4 broken).
+Lateral-first saturation raised the gate count but not the number of completed courses (it
+rescued 8 runs and broke 8, which then failed later in the course), so it was not counted as a
+clear win (section 6.6). The handoff yaw floor changed one run in 300 (section 6.8).
 
 Two reference points from the bootstrap: at 4 m/s with no race clock the stack passes 97.8% of
 gates ([`0423930_ablation-4mps-noclock`](../results/2026-10-07_0423930_ablation-4mps-noclock.json))
@@ -196,6 +205,16 @@ x > −1.2 m guidance switches to "hold the line": a velocity loop towards v_f p
 vertical position feedback. (A floor on T used instead made the drone brake to a stop 0.7 m
 short of the gate.) The total demand is clipped to 14 m/s².
 
+**Planning within the limit.** The cubic's acceleration is linear in time, so on each lateral
+axis its largest value is at one end of the manoeuvre, and both ends have closed forms:
+a(0) = (−6y − 4T v_y)/T² and a(T) = (6y + 2T v_y)/T² (gate at y = 0). Guidance picks the
+shortest lateral time-to-go T_lat whose peak stays within 11 m/s². If that is later than the
+along-track arrival, it buys the time by braking along x at a constant deceleration so the drone
+reaches the gate plane at T_lat (never planning to arrive slower than 3 m/s, and braking only
+with what the 14 m/s² limit leaves). Example: 1 m off the axis, 4 m out at 8 m/s, the plain
+cubic asks for 24 m/s² sideways, which clipping cut to 14; the planned law asks for 11.3 sideways
+and brakes at 6.9.
+
 Control turns the desired acceleration into acro commands: thrust along the required specific
 force (with a 55° tilt limit), a desired attitude from that axis plus the desired heading, and
 body rates proportional to the geometric attitude error on SO(3) (Lee et al., 2010).
@@ -220,7 +239,7 @@ live in `AutonomyConfig` and are deliberately not copied from the simulator.
   one changed corners by 1e-13 px yet altered 40+ of 50 trajectories and flipped 1–2 outcomes
   per seed set. Because a run ends at its first failure, one early crash can cost up to 2% of
   the 400 gates. So differences under ~8 percentage points on one set are treated as noise,
-  and smaller effects are judged only pooled over several seed sets (0, 1000, 2000, 3000, 4000), with
+  and smaller effects are judged only pooled over several seed sets (0, 1000, 2000, 3000, 4000, and 5000 since run 13), with
   a set held out when a threshold was tuned on the others.
 * **Pace rule.** A change counts only if the pass rate rises without the mean lap time getting
   more than 5% worse; going faster at equal pass rate also counts.
@@ -235,6 +254,12 @@ live in `AutonomyConfig` and are deliberately not copied from the simulator.
 
   Along-track time-to-go: 232 of 233 paired runs faster, mean −1.025 s (median −1.033 s),
   about 8% of a lap.
+
+![Paired lap-time differences, feasible lateral guidance on minus off](img/paired_laps_feaslat.png)
+
+  Feasible lateral guidance: 271 of 286 paired runs slower (11 faster, 4 equal), mean
+  +0.344 s (median +0.324 s), about 3% of a lap: the price of braking when a correction
+  would not fit.
 * **Simulator changes** go in as a `SimConfig` field defaulting to the old behaviour, then the
   default is flipped in a separate commit and the benchmark re-baselined.
 
@@ -307,15 +332,41 @@ which counts as an improvement under the pace rule. The 7 broken runs are the sa
 higher speed: lateral demand saturating close to the gate, often after a late correction
 following a handoff.
 
+### 6.7 Plan around the limit instead of clipping at it (pooled 97.92% → 99.08%)
+Both attempts in 6.6 still let guidance ask for the impossible and then decided what to drop.
+The fix was to never ask: because the cubic's acceleration is linear in time, its peak sideways
+demand has a closed form, so guidance can choose the lateral time-to-go that keeps the peak at
+11 m/s² and, when that is longer than the along-track arrival, brake along x to make the time
+(section 3.6). Over six seed sets it rescued 9 runs (8 of them the lateral-saturation crashes
+from 6.6) and broke 4, raising the pooled pass rate from 97.92% to 99.08% and completed courses
+from 290 to 295, for 0.34 s (3%) of lap time. Re-flying the broken runs showed what comes next:
+three were handoffs where the next gate's estimate started 2–4 m off sideways, and the new law
+braked and chased it until sightings corrected it. Fixing one subsystem tends to expose the
+next one.
+
+### 6.8 An error the main measurement cannot see (handoff yaw)
+Those 2–4 m post-handoff errors persisted for 0.5–0.7 s even though the first sighting after
+each handoff was *accepted* by the χ² test within 0.01–0.08 s. The reason is geometric. The
+filter lives in the target gate's frame, and its main measurement is the gate centre seen from
+the camera (direction and range). If the next gate's *yaw* is estimated wrong by θ, the handoff
+re-expresses the drone's pose in a frame rotated by θ about the gate centre: the estimated drone
+is a rigid rotation of the true one about that centre, so the gate centre looks exactly where
+it should and the innovation is zero. Only the weak PnP attitude update can see θ. Checked
+against truth over 685 handoffs on seed sets 0 and 1000, the averaged next-gate yaw had an RMS
+error of 9–10.5° (worse below 7 m), 8–11% of handoffs were more than 15° off, the failing ones
+16–46°, and its claimed σ was 2–3× too small because sightings from one viewpoint share their
+bias. Flooring that σ at 12° (so the attitude updates can pull it in) was flat: pooled
+99.08% → 99.17%, one run rescued, none broken, so it was left off. A wider prior cannot help
+much while the attitude measurement itself is single-square PnP rotation (5–30° noise); the
+planned fix is a better yaw measurement (section 7).
+
 ## 7. Limitations and next steps
 
-* Next-gate estimates are still the weak point; with the earlier renderer about 10% of
-  handoffs were more than 1.5 m off along x. Using both squares in one PnP (8 points), a
-  gravity-constrained 4-DoF PnP (position + yaw only), and a measurement covariance from the
-  PnP Jacobian are the planned attacks.
-* Most remaining failures are lateral saturation near the gate (section 6.6). The guidance
-  should plan within its acceleration limit (choose T so the lateral cubic's peak acceleration
-  stays under 14 m/s², slowing along x only when it must) instead of relying on clipping.
+* Next-gate estimates are the weak point again, and now mostly their *yaw* (section 6.8).
+  A gravity-constrained 4-DoF PnP (position + yaw only, roll and pitch from the filter) should
+  remove most planar flips and give a much better yaw measurement; using both squares in one
+  PnP (8 points) and a measurement covariance from the PnP Jacobian come after it.
+* The terminal "hold the line" law is weak; a miss-distance law for the last 1.2 m is planned.
 * Guidance plans one gate at a time; a lookahead through the current *and* next gate would
   start turns earlier.
 * The world is still clean: no latency, motion blur, lens distortion, lighting changes,
