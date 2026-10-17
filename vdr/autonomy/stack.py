@@ -407,6 +407,8 @@ class Autonomy:
         cfg, e = self.cfg, self.eskf
         t = hyp.mean
         yaw_m, ysig_m = hyp.measured_yaw()
+        if cfg.handoff_yaw_floor:
+            ysig_m = max(ysig_m, math.radians(cfg.handoff_yaw_sigma_floor_deg))
         yaw, ysig = yaw_m, ysig_m
         if cfg.yaw_prior_from_bearing:
             # Prior: the gate roughly faces along the line from the previous gate.
