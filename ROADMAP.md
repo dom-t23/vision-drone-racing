@@ -15,12 +15,14 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (A) Pass rate
 
-0. **Don't over-trust a fresh handoff estimate.** After run 13 the remaining failures are
-   mostly phantom handoffs: the next-gate estimate right after a pass is 2-4 m off laterally,
-   and the (now feasible, braking) guidance chases it for ~0.7 s (seeds 1, 20, 3019). Ideas:
-   cap lateral demand / braking while the target position covariance is still at the handoff
-   floor; require one accepted close sighting before committing; or Two-gate lookahead (item 5).
-   Also: replace the weak terminal hold-the-line law with a miss-distance law.
+0. **Next-gate yaw at handoff (was "phantom handoffs").** Run 14 found the 2-4 m post-handoff
+   errors are a wrong next-gate *yaw*: a frame rotated about the gate centre leaves the
+   gate-centre measurement with zero innovation, so only the weak PnP attitude update fixes it
+   (~0.5-0.7 s). Averaged sighting yaw: RMS 9-10.5 deg, 4-11% of handoffs > 15 deg, worse
+   under 7 m, claimed sigma 2-3x too small. Flooring that sigma (`handoff_yaw_floor`) alone was
+   flat (pooled 99.08% -> 99.17%, left off). The fix has to improve the yaw measurement itself
+   -> item 2 first, then re-try the floor. Also: replace the weak terminal hold-the-line law
+   with a miss-distance law.
 1. **Remaining next-gate range bias.** Re-measured 2026-10-13 (run 9): clean outlines and
    openings are within ~1% to 13 m; beyond 13 m outlines read 1-4% near and openings 1-4% far
    (opposite signs -> item 4). Far lone RANSAC outlines are now dropped. Older notes: the worst source (RANSAC outlines of merged gates,
@@ -30,7 +32,7 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
    pixel on each side (see run 4 in NIGHTLY_LOG). Sub-pixel corners (now default)
    and item 4 (both squares, whose biases have opposite signs) attack this directly.
    Also consider requiring a close-range accepted sighting of the target before a pass.
-2. **Gravity-constrained ("upright") PnP.** Gates are vertical, so solve 4 DoF (position + yaw)
+2. **(next) Gravity-constrained ("upright") PnP.** Gates are vertical, so solve 4 DoF (position + yaw)
    by minimising reprojection error with roll/pitch fixed from the filter, seeded from the
    IPPE solutions. Removes most IPPE flips; replace the 3-DoF attitude update with a yaw-only
    update. Evidence: 7% of attitude updates rejected, median yaw error 4.6 deg, up to ~12 deg
@@ -79,6 +81,10 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   flights and the table match the same code.
 
 ## Done
+
+- 2026-10-17 — Handoff yaw diagnosis + `handoff_yaw_floor` A/B (12 deg floor on the averaged
+  next-gate yaw sigma): pooled 6 sets 99.08% -> 99.17% (1 rescued, 0 broken), laps +0.02 s;
+  left off. Phantom handoffs traced to next-gate yaw errors (see item A0, NIGHTLY_LOG run 14).
 
 - 2026-10-16 — Feasible lateral guidance (`feasible_lateral`, default on): shortest lateral
   time-to-go whose cubic peak stays within 11 m/s², braking along x when that is later than the

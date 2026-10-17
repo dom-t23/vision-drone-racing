@@ -682,3 +682,60 @@ lap 11.26 -> 11.59 s.
 while the target's position covariance is still the handoff floor, until a close sighting is
 accepted (attacks the 3 phantom-handoff breaks). (C) README/WRITEUP still quote the 1d4bb7f
 numbers (100.0% / 11.26 s / pooled 97.75%); refresh with this result (due by 2026-10-22).
+
+## 2026-10-17 — Run 14: (A) handoff yaw — diagnosis + `handoff_yaw_floor` A/B (flat, left off)
+
+Chunk choice: run 13 was (A) and run 12 (C); the write-up is not due until 2026-10-22, so (A),
+ROADMAP item A0 (phantom handoffs).
+
+**Baseline check** at 4ec4074 (local checkout was a detached HEAD 39 commits behind
+`origin/main`; switched to `main` and fast-forwarded first): tests 71 passed; `--runs 50 --seed 0`
+97.8% (391/400), 48/50, 11.59 s, median est. error 0.382 m — identical to
+`results/2026-10-16_3395fb0_baseline.json` (not saved; no code change).
+
+**Diagnosis (scratch scripts hooking `_switch_to` / `_update_target`, truth used only offline).**
+The run-13 idea ("don't plan hard until a close sighting is accepted") can't help: after every
+handoff in seeds 1, 2, 3, 5, 20, 1043, 3019 the first position update is accepted 0.01-0.08 s
+later. Yet 2-4 m lateral errors (with 0.5-1.7 m along x) persist for ~0.5-0.7 s. They are the
+next gate's **yaw** being wrong: the state re-expressed in a frame rotated by θ about the gate
+centre is a rigid rotation of the truth, so the gate-centre measurement (direction + range in
+the body frame) has zero innovation; only the weak PnP attitude update can correct θ.
+Per-handoff yaw error vs truth (`yaw of R_cur^T R_next`), seed sets 0 and 1000 (343 + 342 handoffs):
+measured (averaged sightings) RMS 9.0° / 10.5°, median 3.5° / 3.9°, 28 / 38 handoffs > 15°,
+worse at short range (< 7 m: RMS 12.8° / 15.8°); bearing prior RMS 9.8° / 9.9°. The claimed
+sigma of the averaged yaw has median 3.1° — 2-3x over-confident (normalised error RMS 2.2 / 3.0),
+because sightings from one viewpoint share their bias. The failing handoffs had 16-46° errors
+(1043: -45.9°, 3019: +23.5° and +20.9°, 20: +16.3°).
+
+**Idea (`handoff_yaw_floor`, commit cbd0150).** Floor that sigma at 12° (the re-init yaw sigma)
+before the bearing blend, so the filter starts with a realistic yaw uncertainty and the
+attitude updates can pull it in. Offline, the blended yaw RMS drops 7.6° -> 6.7° (set 0) and
+9.6° -> 8.5° (set 1000).
+
+**A/B** (off = current default, same files as run 13's "on" arm: `results/2026-10-16_3395fb0_baseline.json`
+and `results/2026-10-16_d37cf14_ab-feaslat-seed{1000..5000}.json`; on =
+`results/2026-10-17_cbd0150_ab-yawfloor[-seedN].json`):
+| seeds | pass off -> on | completed | lap (s) | median est. err (m) |
+|---|---|---|---|---|
+| 0 | 97.8% -> 98.2% | 48 -> 49 | 11.59 -> 11.64 | 0.382 -> 0.415 |
+| 1000 | 97.2% -> 97.2% | 48 -> 48 | 11.67 -> 11.70 | 0.485 -> 0.506 |
+| 2000 | 100.0% -> 100.0% | 50 -> 50 | 11.65 -> 11.67 | 0.393 -> 0.425 |
+| 3000 | 99.5% -> 99.5% | 49 -> 49 | 11.53 -> 11.52 | 0.522 -> 0.460 |
+| 4000 | 100.0% -> 100.0% | 50 -> 50 | 11.55 -> 11.58 | 0.412 -> 0.456 |
+| 5000 | 100.0% -> 100.0% | 50 -> 50 | 11.64 -> 11.65 | 0.469 -> 0.459 |
+| pooled (2400 gates) | 99.08% -> 99.17% | 295 -> 296 | | |
+Rescued 1 (seed 20), broke 0; paired laps (295 runs) +0.018 s mean. One run is noise, so
+**left off** (flag kept for ablation). In 3019 and 1043 the post-handoff error decays only a
+little faster (e.g. 3019 last handoff: 2.52 m -> 1.56 m at +0.2 s); the attitude measurements
+that would correct the yaw are the same single-square PnP rotations (5-30° noise, IPPE flips),
+so a wider prior alone doesn't fix them.
+
+Tests: `tests/test_handoff.py` (+2: flag off keeps the ~5° handoff yaw sigma; on gives the
+12°/20° blend ≈ 10.3°). 73 passed.
+
+**Pass rate (headline, seed 0):** no change (97.8%; pooled 99.08%).
+
+**Next:** (A) gravity-constrained upright PnP (ROADMAP A2): solve position + yaw only, with
+roll/pitch from the filter — directly attacks the yaw error that causes phantom handoffs; then
+re-try the yaw floor on top of it. Measure yaw error per handoff before/after with the same
+offline script. (C) write-up due by 2026-10-22 (still quotes the 1d4bb7f numbers).

@@ -177,6 +177,13 @@ estimate trace and course for one seed — use it to debug a specific failure.
   lateral-saturation crashes (pooled 97.92% -> 99.08%) but costs ~3% lap time and hands more
   time to phantom handoff estimates — what breaks next is usually the other subsystem.
 
+- 2026-10-17 — A filter in the target gate's frame cannot see that frame's *yaw* error from the
+  gate-centre measurement: rotating the frame about the gate centre rotates the drone's estimated
+  pose with it, so the bearing+range innovation is zero. Post-handoff lateral errors of 2-4 m that
+  persist despite accepted updates are a next-gate yaw error (16-46 deg in failing runs), not
+  position. Check yaw error per handoff against truth before tuning position covariances, and
+  don't trust an averaged yaw's 1/sqrt(n) sigma (same-viewpoint sightings share their bias).
+
 ## Instruction changes
 
 (none yet)
