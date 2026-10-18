@@ -38,10 +38,12 @@ DEFAULT_SEEDS = [0, 1017, 2034]
 
 # Committed benchmark files shown on the page: (seed set, camera + IMU file, camera-only file).
 BENCHMARK = [
-    (0, "2026-10-13_db88370_baseline.json", "2026-10-13_db88370_ab-camonly.json"),
-    (1000, "2026-10-13_db88370_baseline-seed1000.json", "2026-10-13_db88370_ab-camonly-seed1000.json"),
-    (2000, "2026-10-13_db88370_baseline-seed2000.json", "2026-10-13_db88370_ab-camonly-seed2000.json"),
-    (3000, "2026-10-13_db88370_baseline-seed3000.json", "2026-10-13_db88370_ab-camonly-seed3000.json"),
+    (0, "2026-10-16_3395fb0_baseline.json", "2026-10-17_21b0f5f_ab-camonly.json"),
+    (1000, "2026-10-16_d37cf14_ab-feaslat-seed1000.json", "2026-10-18_21b0f5f_ab-camonly-seed1000.json"),
+    (2000, "2026-10-16_d37cf14_ab-feaslat-seed2000.json", "2026-10-18_21b0f5f_ab-camonly-seed2000.json"),
+    (3000, "2026-10-16_d37cf14_ab-feaslat-seed3000.json", "2026-10-18_21b0f5f_ab-camonly-seed3000.json"),
+    (4000, "2026-10-16_d37cf14_ab-feaslat-seed4000.json", "2026-10-18_21b0f5f_ab-camonly-seed4000.json"),
+    (5000, "2026-10-16_d37cf14_ab-feaslat-seed5000.json", "2026-10-18_21b0f5f_ab-camonly-seed5000.json"),
 ]
 
 
@@ -99,7 +101,7 @@ def benchmark_table(results_dir: str = "results") -> dict:
         tot[0] += a["gates_passed"]; tot[1] += b["gates_passed"]; tot[2] += a["gates_total"]
     rows.append(dict(set="pooled", imu=f"{100 * tot[0] / tot[2]:.1f}%", cam=f"{100 * tot[1] / tot[2]:.1f}%"))
     note = ("Gate pass rate. Single sets of 50 courses move by a few points from noise alone, so compare the "
-            "pooled row. Source: results/2026-10-13_db88370_{baseline,ab-camonly}[-seedN].json in the repo.")
+            "pooled row. Source: " + ", ".join(f"results/{f}" for row in BENCHMARK for f in row[1:]) + " in the repo.")
     return dict(rows=rows, note=note)
 
 

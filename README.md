@@ -164,15 +164,17 @@ an assumed vehicle model (rate and thrust lags, linear drag). It flies, but less
 
 | seed set | camera + IMU (default) | camera only |
 |---|---|---|
-| 0 | 96.8% | 98.0% |
-| 1000 | 100.0% | 96.8% |
-| 2000 | 97.2% | 89.5% |
-| 3000 | 98.0% | 92.2% |
-| pooled (1600 gates) | **98.0%** | **94.1%** |
+| 0 | 97.8% | 93.2% |
+| 1000 | 97.2% | 91.8% |
+| 2000 | 100.0% | 95.2% |
+| 3000 | 99.5% | 86.0% |
+| 4000 | 100.0% | 99.0% |
+| 5000 | 100.0% | 92.5% |
+| pooled (2400 gates) | **99.08%** | **92.96%** |
 
-Files: `results/2026-10-13_db88370_{baseline,ab-camonly}[-seedN].json` (measured before
-along-track time-to-go, so the default column is the older 96.8% baseline). Seed set 0 alone
-would suggest the opposite; pooled, camera-only loses 20 runs and rescues 5. Its vehicle model
+Files: camera only `results/2026-10-1{7,8}_21b0f5f_ab-camonly[-seedN].json`; default as in the
+results table above (same code). Camera-only completes 268 of 300 courses against 295 (31 runs
+lost, 4 rescued) with laps 11.6–11.9 s per set. Its vehicle model
 uses the airframe's nominal values; a real drone's model would be less exact.
 
 **Building the app.** `pip install . pyinstaller && python packaging/build.py` makes

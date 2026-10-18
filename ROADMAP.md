@@ -70,17 +70,21 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 ## (C) Write-up
 
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
-  to `vdr/report.py`'s lists and re-run `python -m vdr.report`). Next due by 2026-10-22; it
-  still quotes the 1d4bb7f numbers — add `feasible_lateral` (run 13: pooled 6 sets
-  97.92% -> 99.08%, laps +3%) to the history/ablation figures and the guidance section.
+  to `vdr/report.py`'s lists and re-run `python -m vdr.report`). Next due by 2026-10-24; it is
+  current as of 3395fb0 (feasible lateral, pooled 6 sets 99.08%) and the handoff yaw A/B.
+- When a flight-changing default flips, also re-run the camera-only A/B on the 6 sets, update
+  `vdr/demo.py`'s BENCHMARK and regenerate `docs/demo/` and `docs/img/flight.gif`.
 - Possible additions: a per-stage figure (detection -> PnP error vs range, from a committed
-  diagnostic results file), and a failure-mode breakdown once `vdr.analyze` exists.
-- The browser replay (`docs/demo/flights.js`) and the camera-only table were recorded before
-  along-track time-to-go. Re-run the camera-only A/B on 5 sets with the current default, then
-  regenerate the replay (`python -m vdr.demo --benchmark-out docs/demo/benchmark.js`) so the
-  flights and the table match the same code.
+  diagnostic results file), a handoff-yaw-error figure, and a failure-mode breakdown once
+  `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-17 — Write-up refresh (run 15): README/WRITEUP/figures report the 3395fb0 default
+  (pooled 6 sets 99.08%, seed 0 97.8%, 11.59 s), feasible lateral in history/ablations/paired
+  laps, stories 6.7 (plan around saturation) and 6.8 (handoff yaw). Camera-only re-run on 6 sets
+  with the current default: pooled 99.08% vs 92.96% (completed 295 vs 268); replay and GIF
+  regenerated.
 
 - 2026-10-17 — Handoff yaw diagnosis + `handoff_yaw_floor` A/B (12 deg floor on the averaged
   next-gate yaw sigma): pooled 6 sets 99.08% -> 99.17% (1 rescued, 0 broken), laps +0.02 s;

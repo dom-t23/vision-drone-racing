@@ -739,3 +739,50 @@ Tests: `tests/test_handoff.py` (+2: flag off keeps the ~5° handoff yaw sigma; o
 roll/pitch from the filter — directly attacks the yaw error that causes phantom handoffs; then
 re-try the yaw floor on top of it. Measure yaw error per handoff before/after with the same
 offline script. (C) write-up due by 2026-10-22 (still quotes the 1d4bb7f numbers).
+
+## 2026-10-17 — Run 15: (C) write-up refresh (feasible lateral, handoff yaw, camera-only re-run)
+
+Chunk choice: runs 13 and 14 were both (A), and README/WRITEUP still quoted the 1d4bb7f numbers
+(seed 0 100.0%, pooled 97.75%) although the default changed in run 13, so (C).
+
+**Baseline check** at 45db4d5: tests 73 passed; `--runs 50 --seed 0` 97.8% (391/400), 48/50,
+11.59 s, median est. error 0.382 m — identical to `results/2026-10-16_3395fb0_baseline.json`
+(not saved; no flight code changed this run).
+
+**Write-up (commit 21b0f5f).**
+- `vdr/report.py`: history gains the 3395fb0 baseline; ablations gain feasible lateral guidance
+  (6 seed sets, pooled 97.92% -> 99.08%); rejected list gains the handoff yaw floor (99.08% ->
+  99.17%); new paired-laps figure `docs/img/paired_laps_feaslat.png` (286 runs: 271 slower,
+  11 faster, 4 equal, mean +0.344 s, median +0.324 s). All figures regenerated.
+- README/WRITEUP: headline is now the pooled 6-set number (99.08%, 295/300 completed, laps
+  11.5-11.7 s per set; 2 crash_gate + 3 missed_gate) with seed 0 (97.8%, 11.59 s) below it;
+  results/ablation tables updated; guidance section explains planning within the limit
+  (closed-form cubic peak a(0), a(T)); new debugging stories 6.7 (plan around saturation) and
+  6.8 (next-gate yaw is invisible to the gate-centre measurement); limitations now point at
+  upright PnP for yaw and a terminal miss-distance law. README test count 69 -> 73.
+
+**Camera-only re-run with the current default** (roadmap C item; the README table was from
+db88370, before along-track time-to-go). `--flag camera_only=true` at 21b0f5f (docs-only commit,
+flight code identical to 3395fb0), 6 seed sets vs the default files above:
+| seeds | camera + IMU | camera only | completed |
+|---|---|---|---|
+| 0 | 97.8% | 93.2% | 48 -> 45 |
+| 1000 | 97.2% | 91.8% | 48 -> 43 |
+| 2000 | 100.0% | 95.2% | 50 -> 47 |
+| 3000 | 99.5% | 86.0% | 49 -> 40 |
+| 4000 | 100.0% | 99.0% | 50 -> 49 |
+| 5000 | 100.0% | 92.5% | 50 -> 44 |
+| pooled (2400 gates) | **99.08%** | **92.96%** | 295 -> 268 (31 lost, 4 rescued) |
+Files: `results/2026-10-17_21b0f5f_ab-camonly.json`, `results/2026-10-18_21b0f5f_ab-camonly-seed{1000..5000}.json`.
+The gap widened (old: 98.0% vs 94.1% on 4 sets). A first attempt at this run was started with
+the doc edits uncommitted (files tagged `-dirty`); deleted and re-run after committing.
+`vdr/demo.py` BENCHMARK now lists these 6 pairs (source note generated from the list);
+`docs/demo/{flights,benchmark}.js` regenerated (seeds 0/1017/2034, all six flights 8/8) and
+`docs/img/flight.gif` re-recorded (seed 0, completed 8/8).
+
+Verify: pytest 73 passed; 8-run smoke 89.1% (seed 1 missed_gate, as in run 13).
+
+**Pass rate (headline, seed 0):** no change (97.8%; pooled 6 sets 99.08%).
+
+**Next:** (A) gravity-constrained upright PnP (ROADMAP A2) to measure next-gate yaw better,
+then re-try `handoff_yaw_floor` on top; measure per-handoff yaw error before/after.
