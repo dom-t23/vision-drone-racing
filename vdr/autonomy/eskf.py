@@ -142,6 +142,23 @@ class ESKF:
         H[:, _TH] = np.eye(3)
         return self._apply(H, r, Rn, gate, thresh, PHt, S)
 
+    def yaw_innovation(self, R_meas, sigma):
+        """Yaw-only residual (about world z), Jacobian row and Mahalanobis distance."""
+        ez_b = self.R.T @ np.array([0.0, 0.0, 1.0])
+        r = float(ez_b @ log_so3(self.R.T @ R_meas))
+        H = np.zeros((1, 15))
+        H[0, _TH] = ez_b
+        S = float(H[0, _TH] @ self.P[_TH, _TH] @ ez_b) + sigma * sigma
+        return r, H, r * r / S
+
+    def update_yaw(self, R_meas, sigma, gate=True, thresh=6.635):
+        """Update heading only from a measured attitude whose roll/pitch came from the filter."""
+        r, H, _ = self.yaw_innovation(R_meas, sigma)
+        Rn = np.array([[sigma * sigma]])
+        PHt = self.P @ H.T
+        S = H @ PHt + Rn
+        return self._apply(H, np.array([r]), Rn, gate, thresh, PHt, S)
+
     # --------------------------------------------------------- frame change
     def change_frame(self, yaw: float, t: np.ndarray, pos_cov: np.ndarray, yaw_sigma: float,
                      correlate_yaw: bool = False) -> None:

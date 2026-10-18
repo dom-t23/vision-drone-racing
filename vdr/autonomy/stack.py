@@ -273,8 +273,12 @@ class Autonomy:
 
     def _valid_solutions(self, corners: np.ndarray, size: float, up_c: np.ndarray) -> list:
         cfg = self.cfg
-        return [s for s in pnp.solve_gate_pose(corners, self.info.K, size, up_c)
+        sols = [s for s in pnp.solve_gate_pose(corners, self.info.K, size, up_c)
                 if s.reproj_err <= cfg.max_reproj_px and pnp.gate_tilt_deg(s, up_c) <= cfg.max_gate_tilt_deg]
+        if cfg.upright_pnp and sols:
+            sols = [s for s in pnp.upright_solutions(sols, corners, self.info.K, up_c)
+                    if s.reproj_err <= cfg.max_reproj_px]
+        return sols
 
     def _yaw_meas(self, s: pnp.GatePose) -> float:
         """Yaw of a detected gate's frame relative to the current navigation frame."""
@@ -341,6 +345,19 @@ class Autonomy:
                 self.stats["reinits"] += 1
                 self._init_on_gate(s0, keep_velocity=True)
                 return
+
+        if cfg.upright_pnp:
+            # roll/pitch of the upright solutions are the filter's own: update heading only
+            best = None
+            for s in sols:
+                R_meas, _ = pnp.body_pose_in_gate(s, info.R_bc, info.t_bc)
+                sig = self._att_sigma(s)
+                _, _, m = e.yaw_innovation(R_meas, sig)
+                if best is None or m < best[0]:
+                    best = (m, R_meas, sig)
+            ok, _ = e.update_yaw(best[1], best[2], gate=cfg.chi2_gating, thresh=cfg.chi2_threshold_1dof)
+            self.stats["att_updates" if ok else "att_rejects"] += 1
+            return
 
         # Attitude: of the (up to two) IPPE solutions, use the one the filter finds most plausible.
         best = None

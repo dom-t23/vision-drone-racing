@@ -134,3 +134,97 @@ def attitude_sigma(pose: GatePose, K: np.ndarray, corner_sigma: float, att_facto
     """1-sigma error (rad) of the relative attitude from a single square: ~ sigma_px * d / (f * L)."""
     f = 0.5 * (K[0, 0] + K[1, 1])
     return max(floor_rad, att_factor * corner_sigma * pose.distance / (f * pose.size))
+
+
+# ------------------------------------------------------------------ upright (4-DoF) PnP
+def _upright_basis(up_cam: np.ndarray):
+    """Orthonormal basis (a, b) of the plane perpendicular to up (camera frame)."""
+    up = up_cam / np.linalg.norm(up_cam)
+    ref = np.array([1.0, 0.0, 0.0]) if abs(up[0]) < 0.9 else np.array([0.0, 0.0, 1.0])
+    a = ref - (ref @ up) * up
+    a /= np.linalg.norm(a)
+    return up, a, np.cross(up, a)
+
+
+def _upright_R(psi: float, up, a, b) -> np.ndarray:
+    """Object frame with +y = up and +x horizontal at angle psi in the (a, b) plane."""
+    x = math.cos(psi) * a + math.sin(psi) * b
+    return np.column_stack([x, up, np.cross(x, up)])
+
+
+def refine_upright(pose: GatePose, corners: np.ndarray, K: np.ndarray, up_cam: np.ndarray,
+                   iters: int = 10) -> GatePose:
+    """Re-solve a square's pose with the gate constrained upright (4 DoF: position + yaw).
+
+    Gates are vertical, so with roll/pitch known (the filter's gravity direction, `up_cam`)
+    only the gate's heading and position are unknown. Gauss-Newton on the 8 reprojection
+    residuals, seeded from an (up-aligned) IPPE solution. The 2 rotational DoF a single small
+    square constrains worst -- and the source of the IPPE "flip" -- are taken from gravity.
+    """
+    up, a, b = _upright_basis(up_cam)
+    obj = _UNIT_SQUARE * pose.size
+    uv = np.asarray(corners, float).reshape(4, 2)
+    fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
+
+    def project(R, t, P):
+        X = (R @ P.T).T + t
+        return np.column_stack([fx * X[:, 0] / X[:, 2] + cx, fy * X[:, 1] / X[:, 2] + cy]), X
+
+    # Correspondence: the aligned pose re-labelled the corners by a multiple of 90 deg;
+    # pick the cyclic labelling of the object square that matches the image best.
+    best = None
+    for k in range(4):
+        P = np.roll(obj, k, axis=0)
+        e = float(np.sum((project(pose.R_co, pose.t_co, P)[0] - uv) ** 2))
+        if best is None or e < best[0]:
+            best = (e, P)
+    P = best[1]
+
+    xo = pose.R_co[:, 0]
+    psi = math.atan2(float(xo @ b), float(xo @ a))
+    t = pose.t_co.astype(float).copy()
+    for _ in range(iters):
+        R = _upright_R(psi, up, a, b)
+        pr, X = project(R, t, P)
+        r = (pr - uv).reshape(-1)
+        dx = -math.sin(psi) * a + math.cos(psi) * b
+        dR = np.column_stack([dx, np.zeros(3), np.cross(dx, up)])
+        dX_dpsi = (dR @ P.T).T
+        iz = 1.0 / X[:, 2]
+        J = np.zeros((4, 2, 4))
+        J[:, 0, 1] = fx * iz
+        J[:, 0, 3] = -fx * X[:, 0] * iz * iz
+        J[:, 1, 2] = fy * iz
+        J[:, 1, 3] = -fy * X[:, 1] * iz * iz
+        J[:, :, 0] = np.einsum("nij,nj->ni", J[:, :, 1:4], dX_dpsi)
+        J = J.reshape(8, 4)
+        step = np.linalg.solve(J.T @ J + 1e-9 * np.eye(4), -J.T @ r)
+        psi += float(step[0])
+        t = t + step[1:]
+        if t[2] <= 0.05:
+            return pose                 # diverged behind the camera: keep the unconstrained fit
+        if abs(step[0]) < 1e-6 and np.linalg.norm(step[1:]) < 1e-5:
+            break
+    R = _upright_R(psi, up, a, b)
+    pr, _ = project(R, t, P)
+    err = float(np.sqrt(np.mean(np.sum((pr - uv) ** 2, axis=1))))
+    return GatePose(R, t, err, pose.size)
+
+
+def upright_solutions(sols: list, corners: np.ndarray, K: np.ndarray, up_cam: np.ndarray) -> list:
+    """Upright-refine every IPPE solution; merge those that converge to the same pose."""
+    out = []
+    for s in sols:
+        u = refine_upright(s, corners, K, up_cam)
+        if u.R_co[:, 2] @ u.t_co > 0.0:
+            continue                    # converged to a gate facing away from the camera
+        dup = False
+        for o in out:
+            if (np.linalg.norm(o.t_co - u.t_co) < 1e-3 * max(o.distance, 1.0)
+                    and float(o.R_co[:, 0] @ u.R_co[:, 0]) > math.cos(math.radians(0.5))):
+                dup = True
+                break
+        if not dup:
+            out.append(u)
+    out.sort(key=lambda s: s.reproj_err)
+    return out

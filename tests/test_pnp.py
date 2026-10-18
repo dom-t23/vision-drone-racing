@@ -97,3 +97,34 @@ def test_noisy_corners_position_error_matches_model():
 
 def test_cv2_ippe_square_is_available():
     assert hasattr(cv2, "SOLVEPNP_IPPE_SQUARE")
+
+
+def test_upright_refinement_is_exact_on_clean_corners():
+    rng = np.random.default_rng(3)
+    for _ in range(50):
+        p_G, R_Gb, uv, t_true, up_cam = _scene(rng)
+        q = order_clockwise(uv)
+        us = pnp.upright_solutions(pnp.solve_gate_pose(q, K, L, up_cam), q, K, up_cam)
+        assert len(us) == 1                      # both IPPE solutions converge to one upright pose
+        assert np.allclose(us[0].t_co, t_true, atol=1e-5)
+        assert abs(float(us[0].R_co[:, 1] @ up_cam) - 1.0) < 1e-9
+        R_est, p_est = pnp.body_pose_in_gate(us[0], R_BC, T_BC)
+        assert np.linalg.norm(log_so3(R_est.T @ R_Gb)) < 1e-5
+
+
+def test_upright_refinement_reduces_yaw_error_with_noisy_corners():
+    """Fixing roll/pitch from gravity takes the badly constrained rotation DoF out of PnP."""
+    from vdr.geometry import yaw_of, wrap_angle
+    rng = np.random.default_rng(4)
+    e_ippe, e_up = [], []
+    for _ in range(200):
+        p_G, R_Gb, uv, _, up_cam = _scene(rng)
+        q = order_clockwise(uv + rng.normal(0.0, 0.5, uv.shape))
+        sols = pnp.solve_gate_pose(q, K, L, up_cam)
+        if not sols:
+            continue
+        us = pnp.upright_solutions(sols, q, K, up_cam)
+        for s, E in ((sols[0], e_ippe), (us[0], e_up)):
+            R, _ = pnp.body_pose_in_gate(s, R_BC, T_BC)
+            E.append(wrap_angle(yaw_of(R) - yaw_of(R_Gb)) ** 2)
+    assert math.sqrt(np.mean(e_up)) < 0.8 * math.sqrt(np.mean(e_ippe))

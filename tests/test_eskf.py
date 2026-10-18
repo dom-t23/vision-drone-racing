@@ -93,3 +93,18 @@ def test_change_frame_moves_origin_to_new_gate():
     assert np.allclose(f.p, expected)
     assert np.allclose(f.v, rot_z(yaw).T @ [8.0, 0.0, 0.0])
     assert np.all(np.linalg.eigvalsh(f.P) > 0)
+
+
+def test_yaw_only_update_corrects_heading_and_leaves_tilt_variance():
+    import math
+    from vdr.autonomy.eskf import ESKF
+    from vdr.geometry import rot_z, yaw_of
+    e = ESKF(0.08, 0.003, 0.005, 0.0005)
+    P0 = np.eye(15) * 0.01
+    P0[6:9, 6:9] = np.eye(3) * math.radians(10) ** 2
+    e.initialize(np.array([-5.0, 0.0, 0.0]), np.zeros(3), np.eye(3), P0)
+    ok, _ = e.update_yaw(rot_z(math.radians(8)), math.radians(2), thresh=1e9)
+    assert ok
+    assert 6.0 < math.degrees(yaw_of(e.R)) < 8.0
+    assert e.yaw_std() < math.radians(2.5)
+    assert np.allclose(np.diag(e.P)[6:8], math.radians(10) ** 2)     # roll/pitch untouched

@@ -96,6 +96,12 @@ class AutonomyConfig:
     # blending with the bearing prior and handing it to the filter.
     handoff_yaw_floor: bool = False
     handoff_yaw_sigma_floor_deg: float = 12.0
+    # Gates are vertical: re-solve each square's pose with roll/pitch fixed from the filter's
+    # gravity direction (4 DoF: position + yaw, Gauss-Newton seeded from IPPE), and replace the
+    # 3-DoF attitude update with a yaw-only one (the constrained pose carries no roll/pitch
+    # information of its own). Both IPPE solutions usually converge to one, removing most flips.
+    upright_pnp: bool = False
+    chi2_threshold_1dof: float = 6.635    # yaw-only update: 99% quantile
 
     # --- guidance & control -------------------------------------------------------
     cruise_speed: float = 8.0         # m/s through the gates (race pace; see CLAUDE.md before changing)
