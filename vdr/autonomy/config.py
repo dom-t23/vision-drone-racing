@@ -101,6 +101,10 @@ class AutonomyConfig:
     # 3-DoF attitude update with a yaw-only one (the constrained pose carries no roll/pitch
     # information of its own). Both IPPE solutions usually converge to one, removing most flips.
     upright_pnp: bool = False
+    # With upright_pnp: keep the 3-DoF attitude update, with roll/pitch from the unconstrained
+    # IPPE solution and yaw from the upright one. A yaw-only update leaves tilt to drift (5 deg in
+    # seed 3041), and upright fits made with a tilted 'up' then absorb that tilt error.
+    upright_keep_tilt: bool = False
     chi2_threshold_1dof: float = 6.635    # yaw-only update: 99% quantile
 
     # --- guidance & control -------------------------------------------------------

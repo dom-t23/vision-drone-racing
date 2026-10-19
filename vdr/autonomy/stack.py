@@ -346,6 +346,21 @@ class Autonomy:
                 self._init_on_gate(s0, keep_velocity=True)
                 return
 
+        if cfg.upright_pnp and cfg.upright_keep_tilt:
+            # roll/pitch from the unconstrained IPPE fit (gravity-independent), yaw from the upright fit
+            best = None
+            for s in sols:
+                R_up, _ = pnp.body_pose_in_gate(s, info.R_bc, info.t_bc)
+                R_ip = R_up if s.ippe is None else pnp.body_pose_in_gate(s.ippe, info.R_bc, info.t_bc)[0]
+                R_meas = rot_z(wrap_angle(yaw_of(R_up) - yaw_of(R_ip))) @ R_ip
+                Rn = np.eye(3) * self._att_sigma(s) ** 2
+                r, m = e.attitude_innovation(R_meas, Rn)
+                if best is None or m < best[0]:
+                    best = (m, R_meas, Rn, r)
+            ok, _ = e.update_attitude(best[1], best[2], gate=cfg.chi2_gating, thresh=cfg.chi2_threshold, r=best[3])
+            self.stats["att_updates" if ok else "att_rejects"] += 1
+            return
+
         if cfg.upright_pnp:
             # roll/pitch of the upright solutions are the filter's own: update heading only
             best = None

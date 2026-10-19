@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -50,6 +51,7 @@ class GatePose:
     t_co: np.ndarray            # gate centre in camera frame (m)
     reproj_err: float           # RMS reprojection error (px)
     size: float                 # physical square size used (m)
+    ippe: Optional["GatePose"] = None   # upright solutions: the unconstrained IPPE seed they came from
 
     @property
     def distance(self) -> float:
@@ -208,7 +210,7 @@ def refine_upright(pose: GatePose, corners: np.ndarray, K: np.ndarray, up_cam: n
     R = _upright_R(psi, up, a, b)
     pr, _ = project(R, t, P)
     err = float(np.sqrt(np.mean(np.sum((pr - uv) ** 2, axis=1))))
-    return GatePose(R, t, err, pose.size)
+    return GatePose(R, t, err, pose.size, ippe=pose)
 
 
 def upright_solutions(sols: list, corners: np.ndarray, K: np.ndarray, up_cam: np.ndarray) -> list:
