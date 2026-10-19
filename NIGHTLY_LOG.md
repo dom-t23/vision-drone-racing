@@ -786,3 +786,61 @@ Verify: pytest 73 passed; 8-run smoke 89.1% (seed 1 missed_gate, as in run 13).
 
 **Next:** (A) gravity-constrained upright PnP (ROADMAP A2) to measure next-gate yaw better,
 then re-try `handoff_yaw_floor` on top; measure per-handoff yaw error before/after.
+
+## 2026-10-18/19 — Run 16: (A) gravity-constrained ("upright") PnP (pooled 99.08% -> 99.54%)
+
+Chunk choice: run 15 was (C); ROADMAP A2 (upright PnP) was next, aimed at the next-gate yaw
+error that run 14 found behind the phantom handoffs.
+
+**Baseline check** at 01c5631 (local main was 2 commits behind origin; fast-forwarded first):
+tests 73 passed; `--runs 50 --seed 0` 97.8% (391/400), 48/50, 11.59 s, median est. error
+0.382 m — identical to `results/2026-10-16_3395fb0_baseline.json` (not saved).
+
+**Idea (`upright_pnp`, commit bc81c40).** Gates are vertical, so with roll/pitch known from the
+filter's gravity direction a square's pose has 4 unknowns (position + yaw), not 6.
+`pnp.refine_upright` runs Gauss-Newton on the 8 reprojection residuals with the object frame's
++y fixed to the filter's "up", seeded from each up-aligned IPPE solution; both IPPE solutions
+usually converge to the same upright pose (flip removed). Offline (scratch script, 400 random
+scenes per band, 0.5 px corner noise, 1° error in "up"): drone yaw error RMS 3.3 -> 2.1° at
+2-5 m, 7.9 -> 5.4° at 5-8 m (>15°: 8.0% -> 1.2%), 11.0 -> 9.5° at 8-12 m; body position median
+error roughly halved. ~2 ms per detection in numpy.
+
+**A/B 1: upright PnP with a yaw-only attitude update** (the constrained pose carries no tilt
+information of its own) — worse: pooled 97.71% (2345/2400), completed 289 vs 295; 4 rescued
+(1, 20, 1033, 3019 — the yaw-handoff seeds), 10 broken. Files
+`results/2026-10-1{8,9}_bc81c40_ab-upright[-seedN].json`. Why: seed 3041 with truth — tilt error
+grew to 5° (1.2° RMS off vs 2.4° on): with no vision tilt update, tilt drifts, and an upright fit
+made with a tilted "up" absorbs the tilt error instead of exposing it.
+
+**A/B 2: `upright_keep_tilt` (commit da2703a)** — keep the 3-DoF attitude update, roll/pitch
+from the unconstrained IPPE seed (independent of the filter), yaw from the upright fit; position
+from the upright fit. Off = run 13's files (`3395fb0_baseline`, `d37cf14_ab-feaslat-seed*`), on =
+`results/2026-10-19_da2703a_ab-upright-tilt[-seedN].json`:
+| seeds | pass off -> on | completed | lap (s) | median est. err (m) |
+|---|---|---|---|---|
+| 0 | 97.8% -> 100.0% | 48 -> 50 | 11.59 -> 11.60 | 0.382 -> 0.299 |
+| 1000 | 97.2% -> 99.0% | 48 -> 49 | 11.67 -> 11.67 | 0.485 -> 0.315 |
+| 2000 | 100.0% -> 100.0% | 50 -> 50 | 11.65 -> 11.60 | 0.393 -> 0.289 |
+| 3000 | 99.5% -> 100.0% | 49 -> 50 | 11.53 -> 11.43 | 0.522 -> 0.331 |
+| 4000 | 100.0% -> 100.0% | 50 -> 50 | 11.55 -> 11.54 | 0.412 -> 0.358 |
+| 5000 | 100.0% -> 98.2% | 50 -> 49 | 11.64 -> 11.56 | 0.469 -> 0.316 |
+| pooled (2400 gates) | **99.08% -> 99.54%** | 295 -> 298 | | |
+Rescued 5 (1, 20, 1033, 1043, 3019), broke 2 (1005 crash_gate at 4, 5007 wrong_gate at 1 — not
+yet diagnosed). Paired laps (293 runs) -0.036 s mean (flat). Per-run yaw error RMS mean 4.20° ->
+2.87°; median estimation error lower on all six sets. The pass-rate gain alone is small, but it
+is on the pooled 6 sets with a consistent mechanism metric, so **kept** (both flags on, commit
+9acf025). Cost: harness wall time ~90 s -> ~140 s per 50 runs.
+
+New baseline: `results/2026-10-19_9acf025_baseline.json` — 100.0% (400/400), 50/50, 11.60 s,
+median est. error 0.299 m.
+
+Tests: +4 (`test_pnp`: exact upright fit on clean corners with one merged solution, yaw error
+< 0.8x IPPE's with noise, IPPE seed attached; `test_eskf`: yaw-only update leaves tilt variance).
+`test_lost_target_recovery_rescues_a_phantom_handoff` now pins `upright_pnp=False` (with it the
+seed-15 handoff is good enough that no recovery happens). 77 passed.
+
+**Pass rate (headline, seed 0):** 97.8% -> 100.0%; pooled 6 sets 99.08% -> 99.54%.
+
+**Next:** (A) diagnose 1005 and 5007 (wrong_gate is new); re-try `handoff_yaw_floor` on top of
+upright PnP; ROADMAP A4 (both squares) now fits naturally into the upright solver (8 points).
+(C) write-up due by 2026-10-24: add the upright PnP story and re-run the camera-only A/B.

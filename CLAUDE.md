@@ -33,7 +33,7 @@ vdr/sim/              ground truth lives here
 vdr/autonomy/
   config.py           AutonomyConfig — every tunable + experiment flags
   detector.py         HSV threshold -> contours (outer + holes) -> quad fit (approxPolyDP, RANSAC fallback)
-  pnp.py              IPPE_SQUARE, gravity-resolved corner labelling, gate frame maths, noise models
+  pnp.py              IPPE_SQUARE + upright 4-DoF refinement, gravity-resolved labelling, frame maths, noise
   eskf.py             15-state error-state KF in the target gate's frame; chi2-gated updates; frame change
   control.py          cubic terminal-velocity guidance + geometric attitude -> thrust/body rates
   stack.py            Autonomy: modes WAIT/TRACK/SEARCH, association, next-gate hypotheses, handoff, retarget
@@ -183,6 +183,12 @@ estimate trace and course for one seed — use it to debug a specific failure.
   persist despite accepted updates are a next-gate yaw error (16-46 deg in failing runs), not
   position. Check yaw error per handoff against truth before tuning position covariances, and
   don't trust an averaged yaw's 1/sqrt(n) sigma (same-viewpoint sightings share their bias).
+
+- 2026-10-19 — Constraining a measurement with the filter's own estimate removes that quantity's
+  observability: upright PnP (roll/pitch fixed from the filter) plus a yaw-only update let tilt
+  drift to 5 deg, and the upright fit absorbed the error (pooled 99.08% -> 97.71%). Keep an
+  independent source for whatever you constrain (here: roll/pitch from the unconstrained IPPE fit,
+  yaw + position from the upright fit; 99.54%). Check tilt error against truth, not just yaw.
 
 ## Instruction changes
 

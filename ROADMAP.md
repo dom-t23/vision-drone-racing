@@ -3,10 +3,11 @@
 Prioritised. Each overnight run takes ONE item (or a well-argued new one), and updates this
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
-Current baseline (since 2026-10-16, feasible lateral guidance):
-`results/2026-10-16_3395fb0_baseline.json` — 97.8% pass rate, 96% completion, 11.59 s lap,
-median est. error 0.382 m (pooled over seeds 0/1000/.../5000: 99.08%; quote the pooled number).
-Previous: `results/2026-10-15_1d4bb7f_baseline.json` — 100.0%, 11.26 s (pooled 6 sets 97.92%).
+Current baseline (since 2026-10-19, upright PnP):
+`results/2026-10-19_9acf025_baseline.json` — 100.0% pass rate, 100% completion, 11.60 s lap,
+median est. error 0.299 m (pooled over seeds 0/1000/.../5000: 99.54%; quote the pooled number).
+Previous: `results/2026-10-16_3395fb0_baseline.json` — 97.8%, 11.59 s (pooled 99.08%).
+Before that: `results/2026-10-15_1d4bb7f_baseline.json` — 100.0%, 11.26 s (pooled 6 sets 97.92%).
 Before that: `results/2026-10-13_0f1e256_baseline.json` — 96.8%, 12.27 s (pooled 97.50%).
 Evidence older than 2026-10-12 was measured on
 the legacy renderer (gates painted ~0.7 px too wide) and is not directly comparable:
@@ -32,13 +33,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
    pixel on each side (see run 4 in NIGHTLY_LOG). Sub-pixel corners (now default)
    and item 4 (both squares, whose biases have opposite signs) attack this directly.
    Also consider requiring a close-range accepted sighting of the target before a pass.
-2. **(next) Gravity-constrained ("upright") PnP.** Gates are vertical, so solve 4 DoF (position + yaw)
-   by minimising reprojection error with roll/pitch fixed from the filter, seeded from the
-   IPPE solutions. Removes most IPPE flips; replace the 3-DoF attitude update with a yaw-only
-   update. Evidence: 7% of attitude updates rejected, median yaw error 4.6 deg, up to ~12 deg
-   in failing runs; single-square rotation errors of 5-30 deg at 6-11 m (see Lessons learned).
+2. **(next) Follow-ups to upright PnP (done 2026-10-19, see Done).** Diagnose the 2 runs it broke
+   (1005 crash at gate 4, 5007 wrong_gate at gate 1); re-try `handoff_yaw_floor` on top of it;
+   speed up `refine_upright` (harness 90 s -> 140 s per 50 runs).
 4. **Use both squares.** When outer and inner corners are both found, solve with all 8 points
-   (IPPE start, then `solvePnPRefineLM` / SQPNP) for lower noise.
+   — `pnp.refine_upright` already takes residuals per point, so add the inner square to it.
 5. **Two-gate lookahead guidance.** At 8 m/s the drone has ~1 s after a pass to line up for
    the next gate. Plan through the current AND next gate (e.g. a cubic through both with the
    exit velocity chosen for the turn) so it starts the turn on the right line.
@@ -69,6 +68,8 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (C) Write-up
 
+- **Due by 2026-10-24:** upright PnP (default since 9acf025) is not in README/WRITEUP yet; add it
+  (both A/B arms, the tilt-drift story) and re-run the camera-only A/B on the 6 sets.
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
   to `vdr/report.py`'s lists and re-run `python -m vdr.report`). Next due by 2026-10-24; it is
   current as of 3395fb0 (feasible lateral, pooled 6 sets 99.08%) and the handoff yaw A/B.
@@ -79,6 +80,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-19 **Upright PnP** (`upright_pnp` + `upright_keep_tilt`): 4-DoF fit (position + yaw)
+  with tilt from the filter; attitude update keeps IPPE roll/pitch. Pooled 99.08% -> 99.54%,
+  completed 295 -> 298, est. error lower on all 6 sets, laps flat. Yaw-only update alone was
+  worse (97.71%: tilt drifted).
 
 - 2026-10-17 — Write-up refresh (run 15): README/WRITEUP/figures report the 3395fb0 default
   (pooled 6 sets 99.08%, seed 0 97.8%, 11.59 s), feasible lateral in history/ablations/paired
