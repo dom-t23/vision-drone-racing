@@ -109,6 +109,9 @@ class AutonomyConfig:
     # IPPE solution and yaw from the upright one. A yaw-only update leaves tilt to drift (5 deg in
     # seed 3041), and upright fits made with a tilted 'up' then absorb that tilt error.
     upright_keep_tilt: bool = True
+    # With upright_pnp: when an outline and its own opening are both detected (and the outline
+    # was not replaced by the opening), fit both squares at once (8 points, 4 DoF).
+    joint_squares: bool = False
     chi2_threshold_1dof: float = 6.635    # yaw-only update: 99% quantile
 
     # --- guidance & control -------------------------------------------------------

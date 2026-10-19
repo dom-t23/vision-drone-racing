@@ -230,3 +230,67 @@ def upright_solutions(sols: list, corners: np.ndarray, K: np.ndarray, up_cam: np
             out.append(u)
     out.sort(key=lambda s: s.reproj_err)
     return out
+
+
+def refine_upright_squares(pose: GatePose, squares: list, K: np.ndarray, up_cam: np.ndarray,
+                           iters: int = 10) -> GatePose:
+    """Upright (4-DoF) fit to several concentric, coplanar squares of one gate at once.
+
+    `squares` is a list of (corners, size): typically the outer outline and the inner opening
+    of the same gate (8 points instead of 4). Seeded from `pose` (an upright or IPPE solution
+    of one of them); each square's corner labelling is the cyclic one that best matches the
+    seed's projection. The returned pose keeps `pose.size` and `pose.ippe` so the measurement
+    model and the tilt source are unchanged; only the fit itself uses more points.
+    """
+    up, a, b = _upright_basis(up_cam)
+    fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
+
+    def project(R, t, P):
+        X = (R @ P.T).T + t
+        return np.column_stack([fx * X[:, 0] / X[:, 2] + cx, fy * X[:, 1] / X[:, 2] + cy]), X
+
+    Ps, uvs = [], []
+    for corners, size in squares:
+        uv = np.asarray(corners, float).reshape(4, 2)
+        obj = _UNIT_SQUARE * size
+        best = None
+        for k in range(4):
+            P = np.roll(obj, k, axis=0)
+            e = float(np.sum((project(pose.R_co, pose.t_co, P)[0] - uv) ** 2))
+            if best is None or e < best[0]:
+                best = (e, P)
+        Ps.append(best[1])
+        uvs.append(uv)
+    P = np.vstack(Ps)
+    uv = np.vstack(uvs)
+    n = P.shape[0]
+
+    xo = pose.R_co[:, 0]
+    psi = math.atan2(float(xo @ b), float(xo @ a))
+    t = pose.t_co.astype(float).copy()
+    for _ in range(iters):
+        R = _upright_R(psi, up, a, b)
+        pr, X = project(R, t, P)
+        r = (pr - uv).reshape(-1)
+        dx = -math.sin(psi) * a + math.cos(psi) * b
+        dR = np.column_stack([dx, np.zeros(3), np.cross(dx, up)])
+        dX_dpsi = (dR @ P.T).T
+        iz = 1.0 / X[:, 2]
+        J = np.zeros((n, 2, 4))
+        J[:, 0, 1] = fx * iz
+        J[:, 0, 3] = -fx * X[:, 0] * iz * iz
+        J[:, 1, 2] = fy * iz
+        J[:, 1, 3] = -fy * X[:, 1] * iz * iz
+        J[:, :, 0] = np.einsum("nij,nj->ni", J[:, :, 1:4], dX_dpsi)
+        J = J.reshape(2 * n, 4)
+        step = np.linalg.solve(J.T @ J + 1e-9 * np.eye(4), -J.T @ r)
+        psi += float(step[0])
+        t = t + step[1:]
+        if t[2] <= 0.05:
+            return pose
+        if abs(step[0]) < 1e-6 and np.linalg.norm(step[1:]) < 1e-5:
+            break
+    R = _upright_R(psi, up, a, b)
+    pr, _ = project(R, t, P)
+    err = float(np.sqrt(np.mean(np.sum((pr - uv) ** 2, axis=1))))
+    return GatePose(R, t, err, pose.size, ippe=pose.ippe if pose.ippe is not None else pose)

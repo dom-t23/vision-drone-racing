@@ -138,3 +138,22 @@ def test_upright_solution_keeps_its_ippe_seed():
     sols = pnp.solve_gate_pose(q, K, L, up_cam)
     us = pnp.upright_solutions(sols, q, K, up_cam)
     assert us[0].ippe is not None and any(us[0].ippe is s for s in sols)
+
+
+def test_joint_outline_and_opening_fit_is_exact_and_keeps_seed():
+    """Fitting the outer outline and the inner opening together (8 points) recovers the pose."""
+    rng = np.random.default_rng(8)
+    LI = 1.4
+    for _ in range(30):
+        p_G, R_Gb, uv, t_true, up_cam = _scene(rng)
+        # inner opening: same gate, smaller square (corners scale about the gate centre)
+        sq = np.array([[0, -1, 1], [0, 1, 1], [0, 1, -1], [0, -1, -1]], float) * [0, LI / 2, LI / 2]
+        R_Gc = R_Gb @ R_BC
+        p_c = p_G + R_Gb @ T_BC
+        Pc = (R_Gc.T @ (sq - p_c).T).T
+        uv_i = (Pc[:, :2] / Pc[:, 2:3]) * [K[0, 0], K[1, 1]] + [K[0, 2], K[1, 2]]
+        qo, qi = order_clockwise(uv), order_clockwise(uv_i)
+        us = pnp.upright_solutions(pnp.solve_gate_pose(qo, K, L, up_cam), qo, K, up_cam)
+        j = pnp.refine_upright_squares(us[0], [(qo, L), (qi, LI)], K, up_cam)
+        assert np.allclose(j.t_co, t_true, atol=1e-5) and j.reproj_err < 1e-4
+        assert j.size == L and j.ippe is us[0].ippe

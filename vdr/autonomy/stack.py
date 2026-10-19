@@ -269,6 +269,17 @@ class Autonomy:
         if not sols and d.inner is not None:
             # the outline fit was bad (often two gates merged) -- try the gate's own opening
             sols = self._valid_solutions(d.inner, info.gate_inner_size, up_c)
+        elif (cfg.joint_squares and cfg.upright_pnp and sols and d.kind == OUTER and d.inner is not None
+              and sols[0].size == info.gate_outer_size):
+            # Outline and opening are concentric squares of one gate: fit both at once (8 points).
+            # Their small range biases have opposite signs, and the extra points pin down yaw.
+            sq = [(d.corners, info.gate_outer_size), (d.inner, info.gate_inner_size)]
+            joint = [pnp.refine_upright_squares(s, sq, info.K, up_c) for s in sols]
+            joint = [j for j in joint if j.reproj_err <= cfg.max_reproj_px and j.R_co[:, 2] @ j.t_co < 0.0]
+            if joint:
+                joint.sort(key=lambda s: s.reproj_err)
+                self.stats["joint_fits"] = self.stats.get("joint_fits", 0) + 1
+                sols = joint
         return sols
 
     def _valid_solutions(self, corners: np.ndarray, size: float, up_c: np.ndarray) -> list:
