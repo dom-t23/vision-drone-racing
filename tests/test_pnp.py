@@ -128,3 +128,13 @@ def test_upright_refinement_reduces_yaw_error_with_noisy_corners():
             R, _ = pnp.body_pose_in_gate(s, R_BC, T_BC)
             E.append(wrap_angle(yaw_of(R) - yaw_of(R_Gb)) ** 2)
     assert math.sqrt(np.mean(e_up)) < 0.8 * math.sqrt(np.mean(e_ippe))
+
+
+def test_upright_solution_keeps_its_ippe_seed():
+    """The stack takes roll/pitch from the unconstrained seed, so it must travel with the fit."""
+    rng = np.random.default_rng(6)
+    _, _, uv, _, up_cam = _scene(rng)
+    q = order_clockwise(uv)
+    sols = pnp.solve_gate_pose(q, K, L, up_cam)
+    us = pnp.upright_solutions(sols, q, K, up_cam)
+    assert us[0].ippe is not None and any(us[0].ippe is s for s in sols)

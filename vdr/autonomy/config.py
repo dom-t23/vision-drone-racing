@@ -100,11 +100,15 @@ class AutonomyConfig:
     # gravity direction (4 DoF: position + yaw, Gauss-Newton seeded from IPPE), and replace the
     # 3-DoF attitude update with a yaw-only one (the constrained pose carries no roll/pitch
     # information of its own). Both IPPE solutions usually converge to one, removing most flips.
-    upright_pnp: bool = False
+    # Alone (yaw-only update) it was worse: pooled 6 sets 99.08% -> 97.71% (tilt drifts, below).
+    # With upright_keep_tilt, on since 2026-10-19: pooled 99.08% -> 99.54%, completed 295 -> 298
+    # (5 rescued, 2 broken), median est. error lower on all 6 sets, per-run yaw error RMS
+    # 4.20 -> 2.87 deg, laps flat (paired, 293 runs, -0.04 s). Costs ~1 ms per detection.
+    upright_pnp: bool = True
     # With upright_pnp: keep the 3-DoF attitude update, with roll/pitch from the unconstrained
     # IPPE solution and yaw from the upright one. A yaw-only update leaves tilt to drift (5 deg in
     # seed 3041), and upright fits made with a tilted 'up' then absorb that tilt error.
-    upright_keep_tilt: bool = False
+    upright_keep_tilt: bool = True
     chi2_threshold_1dof: float = 6.635    # yaw-only update: 99% quantile
 
     # --- guidance & control -------------------------------------------------------
