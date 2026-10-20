@@ -39,28 +39,30 @@ Current simulator (area-coverage gate rendering, since 2026-10-12):
 
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline, pooled over 6 seed sets (300 courses)** | **99.08%** | 98.3% | 11.5–11.7 s per set |
-| **baseline (8 m/s)**, seed set 0 | **97.8%** | 96% | 11.59 s |
-| same, feasible lateral guidance off | 100.0% | 100% | 11.26 s |
+| **baseline, pooled over 6 seed sets (300 courses)** | **99.54%** | 99.3% | 11.4–11.7 s per set |
+| **baseline (8 m/s)**, seed set 0 | **100.0%** | 100% | 11.60 s |
+| same, upright PnP off | 97.8% | 96% | 11.59 s |
+| same, also feasible lateral guidance off | 100.0% | 100% | 11.26 s |
 | same, also along-track time-to-go off | 96.8% | 94% | 12.27 s |
 | same, also far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
 | same, also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Files: [`baseline`](results/2026-10-16_3395fb0_baseline.json),
-pooled: the baseline plus `results/2026-10-16_d37cf14_ab-feaslat-seed{1000..5000}.json` (same
-code as the baseline), [`feasible lateral guidance off`](results/2026-10-15_1d4bb7f_baseline.json),
+Files: [`baseline`](results/2026-10-19_9acf025_baseline.json),
+pooled: the baseline plus `results/2026-10-19_da2703a_ab-upright-tilt-seed{1000..5000}.json` (same
+code as the baseline), [`upright PnP off`](results/2026-10-16_3395fb0_baseline.json),
+[`feasible lateral guidance off`](results/2026-10-15_1d4bb7f_baseline.json),
 [`along-track time-to-go off`](results/2026-10-13_0f1e256_baseline.json),
 [`far lone RANSAC outlines kept`](results/2026-10-12_3b6cbbb_baseline.json),
 [`sub-pixel corners off`](results/2026-10-12_06ceff9_baseline.json).
 Single 50-run sets differ by one or two runs from noise alone, so the pooled row is the number
-to quote and components are judged pooled over several seed sets. The latest change makes the
-guidance plan its sideways correction within the acceleration limit (braking along the track
-when a correction would not fit) instead of clipping an impossible request: pooled pass rate
-97.92% → 99.08% and 5 more completed courses, for laps 3% slower (+0.34 s on 286 paired runs).
-On seed set 0 alone it went 100.0% → 97.8%, because that set had been the lucky one. Before it,
-taking the time-to-go from along-track motion made laps 1.03 s faster at an unchanged pass
-rate. Most remaining failures start at a handoff, when the next gate's estimated *yaw* is off
-by 16–46° in the failing runs (details in the write-up).
+to quote and components are judged pooled over several seed sets. The latest change is an
+"upright" PnP: gates are vertical, so the gate's pose is solved for position and yaw only, with
+the up direction taken from gravity, which gives a much better gate yaw than a free 6-DoF fit.
+Roll and pitch for the filter still come from the unconstrained fit, because measuring them with
+the filter's own estimate let the tilt drift (that version scored 97.71%). Pooled pass rate
+99.08% → 99.54%, completed 295 → 298, lap times unchanged. Before it, guidance that plans its
+sideways correction within the acceleration limit gave 97.92% → 99.08% for 3% of lap time.
+Two failures remain in 300 courses.
 
 ![Headline benchmark after each kept change](docs/img/history.png)
 
@@ -104,7 +106,8 @@ Files: [`baseline`](results/2026-10-11_68513f6_baseline.json),
   four dominant edges, and each gate's inner opening is used as a second, independent square.
 - **Pose from one square.** OpenCV's `solvePnP` with `SOLVEPNP_IPPE_SQUARE` gives the gate's
   pose from its four corners. A square has 4-fold symmetry, so the corner labelling is fixed
-  using gravity (gates are upright); the planar "flip" ambiguity is left to the filter.
+  using gravity (gates are upright). The pose is then refined with the gate held upright
+  (position + yaw only), which removes most planar "flips" and sharpens the gate's yaw.
 - **State estimation without a map.** An error-state Kalman filter (15 states: position,
   velocity, attitude, accelerometer and gyro biases) runs in the frame of the gate the drone
   is flying to. The IMU drives the prediction at 200 Hz; each detection gives a measurement
@@ -147,8 +150,8 @@ camera noise.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 73 tests, ~45 s
-python -m vdr.harness --runs 50 --seed 0    # the benchmark (~2 min on 2 cores)
+python -m pytest -q                         # 78 tests, ~80 s
+python -m vdr.harness --runs 50 --seed 0    # the benchmark (~3 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world
 python -m vdr.harness --runs 8 --link udp                     # autonomy in its own process
@@ -164,18 +167,20 @@ an assumed vehicle model (rate and thrust lags, linear drag). It flies, but less
 
 | seed set | camera + IMU (default) | camera only |
 |---|---|---|
-| 0 | 97.8% | 93.2% |
-| 1000 | 97.2% | 91.8% |
-| 2000 | 100.0% | 95.2% |
-| 3000 | 99.5% | 86.0% |
-| 4000 | 100.0% | 99.0% |
-| 5000 | 100.0% | 92.5% |
-| pooled (2400 gates) | **99.08%** | **92.96%** |
+| 0 | 100.0% | 97.2% |
+| 1000 | 99.0% | 99.0% |
+| 2000 | 100.0% | 99.0% |
+| 3000 | 100.0% | 96.5% |
+| 4000 | 100.0% | 100.0% |
+| 5000 | 98.2% | 100.0% |
+| pooled (2400 gates) | **99.54%** | **98.62%** |
 
-Files: camera only `results/2026-10-1{7,8}_21b0f5f_ab-camonly[-seedN].json`; default as in the
-results table above (same code). Camera-only completes 268 of 300 courses against 295 (31 runs
-lost, 4 rescued) with laps 11.6–11.9 s per set. Its vehicle model
-uses the airframe's nominal values; a real drone's model would be less exact.
+Files: camera only `results/2026-10-20_dcb8934_ab-camonly[-seedN].json`; default as in the
+results table above (same code). Camera-only completes 294 of 300 courses against 298 (6 runs
+lost, 2 rescued) with laps 11.4–11.6 s per set. With the previous default (before upright PnP)
+the gap was much wider, 92.96% vs 99.08% (`results/2026-10-1{7,8}_21b0f5f_ab-camonly*`): a
+better gate yaw probably matters most when there is no gyro to hold heading between frames. Its vehicle
+model uses the airframe's nominal values; a real drone's model would be less exact.
 
 **Building the app.** `pip install . pyinstaller && python packaging/build.py` makes
 `dist/vdr-racing/` for the OS you run it on. Pushing a `v*` tag runs

@@ -33,6 +33,7 @@ HISTORY = [
     ("2026-10-13_0f1e256_baseline.json", "drop far lone\nRANSAC outlines", 1),
     ("2026-10-15_1d4bb7f_baseline.json", "along-track\ntime-to-go", 1),
     ("2026-10-16_3395fb0_baseline.json", "feasible lateral\nguidance", 1),
+    ("2026-10-19_9acf025_baseline.json", "upright PnP", 1),
 ]
 
 # Component A/Bs: (label, [(off file, on file), ...] one pair per seed set).
@@ -81,6 +82,11 @@ ABLATIONS = [
         ("2026-10-15_131d93c_ab-attgo-seed4000.json", "2026-10-16_d37cf14_ab-feaslat-seed4000.json"),
         ("2026-10-16_d37cf14_baseline-seed5000.json", "2026-10-16_d37cf14_ab-feaslat-seed5000.json"),
     ]),
+    # upright_pnp + upright_keep_tilt. Off: the feasible-lateral default (same code path at da2703a).
+    ("upright PnP", [
+        ("2026-10-16_3395fb0_baseline.json", "2026-10-19_da2703a_ab-upright-tilt.json"),
+    ] + [(f"2026-10-16_d37cf14_ab-feaslat-seed{s}.json", f"2026-10-19_da2703a_ab-upright-tilt-seed{s}.json")
+         for s in range(1000, 6000, 1000)]),
 ]
 
 # A/Bs that were tried and left off (shown in the write-up, not in the ablation figure).
@@ -100,6 +106,16 @@ REJECTED = [
         ("2026-10-16_d37cf14_ab-feaslat-seed4000.json", "2026-10-17_cbd0150_ab-yawfloor-seed4000.json"),
         ("2026-10-16_d37cf14_ab-feaslat-seed5000.json", "2026-10-17_cbd0150_ab-yawfloor-seed5000.json"),
     ]),
+    # upright_pnp alone (yaw-only attitude update, tilt from the filter): tilt drifted.
+    ("upright PnP, yaw-only update", [
+        ("2026-10-16_3395fb0_baseline.json", "2026-10-18_bc81c40_ab-upright.json"),
+    ] + [(f"2026-10-16_d37cf14_ab-feaslat-seed{s}.json", f"2026-10-19_bc81c40_ab-upright-seed{s}.json")
+         for s in range(1000, 6000, 1000)]),
+    # joint_squares on top of the upright PnP default.
+    ("joint outline + opening fit", [
+        ("2026-10-19_9acf025_baseline.json", "2026-10-19_42e68bf_ab-joint.json"),
+    ] + [(f"2026-10-19_da2703a_ab-upright-tilt-seed{s}.json", f"2026-10-20_42e68bf_ab-joint-seed{s}.json")
+         for s in range(1000, 6000, 1000)]),
 ]
 
 # Paired lap-time comparisons (same seeds, flag off vs on): (label, pairs, output file name).
@@ -107,6 +123,7 @@ PAIRED = [
     ("sub-pixel corners", ABLATIONS[3][1], "paired_laps.png"),
     ("along-track time-to-go", ABLATIONS[5][1], "paired_laps_tgo.png"),
     ("feasible lateral guidance", ABLATIONS[6][1], "paired_laps_feaslat.png"),
+    ("upright PnP", ABLATIONS[7][1], "paired_laps_upright.png"),
 ]
 
 C_OFF, C_ON, C_INK, C_GRID = "#9aa5b1", "#d9480f", "#212529", "#e9ecef"
@@ -157,7 +174,7 @@ def plot_history(path, root=RESULTS) -> list:
     ax.text(split + 0.05, 77, "simulator renderer fixed:\nnot comparable across this line",
             fontsize=8, color=C_INK, va="bottom")
     ax.set_xticks(list(xs), [r[0] for r in rows], fontsize=8)
-    ax.set_ylim(75, 101)
+    ax.set_ylim(75, 103)
     ax.set_ylabel("% (50 courses, seed set 0)")
     ax.set_title("Headline benchmark after each kept change", fontsize=11)
     ax.legend(loc="upper left", frameon=False, fontsize=9)
@@ -175,7 +192,7 @@ def plot_ablations(path, root=RESULTS) -> list:
         on = pooled_pass([p[1] for p in pairs], root)
         per_set = [(100 * load(a, root)["pass_rate"], 100 * load(b, root)["pass_rate"]) for a, b in pairs]
         rows.append((label, len(pairs), 100 * off[0] / off[1], 100 * on[0] / on[1], per_set))
-    fig, ax = plt.subplots(figsize=(11, 4.4))
+    fig, ax = plt.subplots(figsize=(12, 4.6))
     w = 0.36
     for i, (label, n, off, on, per_set) in enumerate(rows):
         ax.bar(i - w / 2, off, w, color=C_OFF, label="off" if i == 0 else None)
@@ -186,7 +203,7 @@ def plot_ablations(path, root=RESULTS) -> list:
         ax.text(i + w / 2, 71, f"{on:.1f}", ha="center", fontsize=9, color="white", weight="bold")
     sim = ["legacy renderer" if pairs[0][0] < "2026-10-12" else "current renderer" for _, pairs in ABLATIONS]
     ax.set_xticks(range(len(rows)),
-                  [f"{textwrap.fill(r[0], 16)}\n{r[1]} set{'s' if r[1] > 1 else ''}, {sim[i]}"
+                  [f"{textwrap.fill(r[0], 16)}\n{r[1]} set{'s' if r[1] > 1 else ''},\n{sim[i]}"
                    for i, r in enumerate(rows)],
                   fontsize=8)
     ax.set_ylim(70, 101)
