@@ -18,6 +18,8 @@ class SimConfig:
     physics_dt: float = 0.0025        # s (400 Hz rigid-body integration)
     control_substeps: int = 2         # physics steps per control tick -> 200 Hz IMU / commands
     camera_every: int = 5             # control ticks per camera frame -> 40 Hz camera
+    camera_latency: float = 0.0       # s from exposure to the frame reaching the autonomy (rounded to
+                                      # whole control ticks); the image shows the world at capture time
     time_limit: float = 60.0          # s per run (hard cap)
     race_min_speed: float = 5.0       # m/s: race clock = start allowance + path length / this (0 disables)
     race_start_allowance: float = 2.0 # s added to the race clock for take-off

@@ -8,6 +8,7 @@ Ground truth stays in here. The autonomy sees only `VehicleInfo` (once) and
 from __future__ import annotations
 
 import math
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -99,6 +100,9 @@ class Simulator:
         self.events: list = []
         self.record = record
         self.log: list = []          # (t, p, R, v) if record
+        # Camera latency: frames are rendered at capture and handed over this many ticks later.
+        self._latency_ticks = max(0, int(round(cfg.camera_latency / cfg.control_dt)))
+        self._frame_queue: deque = deque()   # (delivery tick, image)
 
     # ------------------------------------------------------------ interface
     def vehicle_info(self) -> VehicleInfo:
@@ -164,6 +168,11 @@ class Simulator:
         image = None
         if force_image or self.tick % self.cfg.camera_every == 0:
             image = self.camera.render(self.state.p, self.state.R)
+            if self._latency_ticks:
+                self._frame_queue.append((self.tick + self._latency_ticks, image))
+                image = None
+        if self._frame_queue and self._frame_queue[0][0] <= self.tick:
+            image = self._frame_queue.popleft()[1]
         return Observation(t=self.t, accel=accel, gyro=gyro, image=image)
 
     def _finish(self, outcome: str, gate: int = -1) -> None:

@@ -115,3 +115,27 @@ def test_supersampled_gate_fill_has_area_coverage():
     pts = [np.round(P * 16).astype(np.int32) for P in (sq, hole)]
     cv2.fillPoly(legacy, pts, (255, 255, 255), lineType=cv2.LINE_AA, shift=4)
     assert legacy[..., 0].sum() / 255.0 - 300 > 20   # the old fill is visibly too fat
+
+
+def test_camera_latency_delivers_the_frame_captured_earlier():
+    """With latency, each frame arrives N ticks late and shows the world at capture time."""
+    base = SimConfig(pixel_noise_sigma=0.0)
+    lag = base.override(camera_latency=0.03)              # 0.03 s / 5 ms ticks = 6 ticks
+    ticks = int(round(lag.camera_latency / lag.control_dt))
+    cmd = Command(thrust=12.0, rates=np.array([0.0, 0.3, 0.0]))   # climb and pitch: frames change
+    a, b = Simulator(base, seed=3), Simulator(lag, seed=3)
+    fa = {0: a.reset().image}
+    ob = b.reset()
+    assert ob.image is None
+    fb = {}
+    for k in range(1, 30):
+        oa, ob = a.step(cmd), b.step(cmd)
+        if oa.image is not None:
+            fa[k] = oa.image
+        if ob.image is not None:
+            fb[k] = ob.image
+    assert sorted(fb) == [k + ticks for k in sorted(fa) if k + ticks < 30]
+    for k, img in fb.items():
+        assert np.array_equal(img, fa[k - ticks])
+    # zero latency (the default) leaves the frame schedule unchanged
+    assert SimConfig().camera_latency == 0.0
