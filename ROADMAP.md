@@ -71,18 +71,23 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (C) Write-up
 
-- **Due by 2026-10-24:** upright PnP (default since 9acf025) is not in README/WRITEUP yet; add it
-  (both A/B arms, the tilt-drift story) and re-run the camera-only A/B on the 6 sets.
+- Current as of d356d7a (2026-10-20): upright PnP default (pooled 6 sets 99.54%), joint fit as
+  "tried", camera-only re-run (98.62%). Next due by 2026-10-27.
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
-  to `vdr/report.py`'s lists and re-run `python -m vdr.report`). Next due by 2026-10-24; it is
-  current as of 3395fb0 (feasible lateral, pooled 6 sets 99.08%) and the handoff yaw A/B.
-- When a flight-changing default flips, also re-run the camera-only A/B on the 6 sets, update
-  `vdr/demo.py`'s BENCHMARK and regenerate `docs/demo/` and `docs/img/flight.gif`.
+  to `vdr/report.py`'s lists and re-run `python -m vdr.report`).
+- When a flight-changing default flips, also re-run the camera-only A/B on the 6 sets (from a
+  clean worktree so doc edits don't make the files `-dirty`), update `vdr/demo.py`'s BENCHMARK
+  and regenerate `docs/demo/` and `docs/img/flight.gif`.
 - Possible additions: a per-stage figure (detection -> PnP error vs range, from a committed
   diagnostic results file), a handoff-yaw-error figure, and a failure-mode breakdown once
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-20 — Write-up refresh (run 18): README/WRITEUP/figures report the 9acf025 default
+  (pooled 6 sets 99.54%, seed 0 100.0%, 11.60 s), upright PnP in history/ablations/paired laps,
+  stories 6.9 (tilt drift) and 6.10 (joint fit ceiling). Camera-only re-run on 6 sets: pooled
+  98.62% vs 99.54% (was 92.96% vs 99.08%); replay and GIF regenerated.
 
 - 2026-10-20 **Both squares (A4), tried**: `joint_squares` (upright 8-point fit of outline +
   opening) flat — pooled 6 sets 99.54% -> 99.54% (1 rescued / 1 broken), laps +0.007 s; left

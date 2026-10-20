@@ -893,3 +893,53 @@ Tests: +1 (`test_pnp`: joint fit exact on clean corners, keeps size and IPPE see
 **Next:** (C) write-up due by 2026-10-24 (upright PnP story, camera-only re-run on 6 sets).
 (A) the remaining failures: 2003 (missed_gate, new with joint fit — irrelevant now), 5007
 wrong_gate; measure per-handoff yaw error for merged-gate detections specifically.
+
+## 2026-10-20 — Run 18: (C) write-up refresh (upright PnP, joint fit, camera-only re-run)
+
+Chunk choice: runs 16 and 17 were both (A), and README/WRITEUP still quoted the 3395fb0 default
+(pooled 99.08%) although upright PnP became the default in run 16, so (C).
+
+**Baseline check** at dcb8934 (local `main` was behind origin and HEAD detached; checked out
+`main` and fast-forwarded first): tests 78 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.60 s, median est. error 0.299 m — identical to `results/2026-10-19_9acf025_baseline.json`
+(not saved; no flight code changed this run). ~195 s per 50 runs on this machine.
+
+**Write-up (commit d356d7a).**
+- `vdr/report.py`: history gains the 9acf025 baseline; ablations gain upright PnP (6 sets,
+  pooled 99.08% -> 99.54%); rejected list gains upright PnP with a yaw-only update (97.71%) and
+  the joint outline + opening fit (99.54% -> 99.54%); new paired-laps figure
+  `docs/img/paired_laps_upright.png` (293 runs, 149 faster, mean -0.036 s, median -0.003 s).
+  Ablation figure widened (8 bars; labels overlapped) and history y-limit raised (100% labels
+  touched the title). All figures regenerated.
+- README/WRITEUP: headline is the pooled 6-set 99.54% (298/300; failures 1005 crash_gate at 4,
+  5007 wrong_gate at 1) with seed 0 100.0%, 11.60 s; results/ablation tables updated; section
+  3.2 describes the upright refinement; new stories 6.9 (constraining a measurement with the
+  filter's estimate removes observability) and 6.10 (measure the ceiling on real frames);
+  limitations now point at merged-gate detection error. README test count 73 -> 78, ~80 s.
+
+**Camera-only re-run with the current default** (`--flag camera_only=true` at dcb8934, run from
+a clean worktree so the doc edits could not tag the files `-dirty`):
+| seeds | camera + IMU | camera only | completed |
+|---|---|---|---|
+| 0 | 100.0% | 97.2% | 50 -> 48 |
+| 1000 | 99.0% | 99.0% | 49 -> 49 |
+| 2000 | 100.0% | 99.0% | 50 -> 49 |
+| 3000 | 100.0% | 96.5% | 50 -> 48 |
+| 4000 | 100.0% | 100.0% | 50 -> 50 |
+| 5000 | 98.2% | 100.0% | 49 -> 50 |
+| pooled (2400 gates) | **99.54%** | **98.62%** | 298 -> 294 (6 lost, 2 rescued) |
+Files: `results/2026-10-20_dcb8934_ab-camonly[-seedN].json` (commit 632139a). Camera-only laps
+11.4-11.6 s per set. The gap shrank from 6.1 pp (run 15: 92.96% vs 99.08%) to 0.9 pp — upright
+PnP helped camera-only far more than camera + IMU. Not yet diagnosed why (hypothesis: without a
+gyro, heading between frames rests on the vision yaw). `vdr/demo.py` BENCHMARK now lists these
+6 pairs; `docs/demo/{flights,benchmark}.js` regenerated (seeds 0/1017/2034: five flights 8/8,
+camera-only 2034 missed_gate at 4, matching its results file); `docs/img/flight.gif` re-recorded
+(seed 0, 8/8).
+
+Verify: pytest 78 passed; 8-run smoke 100.0% (64/64).
+
+**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.54%).
+
+**Next:** (A) diagnose 1005 (crash_gate) and 5007 (wrong_gate); measure per-detection error of
+merged/overlapping-gate detections on rendered multi-gate scenes (ROADMAP A4). Check per-frame
+yaw error in camera-only mode against truth to confirm why upright PnP closed that gap.
