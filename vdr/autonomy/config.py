@@ -111,6 +111,9 @@ class AutonomyConfig:
     upright_keep_tilt: bool = True
     # With upright_pnp: when an outline and its own opening are both detected (and the outline
     # was not replaced by the opening), fit both squares at once (8 points, 4 DoF).
+    # A/B 2026-10-20 on 6 seed sets: flat (pooled 99.54% -> 99.54%, 1 rescued / 1 broken, laps
+    # +0.007 s paired). On rendered single-gate frames the outline alone already gives yaw RMS
+    # < 1.6 deg to 12 m; the joint fit only helps beyond 12 m (6.4 -> 3.4 deg). Left off.
     joint_squares: bool = False
     chi2_threshold_1dof: float = 6.635    # yaw-only update: 99% quantile
 

@@ -190,6 +190,11 @@ estimate trace and course for one seed — use it to debug a specific failure.
   independent source for whatever you constrain (here: roll/pitch from the unconstrained IPPE fit,
   yaw + position from the upright fit; 99.54%). Check tilt error against truth, not just yaw.
 
+- 2026-10-20 — Measure a perception idea's ceiling on frames from the real renderer + detector,
+  not on synthetic corner noise: a 0.5 px Gaussian model predicted 15-20% better yaw from
+  fitting the outline and opening together, but sub-pixel outline corners on rendered frames
+  already give < 1.6 deg yaw to 12 m, so the joint fit was flat in flight (pooled 99.54% both).
+
 ## Instruction changes
 
 (none yet)

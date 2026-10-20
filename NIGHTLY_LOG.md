@@ -844,3 +844,52 @@ seed-15 handoff is good enough that no recovery happens). 77 passed.
 **Next:** (A) diagnose 1005 and 5007 (wrong_gate is new); re-try `handoff_yaw_floor` on top of
 upright PnP; ROADMAP A4 (both squares) now fits naturally into the upright solver (8 points).
 (C) write-up due by 2026-10-24: add the upright PnP story and re-run the camera-only A/B.
+
+## 2026-10-19/20 — Run 17: (A) joint outline + opening upright fit (flat, left off)
+
+Chunk choice: run 16 was (A) and run 15 (C); the write-up is not due until 2026-10-24, so
+(A) again: ROADMAP A4 ("use both squares"), which run 16 noted now fits into the upright solver.
+
+**Baseline check** at 78d96eb: tests 77 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.60 s, median est. error 0.299 m — identical to `results/2026-10-19_9acf025_baseline.json`
+(not saved). Harness wall time on this machine ~260-280 s per 50 runs.
+
+**Idea (`joint_squares`, commit 42e68bf).** The outer outline and the inner opening are
+concentric coplanar squares of one gate. When an OUTER detection has its own opening and the
+outline was not already replaced by it (robust-outline check), `pnp.refine_upright_squares`
+fits all 8 corners at once (4 DoF, Gauss-Newton seeded from each upright outline solution);
+`size`/`ippe` are kept so the measurement model and the roll/pitch source are unchanged.
+Offline (scratch, synthetic corners with 0.5 px noise, 0.7° error in "up"): drone yaw RMS
+1.5 -> 1.2° at 2-5 m, 4.6 -> 4.0° at 5-8 m, 9.3 -> 8.1° at 8-12 m.
+
+**A/B** (off = `9acf025_baseline` + `da2703a_ab-upright-tilt-seedN`, same code path; on =
+`results/2026-10-{19,20}_42e68bf_ab-joint[-seedN].json`):
+| seeds | pass off -> on | completed | lap (s) | median est. err (m) | mean yaw err RMS (°) |
+|---|---|---|---|---|---|
+| 0 | 100.0% -> 100.0% | 50 -> 50 | 11.60 -> 11.60 | 0.299 -> 0.334 | 2.92 -> 3.08 |
+| 1000 | 99.0% -> 100.0% | 49 -> 50 | 11.67 -> 11.68 | 0.315 -> 0.301 | 2.68 -> 2.91 |
+| 2000 | 100.0% -> 99.0% | 50 -> 49 | 11.60 -> 11.60 | 0.289 -> 0.297 | 2.59 -> 2.62 |
+| 3000 | 100.0% -> 100.0% | 50 -> 50 | 11.43 -> 11.44 | 0.331 -> 0.300 | 2.60 -> 2.53 |
+| 4000 | 100.0% -> 100.0% | 50 -> 50 | 11.54 -> 11.54 | 0.358 -> 0.290 | 3.43 -> 3.11 |
+| 5000 | 98.2% -> 98.2% | 49 -> 49 | 11.56 -> 11.58 | 0.316 -> 0.307 | 3.02 -> 3.20 |
+| pooled (2400 gates) | **99.54% -> 99.54%** | 298 -> 298 | | | |
+Rescued 1005 (crash_gate at 4, one of the two runs upright PnP broke), broke 2003 (missed_gate
+at 4). Paired laps (297 runs) +0.007 s. Yaw and estimation error mixed. **Flat -> left off.**
+
+**Why it didn't help** (scratch: one gate rendered by the real `FpvCamera`, 250 clean
+single-gate detections per band, detector with sub-pixel corners, 0.7° error in "up"): the
+outline alone is already far better than the synthetic 0.5 px model assumed — yaw RMS 0.27°
+(2-5 m), 0.77° (5-8 m), 1.59° (8-12 m), range bias < 0.1%. The joint fit only helps beyond
+12 m (yaw 6.4 -> 3.4°, range bias -0.86% -> -0.07%), where the opening alone is worse than the
+outline at every range (it is smaller). So clean single-gate detections are not where the
+remaining yaw error comes from; it is merged/overlapping gates and the handoff averaging
+(same-viewpoint sightings, run 14).
+
+Tests: +1 (`test_pnp`: joint fit exact on clean corners, keeps size and IPPE seed). 78 passed;
+8-run smoke 100.0% (64/64).
+
+**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.54%).
+
+**Next:** (C) write-up due by 2026-10-24 (upright PnP story, camera-only re-run on 6 sets).
+(A) the remaining failures: 2003 (missed_gate, new with joint fit — irrelevant now), 5007
+wrong_gate; measure per-handoff yaw error for merged-gate detections specifically.

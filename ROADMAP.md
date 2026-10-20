@@ -36,8 +36,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 2. **(next) Follow-ups to upright PnP (done 2026-10-19, see Done).** Diagnose the 2 runs it broke
    (1005 crash at gate 4, 5007 wrong_gate at gate 1); re-try `handoff_yaw_floor` on top of it;
    speed up `refine_upright` (harness 90 s -> 140 s per 50 runs).
-4. **Use both squares.** When outer and inner corners are both found, solve with all 8 points
-   — `pnp.refine_upright` already takes residuals per point, so add the inner square to it.
+4. **Error of merged / overlapping-gate detections.** Run 17 measured clean single-gate
+   detections on rendered frames: yaw RMS < 1.6 deg and range bias < 0.1% out to 12 m. The
+   remaining yaw/handoff error must come from RANSAC outlines, openings seen through other
+   gates, and same-viewpoint averaging. Measure per-detection error by type on rendered
+   multi-gate scenes before the next perception change.
 5. **Two-gate lookahead guidance.** At 8 m/s the drone has ~1 s after a pass to line up for
    the next gate. Plan through the current AND next gate (e.g. a cubic through both with the
    exit velocity chosen for the turn) so it starts the turn on the right line.
@@ -80,6 +83,10 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-20 **Both squares (A4), tried**: `joint_squares` (upright 8-point fit of outline +
+  opening) flat — pooled 6 sets 99.54% -> 99.54% (1 rescued / 1 broken), laps +0.007 s; left
+  off. Clean single-gate outlines are already accurate to 12 m; it only helps beyond that.
 
 - 2026-10-19 **Upright PnP** (`upright_pnp` + `upright_keep_tilt`): 4-DoF fit (position + yaw)
   with tilt from the filter; attitude update keeps IPPE roll/pitch. Pooled 99.08% -> 99.54%,
