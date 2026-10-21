@@ -58,7 +58,12 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 - **Stack unit tests:** handoff, retarget and search logic with scripted detections.
 - **Realism, one knob at a time (each: add SimConfig field defaulting to old behaviour ->
   flip default -> re-baseline):**
-  - camera latency (20-40 ms) and IMU/camera timestamp jitter
+  - **camera latency: knob added (run 19, `SimConfig.camera_latency`, default 0)**. Seed 0:
+    10 ms 100%, 15 ms 92%, 20 ms 52%, 30 ms 18.75%, 40 ms 4.5%. The stale *attitude* is the
+    whole effect (stale position alone: 100% at 20 ms). Blocked on a contract decision (Dom):
+    frame capture timestamp in `Observation` (or latency in `VehicleInfo`); then (A) attitude
+    rewind / delayed ESKF update behind a flag, then flip the default to ~25 ms and re-baseline.
+  - IMU/camera timestamp jitter
   - motion blur proportional to angular rate and speed
   - lens distortion (+ give the autonomy calibrated distortion coefficients via VehicleInfo)
   - lighting/exposure changes, gate colour variation, shadows
@@ -83,6 +88,10 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-21 — Camera latency knob (B, run 19): `SimConfig.camera_latency` (default 0, old
+  behaviour); seed-0 sweep 0-50 ms shows a cliff at 15-20 ms (100% -> 52%), caused by stale
+  attitude, not stale position. Default not flipped (needs a frame-timestamp contract field).
 
 - 2026-10-20 — Write-up refresh (run 18): README/WRITEUP/figures report the 9acf025 default
   (pooled 6 sets 99.54%, seed 0 100.0%, 11.60 s), upright PnP in history/ablations/paired laps,

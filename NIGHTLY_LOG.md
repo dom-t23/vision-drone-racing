@@ -943,3 +943,61 @@ Verify: pytest 78 passed; 8-run smoke 100.0% (64/64).
 **Next:** (A) diagnose 1005 (crash_gate) and 5007 (wrong_gate); measure per-detection error of
 merged/overlapping-gate detections on rendered multi-gate scenes (ROADMAP A4). Check per-frame
 yaw error in camera-only mode against truth to confirm why upright PnP closed that gap.
+
+## 2026-10-20/21 — Run 19: (B) camera latency knob + sensitivity sweep (default unchanged)
+
+Chunk choice: run 18 was (C) and run 17 (A). The benchmark is saturated (seed 0 100.0%, pooled
+6 sets 99.54%, 2 failing runs out of 300), so another (A) A/B cannot show a gain above noise.
+(B) instead: the first ROADMAP realism knob, camera latency, to find where the stack has headroom.
+
+**Baseline check** at 914576a: tests 78 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.60 s, median est. error 0.299 m — identical to `results/2026-10-19_9acf025_baseline.json`
+(not saved). ~180 s per 50 runs on this machine.
+
+**Knob (commit 1077d61).** `SimConfig.camera_latency` (s, default 0.0 = old behaviour, rounded
+to whole 5 ms control ticks): a frame is rendered at capture (the world as it was then) and
+handed to the autonomy in a later Observation. With 0 the render calls, RNG draws and frame
+schedule are unchanged by construction (frames are queued only when the latency is > 0). The autonomy is *not* told the latency
+(the contract has no frame timestamp or latency calibration), so it fuses each frame as if it
+were current. Test: `test_sim::test_camera_latency_delivers_the_frame_captured_earlier`.
+
+**Sweep** (seed 0, 50 runs, `--sim camera_latency=X`, files `results/2026-10-2{0,1}_1077d61_latency-<X>ms.json`):
+| latency | pass rate | completed | lap (s) | median est. err (m) | outcomes |
+|---|---|---|---|---|---|
+| 0 (baseline) | 100.0% | 50 | 11.60 | 0.299 | all completed |
+| 10 ms | 100.0% | 50 | 11.62 | 0.305 | all completed |
+| 15 ms | 92.0% | 44 | 11.88 | 0.397 | 5 crash_gate, 1 missed |
+| 20 ms | 52.0% | 21 | 12.17 | 0.456 | 23 crash_gate, 5 missed, 1 ground |
+| 30 ms | 18.75% | 2 | 12.97 | 0.553 | 37 crash_gate, 10 missed, 1 wrong |
+| 40 ms | 4.5% | 0 | – | 0.468 | 33 crash_gate, 17 missed |
+| 50 ms | 8.75% | 0 | – | 0.579 | 25 crash_gate, 20 missed, 4 ground, 1 wrong |
+A cliff between 10 and 20 ms; 20-40 ms is typical for a real FPV camera + capture pipeline.
+(Two files were first written with wrong tags by a shell typo — "02ms"/"04ms" for 20/40 ms, and
+"05ms" for what was really 0.05 s — and renamed; each file's `sim_config.camera_latency` is the
+authority.)
+
+**Which part of the stale frame hurts?** (scratch, not committed: monkeypatched renderer, 50
+runs seed 0, 20 ms): frame from capture-time position *and* attitude 52.0% (reproduces the
+committed file exactly), capture-time **position** with current attitude **100.0%**,
+current position with capture-time **attitude** 52.8%. So the 16 cm of travel in 20 ms is
+harmless; what breaks the stack is the camera having rotated by up to a few degrees since
+exposure — at 6-10 m that moves the gate-centre bearing by tens of cm, and the filter applies it
+with the current attitude. Turning the PnP attitude update off at 20 ms (`att_factor=1000`,
+`results/2026-10-21_1077d61_latency-20ms-noatt.json`) does not help (35.5%), so it is the
+gate-centre bearing measurement itself, not only the attitude update.
+
+**Default not flipped.** Compensation is cheap in principle (rewind the filter's attitude to
+exposure time with the buffered gyro, or apply the update at its own timestamp and re-propagate)
+but the autonomy must know when each frame was exposed. That needs a contract addition — a
+capture timestamp in `Observation` (what every camera driver provides) or a measured latency in
+`VehicleInfo` — which changes `tests/test_separation.py`'s allowed lists, so it is left for Dom
+to decide. Flipping the default now would only measure that missing interface field.
+
+Verify: pytest 79 passed; 8-run smoke 100.0% (64/64).
+
+**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.54%); default world unchanged.
+
+**Next:** if Dom approves a frame capture timestamp: (A) delayed-measurement handling in the
+ESKF behind a flag (attitude rewind first — the split says that is all that matters), A/B at
+20-30 ms, then flip `camera_latency` to ~0.025 and re-baseline (`--tag rebaseline-latency`).
+Otherwise (A) diagnose 1005 / 5007 on the current world.

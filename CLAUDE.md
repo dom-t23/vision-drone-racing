@@ -24,7 +24,7 @@ prompt is the top-level authority; nothing here may weaken it.
 vdr/interface.py      VehicleInfo / Observation / Command  — the ONLY sim<->autonomy contract
 vdr/geometry.py       SO(3) helpers + camera mount (pure maths, shared)
 vdr/sim/              ground truth lives here
-  config.py           SimConfig — every "how hard is the world" knob
+  config.py           SimConfig — every "how hard is the world" knob (incl. camera_latency, default 0)
   dynamics.py         rigid body; acro inner loops as first-order lags; rotor + quadratic drag
   imu.py              white noise + random-walk biases
   camera.py           pinhole renderer: sky/ground, orange gate frames (area-coverage AA fill), noise
@@ -194,6 +194,12 @@ estimate trace and course for one seed — use it to debug a specific failure.
   not on synthetic corner noise: a 0.5 px Gaussian model predicted 15-20% better yaw from
   fitting the outline and opening together, but sub-pixel outline corners on rendered frames
   already give < 1.6 deg yaw to 12 m, so the joint fit was flat in flight (pooled 99.54% both).
+
+- 2026-10-21 — Before designing compensation for a sensor imperfection, split it into its parts
+  in a scratch monkeypatch of the sim: for 20 ms camera latency, a frame from the capture-time
+  *position* flew 100% but one from the capture-time *attitude* 52.8% (all-stale 52.0%) — so
+  only the rotation since exposure matters. Read the swept value back from each results file's
+  `sim_config`; a shell typo (`0.0$L` with L=5 -> 0.05) silently mislabelled a run.
 
 ## Instruction changes
 
