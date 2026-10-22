@@ -120,8 +120,10 @@ class AutonomyConfig:
     # sightings (seed sets 1000 + 5000) those had yaw error RMS 17-44 deg (inner openings:
     # median 34 deg; even the better of the two solutions: RMS 29 deg), vs RMS 5-10 deg
     # (median 1.4-3.7) for single-solution sightings. Their positions are fine and still count.
-    # A gate with no unambiguous sighting takes the bearing prior alone (yaw_prior_from_bearing).
+    # A gate with no unambiguous sighting uses all its sightings (old behaviour), or with
+    # unambiguous_yaw_bearing_only the bearing prior alone (yaw_prior_from_bearing).
     unambiguous_yaw_votes: bool = False
+    unambiguous_yaw_bearing_only: bool = False
     chi2_threshold_1dof: float = 6.635    # yaw-only update: 99% quantile
 
     # --- guidance & control -------------------------------------------------------

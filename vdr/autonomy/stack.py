@@ -474,8 +474,9 @@ class Autonomy:
         cfg, e = self.cfg, self.eskf
         t = hyp.mean
         meas = hyp.measured_yaw(unambiguous_only=True) if cfg.unambiguous_yaw_votes else None
-        if meas is None and not (cfg.unambiguous_yaw_votes and cfg.yaw_prior_from_bearing):
-            meas = hyp.measured_yaw()
+        if meas is None and not (cfg.unambiguous_yaw_votes and cfg.unambiguous_yaw_bearing_only
+                                 and cfg.yaw_prior_from_bearing):
+            meas = hyp.measured_yaw()     # no unambiguous sighting: all of them, as before
         yaw_m, ysig_m = meas if meas is not None else (0.0, math.inf)
         if cfg.handoff_yaw_floor:
             ysig_m = max(ysig_m, math.radians(cfg.handoff_yaw_sigma_floor_deg))
@@ -486,7 +487,7 @@ class Autonomy:
             yaw_b = math.atan2(t[1] - origin[1], t[0] - origin[0])
             sb = math.radians(cfg.bearing_yaw_sigma_deg)
             if meas is None:
-                yaw, ysig = yaw_b, sb     # no unambiguous sighting: the bearing prior alone
+                yaw, ysig = yaw_b, sb     # unambiguous_yaw_bearing_only: the bearing prior alone
             elif abs(wrap_angle(yaw_m - yaw_b)) < 2.0 * sb:
                 w_m, w_b = 1.0 / ysig_m ** 2, 1.0 / sb ** 2
                 yaw = yaw_b + wrap_angle(yaw_m - yaw_b) * w_m / (w_m + w_b)
