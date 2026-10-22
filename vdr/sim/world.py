@@ -14,7 +14,7 @@ from typing import Optional
 
 import numpy as np
 
-from vdr.geometry import rot_z
+from vdr.geometry import exp_so3, log_so3, rot_z
 from vdr.interface import Command, Observation, VehicleInfo
 from vdr.sim.camera import FpvCamera
 from vdr.sim.config import SimConfig
@@ -103,6 +103,10 @@ class Simulator:
         # Camera latency: frames are rendered at capture and handed over this many ticks later.
         self._latency_ticks = max(0, int(round(cfg.camera_latency / cfg.control_dt)))
         self._frame_queue: deque = deque()   # (delivery tick, image)
+        # Motion blur: recent physics-step poses (t, p, R) to interpolate the shutter interval.
+        self._pose_hist: deque = deque(maxlen=int(math.ceil(cfg.exposure_time / cfg.physics_dt)) + 2)
+        if cfg.exposure_time > 0:
+            self._pose_hist.append((self.t, self.state.p.copy(), self.state.R.copy()))
 
     # ------------------------------------------------------------ interface
     def vehicle_info(self) -> VehicleInfo:
@@ -137,6 +141,8 @@ class Simulator:
             p0 = self.state.p.copy()
             self.dyn.step(self.state, cmd.thrust, np.asarray(cmd.rates, dtype=float))
             self.t += self.cfg.physics_dt
+            if self.cfg.exposure_time > 0:
+                self._pose_hist.append((self.t, self.state.p.copy(), self.state.R.copy()))
             f_sum += QuadDynamics.specific_force_body(self.state)
             w_sum += self.state.omega
             self._check_events(p0, self.state.p)
@@ -167,13 +173,37 @@ class Simulator:
         accel, gyro = self.imu.sample(f_mean, w_mean)
         image = None
         if force_image or self.tick % self.cfg.camera_every == 0:
-            image = self.camera.render(self.state.p, self.state.R)
+            if self.cfg.exposure_time > 0:
+                image = self.camera.render_exposure(self._exposure_poses())
+            else:
+                image = self.camera.render(self.state.p, self.state.R)
             if self._latency_ticks:
                 self._frame_queue.append((self.tick + self._latency_ticks, image))
                 image = None
         if self._frame_queue and self._frame_queue[0][0] <= self.tick:
             image = self._frame_queue.popleft()[1]
         return Observation(t=self.t, accel=accel, gyro=gyro, image=image)
+
+    def _exposure_poses(self) -> list:
+        """True poses at the midpoints of `exposure_samples` equal slices of [t - exposure, t],
+        interpolated between physics steps (before the first step: the start pose)."""
+        n = max(1, self.cfg.exposure_samples)
+        hist = list(self._pose_hist)
+        times = np.array([h[0] for h in hist])
+        out = []
+        for k in range(n):
+            tk = self.t - self.cfg.exposure_time * (1.0 - (k + 0.5) / n)
+            j = int(np.searchsorted(times, tk))
+            if j <= 0:
+                out.append((hist[0][1], hist[0][2]))
+                continue
+            if j >= len(hist):
+                out.append((hist[-1][1], hist[-1][2]))
+                continue
+            (t0, p0, R0), (t1, p1, R1) = hist[j - 1], hist[j]
+            a = (tk - t0) / (t1 - t0)
+            out.append((p0 + a * (p1 - p0), R0 @ exp_so3(a * log_so3(R0.T @ R1))))
+        return out
 
     def _finish(self, outcome: str, gate: int = -1) -> None:
         self.outcome = outcome

@@ -172,6 +172,21 @@ class FpvCamera:
         img[v0:v1, u0:u1] = np.clip(np.round(roi), 0, 255).astype(np.uint8)
 
     def render(self, p_wb: np.ndarray, R_wb: np.ndarray) -> np.ndarray:
+        img = self._render_scene(p_wb, R_wb)
+        self._add_noise(img)
+        return img
+
+    def render_exposure(self, poses) -> np.ndarray:
+        """Motion-blurred frame: the mean of noise-free renders at each (p_wb, R_wb) pose
+        sampled over the shutter interval, then one frame of sensor noise."""
+        acc = np.zeros((self.H, self.W, 3), np.float32)
+        for p_wb, R_wb in poses:
+            acc += self._render_scene(p_wb, R_wb)
+        img = np.clip(np.round(acc * (1.0 / len(poses))), 0, 255).astype(np.uint8)
+        self._add_noise(img)
+        return img
+
+    def _render_scene(self, p_wb: np.ndarray, R_wb: np.ndarray) -> np.ndarray:
         R_wc, p_wc = self.camera_pose(p_wb, R_wb)
         R_cw = R_wc.T
         img = np.empty((self.H, self.W, 3), np.uint8)
@@ -208,7 +223,9 @@ class FpvCamera:
                     contours.append(self._project(ic))
                 # Outer + inner contour filled together -> frame with a hole, no seams.
                 cv2.fillPoly(img, contours, GATE_BGR, lineType=cv2.LINE_AA, shift=_SHIFT)
+        return img
 
+    def _add_noise(self, img: np.ndarray) -> None:
         if self._noise is not None:
             pos, neg = self._noise[int(self.rng.integers(len(self._noise)))]
         elif self.cfg.pixel_noise_sigma > 0:
@@ -218,7 +235,6 @@ class FpvCamera:
         if pos is not None:
             cv2.add(img, pos, dst=img)
             cv2.subtract(img, neg, dst=img)
-        return img
 
     def project_gate_corners(self, p_wb, R_wb, gate_index: int) -> np.ndarray:
         """Ground-truth projected outer corners (for TESTS and diagnostics only --

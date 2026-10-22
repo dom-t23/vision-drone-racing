@@ -139,3 +139,37 @@ def test_camera_latency_delivers_the_frame_captured_earlier():
         assert np.array_equal(img, fa[k - ticks])
     # zero latency (the default) leaves the frame schedule unchanged
     assert SimConfig().camera_latency == 0.0
+
+
+def test_motion_blur_averages_the_shutter_interval():
+    """exposure_time > 0: a still drone renders exactly as before; a spinning one smears edges
+    over the angle turned during the exposure, and the sampled poses span [t - exposure, t]."""
+    sharp_cfg = SimConfig(pixel_noise_sigma=0.0)
+    blur_cfg = sharp_cfg.override(exposure_time=0.02)
+    a, b = Simulator(sharp_cfg, seed=3), Simulator(blur_cfg, seed=3)
+    assert np.array_equal(a.reset().image, b.reset().image)      # no motion yet: identical
+
+    cmd = Command(thrust=9.81, rates=np.array([0.0, 0.0, 4.0]))   # fast yaw
+    for _ in range(3 * sharp_cfg.camera_every):
+        oa, ob = a.step(cmd), b.step(cmd)
+    assert oa.image is not None and ob.image is not None
+    assert np.allclose(a.state.p, b.state.p) and np.allclose(a.state.R, b.state.R)
+
+    def mixed(img):   # pixels that are none of sky, ground or gate: a blend across an edge
+        from vdr.sim.camera import GATE_BGR, GROUND_BGR, SKY_BGR
+        x = img.astype(int)
+        far = [np.abs(x - np.array(c)).sum(-1) > 30 for c in (SKY_BGR, GROUND_BGR, GATE_BGR)]
+        return int(np.sum(far[0] & far[1] & far[2]))
+
+    assert not np.array_equal(oa.image, ob.image)
+    assert mixed(ob.image) > 2 * mixed(oa.image)
+
+    poses = b._exposure_poses()
+    assert len(poses) == blur_cfg.exposure_samples
+    yaw_now = yaw_of(b.state.R)
+    first, last = yaw_of(poses[0][1]), yaw_of(poses[-1][1])
+    w = b.state.omega[2]
+    n = blur_cfg.exposure_samples
+    assert abs((yaw_now - first) - w * blur_cfg.exposure_time * (1 - 0.5 / n)) < 0.01
+    assert abs((yaw_now - last) - w * blur_cfg.exposure_time * 0.5 / n) < 0.01
+    assert SimConfig().exposure_time == 0.0       # default: instantaneous shutter
