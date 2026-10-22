@@ -37,41 +37,65 @@ WAIT, TRACK, SEARCH = "wait", "track", "search"
 _EZ = np.array([0.0, 0.0, 1.0])
 
 
+class _YawVotes:
+    """Weighted circular mean of measured gate yaws."""
+
+    def __init__(self):
+        self.s = 0.0              # weighted sum of sin(yaw)
+        self.c = 0.0              # weighted sum of cos(yaw)
+        self.w = 0.0
+        self.n = 0
+
+    def add(self, yaw: float, sigma: float) -> None:
+        w = 1.0 / (sigma * sigma)
+        self.s += w * math.sin(yaw)
+        self.c += w * math.cos(yaw)
+        self.w += w
+        self.n += 1
+
+    def mean(self):
+        """Circular mean and its approximate sigma (None if there are no votes)."""
+        if self.n == 0:
+            return None
+        yaw = math.atan2(self.s, self.c)
+        R = math.hypot(self.s, self.c) / self.w     # resultant length, 1 = all agree
+        spread = math.sqrt(max(-2.0 * math.log(max(R, 1e-6)), 0.0))
+        sigma = max(1.0 / math.sqrt(self.w), spread / math.sqrt(self.n))
+        return yaw, sigma
+
+
 class _NextGateEstimate:
     """Running weighted average of where the next gate is, in the current gate frame."""
 
     def __init__(self):
         self.sw = 0.0
         self.swt = np.zeros(3)
-        self.yaw_s = 0.0          # weighted sum of sin(yaw)
-        self.yaw_c = 0.0          # weighted sum of cos(yaw)
-        self.yaw_w = 0.0
+        self.yaw_all = _YawVotes()      # every sighting's yaw
+        self.yaw_clear = _YawVotes()    # sightings with a single valid pose (no two-fold yaw ambiguity)
         self.n = 0
 
     @property
     def mean(self) -> np.ndarray:
         return self.swt / self.sw
 
-    def add(self, c: np.ndarray, sigma: float, yaw: float, yaw_sigma: float) -> None:
+    def add(self, c: np.ndarray, sigma: float, yaw: float, yaw_sigma: float, ambiguous: bool = False) -> None:
         w = 1.0 / (sigma * sigma)
         self.sw += w
         self.swt += w * c
-        wy = 1.0 / (yaw_sigma * yaw_sigma)
-        self.yaw_s += wy * math.sin(yaw)
-        self.yaw_c += wy * math.cos(yaw)
-        self.yaw_w += wy
+        self.yaw_all.add(yaw, yaw_sigma)
+        if not ambiguous:
+            self.yaw_clear.add(yaw, yaw_sigma)
         self.n += 1
 
     def position_sigma(self) -> float:
         return math.sqrt(1.0 / self.sw)
 
-    def measured_yaw(self):
-        """Weighted circular mean of measured yaws and its approximate sigma."""
-        yaw = math.atan2(self.yaw_s, self.yaw_c)
-        R = math.hypot(self.yaw_s, self.yaw_c) / self.yaw_w     # resultant length, 1 = all agree
-        spread = math.sqrt(max(-2.0 * math.log(max(R, 1e-6)), 0.0))
-        sigma = max(1.0 / math.sqrt(self.yaw_w), spread / math.sqrt(self.n))
-        return yaw, sigma
+    def measured_yaw(self, unambiguous_only: bool = False):
+        """Weighted circular mean of measured yaws and its approximate sigma.
+
+        With unambiguous_only, only sightings with a single valid pose vote; returns None
+        if there were none."""
+        return self.yaw_clear.mean() if unambiguous_only else self.yaw_all.mean()
 
 
 class Autonomy:
@@ -419,7 +443,7 @@ class Autonomy:
         if best is None or best_d > radius:
             best = _NextGateEstimate()
             hyps.append(best)
-        best.add(c_G, sigma, yaw, ysig)
+        best.add(c_G, sigma, yaw, ysig, ambiguous=len(sols) > 1)
         return best
 
     def _choose_next(self) -> Optional[_NextGateEstimate]:
@@ -449,7 +473,10 @@ class Autonomy:
         """Re-express the filter in the frame of the gate described by `hyp`."""
         cfg, e = self.cfg, self.eskf
         t = hyp.mean
-        yaw_m, ysig_m = hyp.measured_yaw()
+        meas = hyp.measured_yaw(unambiguous_only=True) if cfg.unambiguous_yaw_votes else None
+        if meas is None and not (cfg.unambiguous_yaw_votes and cfg.yaw_prior_from_bearing):
+            meas = hyp.measured_yaw()
+        yaw_m, ysig_m = meas if meas is not None else (0.0, math.inf)
         if cfg.handoff_yaw_floor:
             ysig_m = max(ysig_m, math.radians(cfg.handoff_yaw_sigma_floor_deg))
         yaw, ysig = yaw_m, ysig_m
@@ -458,7 +485,9 @@ class Autonomy:
             origin = self._prev_gate if self._prev_gate is not None else e.p
             yaw_b = math.atan2(t[1] - origin[1], t[0] - origin[0])
             sb = math.radians(cfg.bearing_yaw_sigma_deg)
-            if abs(wrap_angle(yaw_m - yaw_b)) < 2.0 * sb:
+            if meas is None:
+                yaw, ysig = yaw_b, sb     # no unambiguous sighting: the bearing prior alone
+            elif abs(wrap_angle(yaw_m - yaw_b)) < 2.0 * sb:
                 w_m, w_b = 1.0 / ysig_m ** 2, 1.0 / sb ** 2
                 yaw = yaw_b + wrap_angle(yaw_m - yaw_b) * w_m / (w_m + w_b)
                 ysig = 1.0 / math.sqrt(w_m + w_b)

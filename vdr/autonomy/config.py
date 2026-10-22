@@ -115,6 +115,13 @@ class AutonomyConfig:
     # +0.007 s paired). On rendered single-gate frames the outline alone already gives yaw RMS
     # < 1.6 deg to 12 m; the joint fit only helps beyond 12 m (6.4 -> 3.4 deg). Left off.
     joint_squares: bool = False
+    # Next-gate yaw from sightings with a single valid (upright) pose only. When both PnP
+    # solutions survive, the square's yaw is two-fold ambiguous: on 40k truth-matched next-gate
+    # sightings (seed sets 1000 + 5000) those had yaw error RMS 17-44 deg (inner openings:
+    # median 34 deg; even the better of the two solutions: RMS 29 deg), vs RMS 5-10 deg
+    # (median 1.4-3.7) for single-solution sightings. Their positions are fine and still count.
+    # A gate with no unambiguous sighting takes the bearing prior alone (yaw_prior_from_bearing).
+    unambiguous_yaw_votes: bool = False
     chi2_threshold_1dof: float = 6.635    # yaw-only update: 99% quantile
 
     # --- guidance & control -------------------------------------------------------
