@@ -121,8 +121,12 @@ class AutonomyConfig:
     # median 34 deg; even the better of the two solutions: RMS 29 deg), vs RMS 5-10 deg
     # (median 1.4-3.7) for single-solution sightings. Their positions are fine and still count.
     # A gate with no unambiguous sighting uses all its sightings (old behaviour), or with
-    # unambiguous_yaw_bearing_only the bearing prior alone (yaw_prior_from_bearing).
-    unambiguous_yaw_votes: bool = False
+    # unambiguous_yaw_bearing_only the bearing prior alone (yaw_prior_from_bearing; that variant
+    # was flat, pooled 99.54% -> 99.54%: fresh retarget hypotheses often have no clear sighting).
+    # On since 2026-10-22: pooled 6 sets 99.54% -> 99.83%, completed 298 -> 299 (2 rescued,
+    # 1 broken), median est. error lower on all 6 sets (0.29-0.36 -> 0.20-0.24 m), per-run yaw
+    # error RMS 2.87 -> 2.26 deg (mean), laps flat (paired, 297 runs, -0.007 s).
+    unambiguous_yaw_votes: bool = True
     unambiguous_yaw_bearing_only: bool = False
     chi2_threshold_1dof: float = 6.635    # yaw-only update: 99% quantile
 
