@@ -3,10 +3,11 @@
 Prioritised. Each overnight run takes ONE item (or a well-argued new one), and updates this
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
-Current baseline (since 2026-10-19, upright PnP):
-`results/2026-10-19_9acf025_baseline.json` — 100.0% pass rate, 100% completion, 11.60 s lap,
-median est. error 0.299 m (pooled over seeds 0/1000/.../5000: 99.54%; quote the pooled number).
-Previous: `results/2026-10-16_3395fb0_baseline.json` — 97.8%, 11.59 s (pooled 99.08%).
+Current baseline (since 2026-10-22, unambiguous next-gate yaw votes):
+`results/2026-10-22_5143039_baseline.json` — 100.0% pass rate, 100% completion, 11.59 s lap,
+median est. error 0.203 m (pooled over seeds 0/1000/.../5000: 99.83%; quote the pooled number).
+Previous: `results/2026-10-19_9acf025_baseline.json` — 100.0%, 11.60 s, 0.299 m (pooled 99.54%).
+Before that: `results/2026-10-16_3395fb0_baseline.json` — 97.8%, 11.59 s (pooled 99.08%).
 Before that: `results/2026-10-15_1d4bb7f_baseline.json` — 100.0%, 11.26 s (pooled 6 sets 97.92%).
 Before that: `results/2026-10-13_0f1e256_baseline.json` — 96.8%, 12.27 s (pooled 97.50%).
 Evidence older than 2026-10-12 was measured on
@@ -33,9 +34,15 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
    pixel on each side (see run 4 in NIGHTLY_LOG). Sub-pixel corners (now default)
    and item 4 (both squares, whose biases have opposite signs) attack this directly.
    Also consider requiring a close-range accepted sighting of the target before a pass.
-2. **(next) Follow-ups to upright PnP (done 2026-10-19, see Done).** Diagnose the 2 runs it broke
-   (1005 crash at gate 4, 5007 wrong_gate at gate 1); re-try `handoff_yaw_floor` on top of it;
-   speed up `refine_upright` (harness 90 s -> 140 s per 50 runs).
+2. **(next) Stale hypotheses after a re-initialisation.** When 8 rejects in a row re-initialise
+   the filter on the target, the next-gate / closer / beyond hypotheses built with the old
+   (wrong) pose are kept; in 5007 one of them became the handoff target (41 deg yaw). Clear or
+   re-express them on reinit, behind a flag (~12 of 300 runs have a reinit). Then: next gate
+   seen too few times before a pass (2003: gate 7 m behind the target, 2 sightings); re-try
+   `handoff_yaw_floor`; speed up `refine_upright`. 1005 (crash at 4) is fixed by item 3 below.
+3. **Two-solution sightings** (done 2026-10-22, see Done): ambiguous upright fits carry no yaw;
+   what is left of the handoff yaw error is in single-solution sightings beyond ~12 m and in
+   gates seen through another gate's opening.
 4. **Error of merged / overlapping-gate detections.** Run 17 measured clean single-gate
    detections on rendered frames: yaw RMS < 1.6 deg and range bias < 0.1% out to 12 m. The
    remaining yaw/handoff error must come from RANSAC outlines, openings seen through other
@@ -77,7 +84,8 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 ## (C) Write-up
 
 - Current as of d356d7a (2026-10-20): upright PnP default (pooled 6 sets 99.54%), joint fit as
-  "tried", camera-only re-run (98.62%). Next due by 2026-10-27.
+  "tried", camera-only re-run (98.62%). Next due by 2026-10-27; must add unambiguous_yaw_votes
+  (pooled 99.83%, run 20) and re-run the camera-only A/B with the new default.
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
   to `vdr/report.py`'s lists and re-run `python -m vdr.report`).
 - When a flight-changing default flips, also re-run the camera-only A/B on the 6 sets (from a
@@ -88,6 +96,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-22 **Unambiguous next-gate yaw votes** (`unambiguous_yaw_votes`, default on): handoff
+  yaw from sightings with a single valid pose only (two-solution sightings: yaw RMS 17-44 deg vs
+  5-10). Pooled 6 sets 99.54% -> 99.83% (2 rescued, 1 broken), median est. error lower on all 6
+  sets (~0.31 -> ~0.22 m), laps flat. Bearing-only fallback variant was flat (99.54%).
 
 - 2026-10-21 — Camera latency knob (B, run 19): `SimConfig.camera_latency` (default 0, old
   behaviour); seed-0 sweep 0-50 ms shows a cliff at 15-20 ms (100% -> 52%), caused by stale

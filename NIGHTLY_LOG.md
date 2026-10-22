@@ -1001,3 +1001,64 @@ Verify: pytest 79 passed; 8-run smoke 100.0% (64/64).
 ESKF behind a flag (attitude rewind first — the split says that is all that matters), A/B at
 20-30 ms, then flip `camera_latency` to ~0.025 and re-baseline (`--tag rebaseline-latency`).
 Otherwise (A) diagnose 1005 / 5007 on the current world.
+
+## 2026-10-22 — Run 20: (A) next-gate yaw from unambiguous sightings only (pooled 99.54% -> 99.83%)
+
+Chunk choice: runs 19 (B) and 18 (C) were not (A), so (A). Started from ROADMAP A2: diagnose the
+two runs upright PnP broke (1005 crash_gate at 4, 5007 wrong_gate at 1).
+
+**Baseline check** at f8cb3bd: tests 79 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.60 s, median est. error 0.299 m — identical to `results/2026-10-19_9acf025_baseline.json`.
+
+**Diagnosis** (scratch scripts hooking `_switch_to` / `_add_sighting` with truth, not committed):
+- Both failures follow a handoff with a large next-gate yaw error: 1005 gate 3 -> 4, 25 deg
+  (55 sightings, claimed sigma 3.5 deg); 5007 gate 0 -> 1, 41 deg.
+- 1005: gate 4 is seen through gate 3's opening at 6-13 m and nearly every sighting has *two*
+  valid upright solutions at about +/-40-45 deg from the truth — neither is right.
+- Over 40k truth-matched next-gate sightings (seed sets 1000 + 5000, current default), yaw error
+  by number of valid solutions: one solution RMS 5-10 deg (median 1.4-3.7); two solutions RMS
+  17-44 deg (inner openings: median 34 deg, 72% > 15 deg; RANSAC outlines: median 20 deg). Even the
+  better of the two is RMS 29 deg, so the sign choice is not the problem: such a sighting has no
+  usable yaw. Error grows with range (> 15 deg: 16% at 6-9 m, 39% beyond 16 m).
+- 5007 is a different bug: a filter re-initialisation (8 consecutive rejects) introduced a 38 deg
+  yaw error, a second one fixed it 0.5 s later, but the next-gate hypotheses built in between
+  were kept and one of them (in the wrong frame) became the handoff target. Not fixed this run.
+
+**Change** (`unambiguous_yaw_votes`, commits fe855c9 + 6b66b99): next-gate hypotheses keep two yaw
+averages — all sightings, and sightings with a single valid pose. The handoff (and retarget /
+recovery switches) use the second; if a hypothesis has none, it falls back to all sightings (old
+behaviour). Positions still use every sighting. Tests: `test_handoff.py` (2 new).
+
+**A/B** (50 runs per set, same seeds, files `results/2026-10-22_{fe855c9,6b66b99}_ab-unamb*`):
+| seed set | off | bearing-only fallback | **on (fallback to all)** |
+|---|---|---|---|
+| 0 | 100.0% | 100.0% | 100.0% |
+| 1000 | 99.0% | 99.25% | 100.0% (1005 rescued) |
+| 2000 | 100.0% | 99.0% | 99.0% (2003 missed_gate at 4) |
+| 3000 | 100.0% | 100.0% | 100.0% |
+| 4000 | 100.0% | 99.0% | 100.0% |
+| 5000 | 98.25% | 100.0% | 100.0% (5007 rescued) |
+| pooled (2400 gates) | 99.54% | 99.54% | **99.83%** (299/300 completed, 2 rescued / 1 broken) |
+First variant: no unambiguous sighting -> bearing prior alone. Flat; its new failure 4030 was a
+retarget switch to a fresh hypothesis (4 sightings, all ambiguous) whose bearing prior was 54 deg
+off. Kept variant: fall back to all sightings (`unambiguous_yaw_bearing_only` keeps the other).
+Median per-run est. error lower on all 6 sets (off 0.289-0.358 m -> on 0.203-0.236 m), per-run
+yaw error RMS 2.87 -> 2.26 deg (mean over runs), laps flat (paired 297 runs, -0.007 s).
+Handoff yaw error right after the switch (scratch, truth): seed 1000 RMS 6.3 -> 4.2 deg,
+handoffs > 15 deg 15 -> 7; seed 5000 RMS 7.0 -> 6.2 deg, 16 -> 9.
+Pass-rate gain is under the noise level (1 net run), but the estimation gain is large, on every
+set and explained by the mechanism, so it was kept (default on, commit 5143039).
+
+2003 (broken) is not a yaw problem: gate 4 sits 7 m behind gate 3 and was seen only twice before
+the pass (off: 5 times), below `next_gate_min_sightings`, so the handoff went to gate 5.
+
+New baseline: `results/2026-10-22_5143039_baseline.json` — seed 0 100.0%, 50/50, 11.59 s,
+median est. error 0.203 m (was 0.299).
+
+Verify: pytest 81 passed; harness clean on all 6 sets.
+
+**Pass rate (headline, seed 0):** 100.0% -> 100.0%; pooled 6 sets 99.54% -> 99.83%.
+
+**Next:** (A) clear (or re-express) the next-gate / closer / beyond hypotheses on a filter
+re-initialisation (5007's root cause; affects ~12 of 300 runs); handoff when the next gate was
+seen too few times (2003: a gate close behind the target); write-up refresh is due by 10-27.

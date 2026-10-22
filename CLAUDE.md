@@ -201,6 +201,13 @@ estimate trace and course for one seed — use it to debug a specific failure.
   only the rotation since exposure matters. Read the swept value back from each results file's
   `sim_config`; a shell typo (`0.0$L` with L=5 -> 0.05) silently mislabelled a run.
 
+- 2026-10-22 — Split a measurement's error by how ambiguous its solver was before averaging it:
+  next-gate sightings where two upright PnP solutions survive had yaw RMS 17-44 deg (neither
+  solution close; the better one still 29 deg) vs 5-10 deg with one solution, and 50+ of them
+  averaged to a confident 25-40 deg handoff error. Dropping their yaw votes (positions kept) cut
+  est. error ~30% on every seed set (pooled 99.54% -> 99.83%). Make fallbacks no worse than the
+  old path: "bearing prior alone when no clear vote" broke a retarget to a fresh hypothesis.
+
 ## Instruction changes
 
 (none yet)
