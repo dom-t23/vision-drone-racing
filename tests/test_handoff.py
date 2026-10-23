@@ -63,3 +63,37 @@ def test_unambiguous_yaw_votes_fall_back_when_all_ambiguous():
     assert abs(_yaw_after_switch(cfg, sightings) - _yaw_after_switch(AutonomyConfig(unambiguous_yaw_votes=False), sightings)) < 1e-9
     cfg_b = AutonomyConfig(unambiguous_yaw_votes=True, unambiguous_yaw_bearing_only=True)
     assert abs(_yaw_after_switch(cfg_b, sightings)) < 1e-6      # bearing prior alone
+
+
+def _hyp_after_reinit(cfg):
+    """A next-gate hypothesis seen with a 20 deg yaw error, then a reinit that removes the error."""
+    from vdr.geometry import rot_z
+    info = Simulator(SimConfig(), 0).vehicle_info()
+    auto = Autonomy(info, cfg)
+    e = auto.eskf
+    err = math.radians(20.0)
+    p_true = np.array([-6.0, 0.0, 0.0])
+    p_old, R_old = rot_z(err) @ p_true, rot_z(err)           # frame estimate rotated about the gate
+    e.initialize(p_old, np.zeros(3), R_old, np.eye(15) * 1e-4)
+    g_true, gyaw_true = np.array([10.0, 2.0, 0.0]), math.radians(15.0)
+    h = _NextGateEstimate()
+    for _ in range(5):                  # placed with the wrong pose: rotated by err too
+        h.add(rot_z(err) @ g_true, 0.2, gyaw_true + err, math.radians(5.0))
+    auto._ahead_hyps = [h]
+    e.initialize(p_true, np.zeros(3), np.eye(3), np.eye(15) * 1e-4)    # what the reinit found
+    auto._after_reinit(p_old, R_old)
+    return auto, g_true, gyaw_true
+
+
+def test_reinit_reexpresses_next_gate_hypotheses():
+    auto, g_true, gyaw_true = _hyp_after_reinit(AutonomyConfig(reinit_reexpress_hyps=True))
+    h = auto._ahead_hyps[0]
+    assert np.allclose(h.mean, g_true, atol=1e-9)
+    assert abs(h.measured_yaw()[0] - gyaw_true) < 1e-9
+
+
+def test_reinit_flags_off_keep_hypotheses_and_clear_drops_them():
+    auto, g_true, _ = _hyp_after_reinit(AutonomyConfig())
+    assert np.linalg.norm(auto._ahead_hyps[0].mean - g_true) > 1.0     # old behaviour: stale
+    auto, _, _ = _hyp_after_reinit(AutonomyConfig(reinit_clear_hyps=True))
+    assert auto._ahead_hyps == []

@@ -69,6 +69,15 @@ class AutonomyConfig:
     chi2_gating: bool = True          # reject measurements whose innovation fails a chi-squared test
     chi2_threshold: float = 11.345    # 3-DoF updates (gate position, attitude): 99% quantile
     max_consecutive_rejects: int = 8  # then re-initialise from the measurement (lock-out recovery)
+    # A re-initialisation moves the drone's estimated pose (yaw + position) inside the same
+    # target-gate frame, but gate hypotheses already built from sightings (next gate, closer,
+    # beyond, and the previous gate) were placed with the OLD pose. Run 20: in 5007 such a stale
+    # hypothesis became the handoff target with a 41 deg yaw error.
+    #   reinit_reexpress_hyps: apply the reinit's pose correction to every stored hypothesis
+    #     (c' = p_new + R_new R_old^T (c - p_old), yaw' = yaw + d_yaw), exact for sums.
+    #   reinit_clear_hyps: drop them instead (rebuilt from the next sightings).
+    reinit_reexpress_hyps: bool = False
+    reinit_clear_hyps: bool = False
 
     # --- gate tracking & handoff ---------------------------------------------------
     assoc_radius: float = 2.0         # m (+ assoc_radius_per_m * range, capped) to call a detection "the target gate"

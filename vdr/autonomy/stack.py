@@ -63,6 +63,11 @@ class _YawVotes:
         sigma = max(1.0 / math.sqrt(self.w), spread / math.sqrt(self.n))
         return yaw, sigma
 
+    def rotate(self, dyaw: float) -> None:
+        """Add dyaw to every vote (exact: rotates the summed unit vectors)."""
+        c, s = math.cos(dyaw), math.sin(dyaw)
+        self.s, self.c = s * self.c + c * self.s, c * self.c - s * self.s
+
 
 class _NextGateEstimate:
     """Running weighted average of where the next gate is, in the current gate frame."""
@@ -96,6 +101,12 @@ class _NextGateEstimate:
         With unambiguous_only, only sightings with a single valid pose vote; returns None
         if there were none."""
         return self.yaw_clear.mean() if unambiguous_only else self.yaw_all.mean()
+
+    def transform(self, A: np.ndarray, b: np.ndarray, dyaw: float) -> None:
+        """Re-express in a corrected frame: every sighting c -> A c + b, yaw -> yaw + dyaw."""
+        self.swt = A @ self.swt + self.sw * b
+        self.yaw_all.rotate(dyaw)
+        self.yaw_clear.rotate(dyaw)
 
 
 class Autonomy:
@@ -378,7 +389,9 @@ class Autonomy:
             self._consec_rejects += 1
             if self._consec_rejects >= cfg.max_consecutive_rejects:
                 self.stats["reinits"] += 1
+                p_old, R_old = e.p.copy(), e.R.copy()
                 self._init_on_gate(s0, keep_velocity=True)
+                self._after_reinit(p_old, R_old)
                 return
 
         if cfg.upright_pnp and cfg.upright_keep_tilt:
@@ -419,6 +432,24 @@ class Autonomy:
                 best = (m, R_meas, Rn, r)
         ok, _ = e.update_attitude(best[1], best[2], gate=cfg.chi2_gating, thresh=cfg.chi2_threshold, r=best[3])
         self.stats["att_updates" if ok else "att_rejects"] += 1
+
+    def _after_reinit(self, p_old: np.ndarray, R_old: np.ndarray) -> None:
+        """A reinit moved our pose estimate; deal with gates placed using the old one."""
+        cfg, e = self.cfg, self.eskf
+        if cfg.reinit_clear_hyps:
+            self._ahead_hyps, self._closer_hyps, self._beyond_hyps = [], [], []
+            return
+        if not cfg.reinit_reexpress_hyps:
+            return
+        # Each stored point was c = p_old + R_old r (r: what the camera saw, body-relative).
+        # With the corrected pose the same sighting is c' = p_new + R_new R_old^T (c - p_old).
+        A = e.R @ R_old.T
+        b = e.p - A @ p_old
+        dyaw = wrap_angle(yaw_of(e.R) - yaw_of(R_old))
+        for h in self._ahead_hyps + self._closer_hyps + self._beyond_hyps:
+            h.transform(A, b, dyaw)
+        if self._prev_gate is not None:
+            self._prev_gate = A @ self._prev_gate + b
 
     def _add_sighting(self, hyps: list, cand) -> _NextGateEstimate:
         """Add one sighting of a non-target gate to a list of gate hypotheses.
