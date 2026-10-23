@@ -11,7 +11,7 @@ import math
 import cv2
 import numpy as np
 
-from vdr.geometry import camera_mount
+from vdr.geometry import camera_mount, log_so3
 from vdr.sim.config import SimConfig
 
 SKY_BGR = (225, 196, 160)
@@ -185,6 +185,24 @@ class FpvCamera:
         img = np.clip(np.round(acc * (1.0 / len(poses))), 0, 255).astype(np.uint8)
         self._add_noise(img)
         return img
+
+    def motion_px(self, pose_a, pose_b) -> float:
+        """Largest image displacement (px) between two body poses: the camera rotation
+        (moves the horizon and far scenery by ~f * angle) and every gate corner that is
+        in front of the camera in both."""
+        Ra, pa = self.camera_pose(*pose_a)
+        Rb, pb = self.camera_pose(*pose_b)
+        f = self.K[0, 0]
+        d = f * float(np.linalg.norm(log_so3(Ra.T @ Rb)))
+        if self._gate_polys:
+            P = np.vstack([np.vstack([o, i]) for _, o, i in self._gate_polys])
+            Ca = (Ra.T @ (P - pa).T).T
+            Cb = (Rb.T @ (P - pb).T).T
+            ok = (Ca[:, 2] > _Z_NEAR) & (Cb[:, 2] > _Z_NEAR)
+            if np.any(ok):
+                du = self._project_uv(Ca[ok]) - self._project_uv(Cb[ok])
+                d = max(d, float(np.max(np.linalg.norm(du, axis=1))))
+        return d
 
     def _render_scene(self, p_wb: np.ndarray, R_wb: np.ndarray) -> np.ndarray:
         R_wc, p_wc = self.camera_pose(p_wb, R_wb)

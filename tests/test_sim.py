@@ -164,12 +164,15 @@ def test_motion_blur_averages_the_shutter_interval():
     assert not np.array_equal(oa.image, ob.image)
     assert mixed(ob.image) > 2 * mixed(oa.image)
 
-    poses = b._exposure_poses()
-    assert len(poses) == blur_cfg.exposure_samples
+    assert len(b._exposure_poses()) > 8                 # ~11 px of motion -> many sub-frames
+    still = Simulator(blur_cfg, seed=3)
+    still.reset()
+    assert len(still._exposure_poses()) == 1            # no motion -> a single render
+    poses = b._exposure_poses(n=8)
     yaw_now = yaw_of(b.state.R)
     first, last = yaw_of(poses[0][1]), yaw_of(poses[-1][1])
     w = b.state.omega[2]
-    n = blur_cfg.exposure_samples
+    n = 8
     assert abs((yaw_now - first) - w * blur_cfg.exposure_time * (1 - 0.5 / n)) < 0.01
     assert abs((yaw_now - last) - w * blur_cfg.exposure_time * 0.5 / n) < 0.01
     assert SimConfig().exposure_time == 0.0       # default: instantaneous shutter

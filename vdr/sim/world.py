@@ -184,26 +184,29 @@ class Simulator:
             image = self._frame_queue.popleft()[1]
         return Observation(t=self.t, accel=accel, gyro=gyro, image=image)
 
-    def _exposure_poses(self) -> list:
-        """True poses at the midpoints of `exposure_samples` equal slices of [t - exposure, t],
-        interpolated between physics steps (before the first step: the start pose)."""
-        n = max(1, self.cfg.exposure_samples)
-        hist = list(self._pose_hist)
-        times = np.array([h[0] for h in hist])
-        out = []
-        for k in range(n):
-            tk = self.t - self.cfg.exposure_time * (1.0 - (k + 0.5) / n)
-            j = int(np.searchsorted(times, tk))
-            if j <= 0:
-                out.append((hist[0][1], hist[0][2]))
-                continue
-            if j >= len(hist):
-                out.append((hist[-1][1], hist[-1][2]))
-                continue
-            (t0, p0, R0), (t1, p1, R1) = hist[j - 1], hist[j]
-            a = (tk - t0) / (t1 - t0)
-            out.append((p0 + a * (p1 - p0), R0 @ exp_so3(a * log_so3(R0.T @ R1))))
-        return out
+    def _exposure_poses(self, n: Optional[int] = None) -> list:
+        """True poses at the midpoints of n equal slices of [t - exposure, t], interpolated
+        between physics steps (before the first step: the start pose). By default n is the
+        image motion over the exposure in pixels (+1), capped at `exposure_samples`, so
+        sub-frames are at most ~1 px apart and a still drone costs one render."""
+        e = self.cfg.exposure_time
+        if n is None:
+            px = self.camera.motion_px(self._pose_at(self.t - e), self._pose_at(self.t))
+            n = int(min(max(1, self.cfg.exposure_samples), 1 + math.ceil(px)))
+        return [self._pose_at(self.t - e * (1.0 - (k + 0.5) / n)) for k in range(n)]
+
+    def _pose_at(self, tk: float):
+        hist = self._pose_hist
+        if tk <= hist[0][0]:
+            return hist[0][1], hist[0][2]
+        if tk >= hist[-1][0]:
+            return hist[-1][1], hist[-1][2]
+        j = 1
+        while hist[j][0] < tk:
+            j += 1
+        (t0, p0, R0), (t1, p1, R1) = hist[j - 1], hist[j]
+        a = (tk - t0) / (t1 - t0)
+        return p0 + a * (p1 - p0), R0 @ exp_so3(a * log_so3(R0.T @ R1))
 
     def _finish(self, outcome: str, gate: int = -1) -> None:
         self.outcome = outcome

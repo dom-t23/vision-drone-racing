@@ -21,9 +21,10 @@ class SimConfig:
     camera_latency: float = 0.0       # s from exposure to the frame reaching the autonomy (rounded to
                                       # whole control ticks); the image shows the world at capture time
     exposure_time: float = 0.0        # s of shutter open time ending at capture: the frame is the average
-                                      # of `exposure_samples` renders along the true motion (motion blur);
+                                      # of renders along the true motion (motion blur); <= 1/camera rate;
                                       # 0 = instantaneous shutter (old behaviour)
-    exposure_samples: int = 8         # sub-frames averaged over the exposure (when exposure_time > 0)
+    exposure_samples: int = 16        # max sub-frames averaged over the exposure; fewer when the image moves
+                                      # less (about one per pixel of motion, one when still)
     time_limit: float = 60.0          # s per run (hard cap)
     race_min_speed: float = 5.0       # m/s: race clock = start allowance + path length / this (0 disables)
     race_start_allowance: float = 2.0 # s added to the race clock for take-off
