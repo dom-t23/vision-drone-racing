@@ -1062,3 +1062,58 @@ Verify: pytest 81 passed; harness clean on all 6 sets.
 **Next:** (A) clear (or re-express) the next-gate / closer / beyond hypotheses on a filter
 re-initialisation (5007's root cause; affects ~12 of 300 runs); handoff when the next gate was
 seen too few times (2003: a gate close behind the target); write-up refresh is due by 10-27.
+
+## 2026-10-22/23 — Run 21: (B) motion-blur knob + exposure sweep (default unchanged)
+
+Chunk choice: run 20 was (A) and pass rate is at 99.83% pooled (seed 0 100%), so the benchmark has
+little headroom for (A); the write-up is due by 10-27 (not yet). Took the next ROADMAP realism knob
+that needs no contract change: motion blur.
+
+**Baseline check** at 8141e1e: tests 81 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`.
+
+**Change** (commits f58b856, 697a289): `SimConfig.exposure_time` (default 0 = instantaneous shutter,
+old behaviour). With exposure > 0 the frame is the mean of noise-free renders at true poses sampled
+over [t - exposure, t] (poses interpolated between 400 Hz physics steps, rotation on SO(3)), then
+one frame of sensor noise. The shutter *ends* at capture, so mid-exposure is exposure/2 before the
+frame — a small built-in delay, as on a real camera. Sub-frame count follows the image motion
+(`FpvCamera.motion_px`: camera rotation x f and every gate corner's displacement), ~1 per pixel,
+capped at `exposure_samples` = 16; a still drone costs one render. Test: `test_sim.py::
+test_motion_blur_averages_the_shutter_interval` (still drone renders bit-identical; fast yaw
+triples the edge-blend band; sampled poses span the shutter).
+
+**Sweep** (50 runs; `results/2026-10-23_*exposure*`, `*latency*`). The frame period at 40 Hz is
+25 ms, so 20 ms is close to the physical maximum:
+| world | seed set | pass rate | completed | lap | median est. error |
+|---|---|---|---|---|---|
+| default (exposure 0) | 0 | 100.0% | 50 | 11.59 s | 0.203 m |
+| exposure 5 ms (8 fixed sub-frames, f58b856) | 0 | 100.0% | 50 | 11.59 s | 0.201 m |
+| exposure 5 ms (adaptive, 697a289) | 0 | 100.0% | 50 | 11.56 s | 0.227 m |
+| exposure 10 ms (f58b856) | 0 | 100.0% | 50 | 11.55 s | 0.223 m |
+| exposure 20 ms (f58b856) | 0 | 100.0% | 50 | 11.52 s | 0.327 m |
+| exposure 20 ms (697a289) | 1000 | 98.0% | 49 (1009 crash_gate at 0) | 11.60 s | 0.335 m |
+| latency 5 ms (control, f58b856) | 0 | 100.0% | 50 | 11.56 s | 0.204 m |
+| latency 10 ms (control, f58b856) | 0 | 97.5% | 48 (2 crash_gate) | 11.64 s | 0.275 m |
+Seed 1000 with the current default is 100.0% (`2026-10-22_6b66b99_ab-unamb2-on-seed1000.json`), so
+20 ms of blur costs at most one run there (under the noise level; 1009 not investigated).
+Reading: blur up to the frame period does not cost pass rate; it raises estimation error by ~60%
+at 20 ms. The latency controls (mid-exposure delay alone) say the same delay without blur is not
+better — 10 ms latency already sits at the edge of run 19's cliff (2 crashes here, 0 at 1077d61;
+2 runs is noise). Not concluded: whether blur *helps* versus pure delay — the difference is 2 runs.
+
+**Default left at 0.** It would be the realistic choice (~5 ms) and is harmless to pass rate, but
+the benchmark gets ~2x slower (seed 0: 143 s -> 284 s with adaptive sub-frames; most frames move
+2-5 px because of looming near gates), for no measurable change at 5 ms. Worth flipping once a
+second knob (latency compensation, distractors) makes the combined world harder; a cheaper motion
+estimate (only corners inside the image) would cut the cost first.
+
+Smoke-test pitfall: a 2-run harness at 10 ms reported median est. error 0.90 m; the 50-run value
+was 0.22 m. Read nothing but "it runs" into `--runs 2`.
+
+Verify: pytest 82 passed; harness clean on every sweep point.
+
+**Pass rate (headline, seed 0):** 100.0% -> 100.0% (no flight change; default world unchanged).
+
+**Next:** (C) write-up refresh is due by 10-27 (add unambiguous_yaw_votes, the camera-only re-run,
+and the blur/latency sensitivity); (A) clear stale next-gate hypotheses on filter re-init;
+latency compensation still waits on Dom's frame-timestamp decision.

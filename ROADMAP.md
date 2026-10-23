@@ -71,7 +71,10 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
     frame capture timestamp in `Observation` (or latency in `VehicleInfo`); then (A) attitude
     rewind / delayed ESKF update behind a flag, then flip the default to ~25 ms and re-baseline.
   - IMU/camera timestamp jitter
-  - motion blur proportional to angular rate and speed
+  - **motion blur: knob added (run 21, `SimConfig.exposure_time`, default 0).** Seed 0: 5/10/20 ms
+    all 100% (est. error 0.20 -> 0.33 m at 20 ms); seed 1000 at 20 ms 98.0% (1 run). Harmless
+    to pass rate but ~2x benchmark time; flip to ~5 ms together with the next harder knob, after
+    making `motion_px` cheaper (only corners inside the image).
   - lens distortion (+ give the autonomy calibrated distortion coefficients via VehicleInfo)
   - lighting/exposure changes, gate colour variation, shadows
   - orange distractor objects (false positives) and partial occlusion
@@ -85,7 +88,8 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 - Current as of d356d7a (2026-10-20): upright PnP default (pooled 6 sets 99.54%), joint fit as
   "tried", camera-only re-run (98.62%). Next due by 2026-10-27; must add unambiguous_yaw_votes
-  (pooled 99.83%, run 20) and re-run the camera-only A/B with the new default.
+  (pooled 99.83%, run 20), re-run the camera-only A/B with the new default, and add a
+  sensor-sensitivity section (latency cliff run 19, blur sweep run 21).
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
   to `vdr/report.py`'s lists and re-run `python -m vdr.report`).
 - When a flight-changing default flips, also re-run the camera-only A/B on the 6 sets (from a
@@ -96,6 +100,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-23 — Motion blur knob (B, run 21): `SimConfig.exposure_time` (default 0, old
+  behaviour), frame = mean of renders over the shutter interval, sub-frames ~1 per px of image
+  motion. Sweep: no pass-rate cost up to 20 ms (near the 25 ms frame period); est. error +60% at
+  20 ms. Default not flipped (2x benchmark time, no measurable effect at a realistic 5 ms).
 
 - 2026-10-22 **Unambiguous next-gate yaw votes** (`unambiguous_yaw_votes`, default on): handoff
   yaw from sightings with a single valid pose only (two-solution sightings: yaw RMS 17-44 deg vs

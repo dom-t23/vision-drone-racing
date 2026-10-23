@@ -24,7 +24,8 @@ prompt is the top-level authority; nothing here may weaken it.
 vdr/interface.py      VehicleInfo / Observation / Command  — the ONLY sim<->autonomy contract
 vdr/geometry.py       SO(3) helpers + camera mount (pure maths, shared)
 vdr/sim/              ground truth lives here
-  config.py           SimConfig — every "how hard is the world" knob (incl. camera_latency, default 0)
+  config.py           SimConfig — every "how hard is the world" knob (incl. camera_latency and
+                      exposure_time / motion blur, both default 0)
   dynamics.py         rigid body; acro inner loops as first-order lags; rotor + quadratic drag
   imu.py              white noise + random-walk biases
   camera.py           pinhole renderer: sky/ground, orange gate frames (area-coverage AA fill), noise
@@ -207,6 +208,12 @@ estimate trace and course for one seed — use it to debug a specific failure.
   averaged to a confident 25-40 deg handoff error. Dropping their yaw votes (positions kept) cut
   est. error ~30% on every seed set (pooled 99.54% -> 99.83%). Make fallbacks no worse than the
   old path: "bearing prior alone when no clear vote" broke a retarget to a fresh hypothesis.
+
+- 2026-10-23 — Price a realism knob before flipping it: motion blur up to the frame period (20 ms
+  of 25) cost no pass rate on seed 0 (est. error 0.20 -> 0.33 m) but doubled benchmark time, so
+  it stays off until it buys something. The stack is sensitive to *when* a frame was taken
+  (run 19), not to how sharp it is. Never read numbers from a 2-run smoke test (0.90 m est.
+  error vs 0.22 m over 50 runs).
 
 ## Instruction changes
 
