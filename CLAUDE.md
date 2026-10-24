@@ -215,6 +215,12 @@ estimate trace and course for one seed — use it to debug a specific failure.
   (run 19), not to how sharp it is. Never read numbers from a 2-run smoke test (0.90 m est.
   error vs 0.22 m over 50 runs).
 
+- 2026-10-24 — Before repairing what a recovery leaves behind, check the recovery was right:
+  re-expressing gate hypotheses after a filter reinit was exact but flat, because in the one
+  failure it targeted (5007) the reinit itself was wrong — chi2 had correctly rejected 8 frames
+  of a biased two-solution opening, and the reinit then adopted it over a 6 cm-accurate pose.
+  Hook the recovery with truth (error before -> after) first.
+
 ## Instruction changes
 
 (none yet)

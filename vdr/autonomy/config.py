@@ -76,6 +76,9 @@ class AutonomyConfig:
     #   reinit_reexpress_hyps: apply the reinit's pose correction to every stored hypothesis
     #     (c' = p_new + R_new R_old^T (c - p_old), yaw' = yaw + d_yaw), exact for sums.
     #   reinit_clear_hyps: drop them instead (rebuilt from the next sightings).
+    # Both flat (2026-10-24, run 22): pooled 6 sets 99.83% -> 99.83% for each, only the 12/300
+    # runs with a reinit change, none fails either way; left off. 5007's first reinit was itself
+    # wrong (8 rejects of one biased two-solution opening replaced a 6 cm-accurate pose).
     reinit_reexpress_hyps: bool = False
     reinit_clear_hyps: bool = False
 

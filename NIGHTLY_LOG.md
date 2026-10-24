@@ -1117,3 +1117,56 @@ Verify: pytest 82 passed; harness clean on every sweep point.
 **Next:** (C) write-up refresh is due by 10-27 (add unambiguous_yaw_votes, the camera-only re-run,
 and the blur/latency sensitivity); (A) clear stale next-gate hypotheses on filter re-init;
 latency compensation still waits on Dom's frame-timestamp decision.
+
+## 2026-10-23/24 — Run 22: (A) gate hypotheses after a filter re-initialisation (flat, left off)
+
+Chunk choice: run 21 was (B), run 20 (A); ROADMAP A2 "(next) stale hypotheses after a
+re-initialisation" (5007's root cause in run 20). Write-up is still due by 10-27.
+
+**Baseline check** at e10934f: tests 82 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`.
+(The checkout was a detached HEAD with a stale local `main`; fast-forwarded `main` to origin.)
+
+**Change** (commit 418da48, two flags, default off): when 8 rejects in a row re-initialise the
+filter, the next-gate / closer / beyond hypotheses and the previous gate were placed with the old
+pose. `reinit_reexpress_hyps` applies the reinit's pose correction to them
+(c' = p_new + R_new R_old^T (c - p_old), yaw votes rotated by d_yaw; exact on the running sums);
+`reinit_clear_hyps` drops them. Tests: `test_handoff.py` (2 new: exact re-expression of a
+20-deg-rotated hypothesis; off keeps it stale, clear empties the lists).
+
+**A/B** (50 runs per set; off = the committed `results/2026-10-22_6b66b99_ab-unamb2-on*.json`, the
+current default — seed 0 re-run tonight matches it; on = `results/2026-10-2{3,4}_418da48_ab-reinit-*`):
+| seed set | off | reexpress | clear | runs with a reinit |
+|---|---|---|---|---|
+| 0 | 100.0% | 100.0% | 100.0% | 1 |
+| 1000 | 100.0% | 100.0% | 100.0% | 1 |
+| 2000 | 99.0% | 99.0% | 99.0% | 3 |
+| 3000 | 100.0% | 100.0% | 100.0% | 1 |
+| 4000 | 100.0% | 100.0% | 100.0% | 3 |
+| 5000 | 100.0% | 100.0% | 100.0% | 3 |
+| pooled (2400 gates) | 99.83% | 99.83% | 99.83% | 12/300 |
+Only runs with a reinit change (per_run identical otherwise): reexpress 6, clear 7, all still
+complete; paired laps (299 runs) -0.000 s / -0.001 s; median est. error unchanged on every set.
+Left off (no measurable gain). 5007 already completes since run 20.
+
+**Diagnosis** (scratch hooks on `_after_reinit` / `_switch_to` / `_update_target` with truth, not
+committed):
+- Re-expression does what it should: 5007's second reinit (45.6 -> 0.4 deg) moved the stale
+  hypotheses from 5.0 / 9.6 m off to 0.17 / 0.54 m; 4046's (-12.7 -> -3.2 deg) moved the g4
+  hypothesis 1.32 -> 0.72 m. 4046's worse run-level error under reexpress (yaw RMS 3.4 -> 12.8 deg)
+  comes from a later handoff after the trajectory diverged (identical up to the g4 handoff) — chaos.
+- **The real problem in 5007 is the first reinit itself.** At t=0.25 s the filter was 6 cm / 0 deg
+  off; then the target's *opening* was detected with a 0.40 m centre bias and two upright
+  solutions (+44 / -65 deg yaw). The chi2 gate correctly rejected it 8 frames in a row — and the
+  reinit then adopted it, putting the filter 4.9 m / 44 deg off. Re-expressing hypotheses after
+  such a reinit only makes them agree with a wrong pose. A reinit should need a measurement that
+  is itself trustworthy (single solution, or several rejected measurements agreeing with each
+  other AND disagreeing with the filter for a reason).
+
+Verify: pytest 84 passed; harness clean on all 12 runs.
+
+**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.83%); defaults unchanged.
+
+**Next:** (C) write-up refresh, due by 10-27. Then (A): don't re-initialise from a two-solution
+(ambiguous) measurement — 5007's bad reinit — behind a flag; handoff when the next gate was seen
+too few times (2003).

@@ -34,12 +34,12 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
    pixel on each side (see run 4 in NIGHTLY_LOG). Sub-pixel corners (now default)
    and item 4 (both squares, whose biases have opposite signs) attack this directly.
    Also consider requiring a close-range accepted sighting of the target before a pass.
-2. **(next) Stale hypotheses after a re-initialisation.** When 8 rejects in a row re-initialise
-   the filter on the target, the next-gate / closer / beyond hypotheses built with the old
-   (wrong) pose are kept; in 5007 one of them became the handoff target (41 deg yaw). Clear or
-   re-express them on reinit, behind a flag (~12 of 300 runs have a reinit). Then: next gate
-   seen too few times before a pass (2003: gate 7 m behind the target, 2 sightings); re-try
-   `handoff_yaw_floor`; speed up `refine_upright`. 1005 (crash at 4) is fixed by item 3 below.
+2. **(next) Bad re-initialisations.** Run 22: fixing hypotheses after a reinit was flat (see
+   Done), but 5007's first reinit was itself wrong — 8 chi2 rejects of one biased opening
+   detection with two upright solutions (+44 / -65 deg) replaced a 6 cm-accurate pose. Behind a
+   flag: never re-initialise from a two-solution measurement (or require the rejected
+   measurements to agree). Then: next gate seen too few times before a pass (2003: gate 7 m
+   behind the target, 2 sightings); re-try `handoff_yaw_floor`; speed up `refine_upright`.
 3. **Two-solution sightings** (done 2026-10-22, see Done): ambiguous upright fits carry no yaw;
    what is left of the handoff yaw error is in single-solution sightings beyond ~12 m and in
    gates seen through another gate's opening.
@@ -100,6 +100,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-24 — Hypotheses after a reinit (A, run 22), tried: `reinit_reexpress_hyps` (apply the
+  reinit's pose correction to stored gate hypotheses) and `reinit_clear_hyps` both flat — pooled
+  6 sets 99.83% -> 99.83% each; only the 12/300 runs with a reinit change, none fails; left off.
+  Root cause of 5007 is the reinit itself (item 2).
 
 - 2026-10-23 — Motion blur knob (B, run 21): `SimConfig.exposure_time` (default 0, old
   behaviour), frame = mean of renders over the shutter interval, sub-frames ~1 per px of image
