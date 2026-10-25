@@ -38,7 +38,8 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
    Done), but 5007's first reinit was itself wrong — 8 chi2 rejects of one biased opening
    detection with two upright solutions (+44 / -65 deg) replaced a 6 cm-accurate pose. Behind a
    flag: never re-initialise from a two-solution measurement (or require the rejected
-   measurements to agree). Then: next gate seen too few times before a pass (2003: gate 7 m
+   measurements to agree). Also check why camera-only fell 98.62% -> 97.79% with unambiguous
+   yaw votes on (run 23; yaw-vote counts per hypothesis without a gyro). Then: next gate seen too few times before a pass (2003: gate 7 m
    behind the target, 2 sightings); re-try `handoff_yaw_floor`; speed up `refine_upright`.
 3. **Two-solution sightings** (done 2026-10-22, see Done): ambiguous upright fits carry no yaw;
    what is left of the handoff yaw error is in single-solution sightings beyond ~12 m and in
@@ -86,10 +87,9 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (C) Write-up
 
-- Current as of d356d7a (2026-10-20): upright PnP default (pooled 6 sets 99.54%), joint fit as
-  "tried", camera-only re-run (98.62%). Next due by 2026-10-27; must add unambiguous_yaw_votes
-  (pooled 99.83%, run 20), re-run the camera-only A/B with the new default, and add a
-  sensor-sensitivity section (latency cliff run 19, blur sweep run 21).
+- Current as of run 23 (2026-10-25): unambiguous yaw votes default (pooled 6 sets 99.83%),
+  reinit variants as "tried", sensor-sensitivity section and figure, camera-only re-run (97.79%).
+  Next due by 2026-11-01.
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
   to `vdr/report.py`'s lists and re-run `python -m vdr.report`).
 - When a flight-changing default flips, also re-run the camera-only A/B on the 6 sets (from a
@@ -100,6 +100,12 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-25 — Write-up refresh (C, run 23): README/WRITEUP/figures report the 5143039 default
+  (pooled 6 sets 99.83%, seed 0 100.0%, 11.59 s); unambiguous yaw votes in history/ablations/
+  paired laps; section 4.1 sensor sensitivity (`docs/img/sensitivity.png`); stories 6.11, 6.12.
+  Camera-only re-run on 6 sets: pooled 97.79% vs 99.83% (was 98.62% vs 99.54%: 6 broken,
+  2 rescued, not diagnosed); replay and GIF regenerated.
 
 - 2026-10-24 — Hypotheses after a reinit (A, run 22), tried: `reinit_reexpress_hyps` (apply the
   reinit's pose correction to stored gate hypotheses) and `reinit_clear_hyps` both flat — pooled

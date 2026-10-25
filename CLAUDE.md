@@ -220,6 +220,11 @@ estimate trace and course for one seed — use it to debug a specific failure.
   failure it targeted (5007) the reinit itself was wrong — chi2 had correctly rejected 8 frames
   of a biased two-solution opening, and the reinit then adopted it over a 6 cm-accurate pose.
   Hook the recovery with truth (error before -> after) first.
+- 2026-10-25 — A default tuned in one sensing mode is not free in another: unambiguous yaw
+  votes gained 0.29 pp pooled with the IMU, but camera-only (re-run only at write-up time) went
+  98.62% -> 97.79%. When a default flips, re-run the camera-only A/B in the same run, so the
+  trade-off is seen before the change is kept. (When waiting on a background job, don't
+  `pgrep -f` a string that also appears in your own wait command — it matches itself.)
 
 ## Instruction changes
 

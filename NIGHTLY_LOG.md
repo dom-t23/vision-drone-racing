@@ -1170,3 +1170,53 @@ Verify: pytest 84 passed; harness clean on all 12 runs.
 **Next:** (C) write-up refresh, due by 10-27. Then (A): don't re-initialise from a two-solution
 (ambiguous) measurement — 5007's bad reinit — behind a flag; handoff when the next gate was seen
 too few times (2003).
+
+## 2026-10-24/25 — Run 23: (C) write-up refresh + camera-only re-run (no flight change)
+
+Chunk choice: run 22 was (A), run 21 (B); the write-up was last refreshed on 10-20 and due by
+10-27, and the last two runs both named it next.
+
+**Baseline check** at 75277ee: tests 84 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`
+(not saved).
+
+**Camera-only re-run with the current default** (`--flag camera_only=true` at 75277ee, from a
+clean worktree so the doc edits could not tag the files `-dirty`):
+| seeds | camera + IMU | camera only (now) | camera only (run 18, dcb8934) |
+|---|---|---|---|
+| 0 | 100.0% | 96.25% | 97.25% |
+| 1000 | 100.0% | 98.5% | 99.0% |
+| 2000 | 99.0% | 98.0% | 99.0% |
+| 3000 | 100.0% | 96.5% | 96.5% |
+| 4000 | 100.0% | 98.75% | 100.0% |
+| 5000 | 100.0% | 98.75% | 100.0% |
+| pooled (2400 gates) | **99.83%** | **97.79%** (290/300 completed) | 98.62% (294/300) |
+Files: `results/2026-10-25_75277ee_ab-camonly[-seedN].json`. Camera-only failures vs run 18:
+broken 1, 14, 1030, 2003, 4028, 5018; rescued 41, 1002 (still failing: 11, 2034, 3023, 3025).
+The camera + IMU default gained 0.29 pp from unambiguous yaw votes; camera-only lost 0.83 pp
+(4 net runs). Not diagnosed: it may be chaos (a different default changes most trajectories),
+or ambiguity-filtered yaw votes leave camera-only — which has no gyro to carry heading — with
+too few votes on some hypotheses. Laps 11.4–11.6 s, median est. error 0.23–0.26 m per set.
+
+**Write-up** (README, docs/WRITEUP.md, figures): reports the 5143039 default (seed 0 100.0%,
+11.59 s; pooled 6 sets 99.83%, 299/300, only failure 2003). New: unambiguous yaw votes in the
+results table, history, ablations and a paired-laps figure (`docs/img/paired_laps_unamb.png`,
+297 runs, −0.007 s); bearing-only fallback and both reinit variants as "tried, left off" rows;
+section 4.1 "Sensor sensitivity" with a new figure (`docs/img/sensitivity.png`) from the
+committed latency (run 19) and exposure (run 21) sweeps; stories 6.11 (split a measurement by
+solver ambiguity) and 6.12 (check the recovery before repairing after it); limitations rewritten
+(saturated benchmark, latency needs a capture timestamp). `vdr/report.py` gained the new
+HISTORY/ABLATIONS/REJECTED/PAIRED entries and `SENSITIVITY`; `vdr/demo.py` BENCHMARK points at
+the new files; `docs/demo/{flights,benchmark}.js` regenerated (seeds 0/1017/2034: five flights
+8/8, camera-only 2034 missed_gate at 4, matching its results file); `docs/img/flight.gif`
+re-recorded (seed 0, 8/8). Every figure number was checked against `python -m vdr.report`'s
+printout and the log.
+
+Verify: pytest 84 passed; 8-run smoke 100.0% (64/64).
+
+**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.83%).
+
+**Next:** (A) don't re-initialise the filter from a two-solution measurement (5007's bad reinit),
+behind a flag; check camera-only's drop against truth (yaw-vote counts per hypothesis with and
+without `unambiguous_yaw_votes` in camera-only mode). Latency compensation still waits on Dom's
+frame-timestamp decision.
