@@ -38,8 +38,8 @@ DEFAULT_SEEDS = [0, 1017, 2034]
 
 # Committed benchmark files shown on the page: (seed set, camera + IMU file, camera-only file).
 BENCHMARK = [
-    (0, "2026-10-19_9acf025_baseline.json", "2026-10-20_dcb8934_ab-camonly.json"),
-] + [(s, f"2026-10-19_da2703a_ab-upright-tilt-seed{s}.json", f"2026-10-20_dcb8934_ab-camonly-seed{s}.json")
+    (0, "2026-10-22_5143039_baseline.json", "2026-10-25_75277ee_ab-camonly.json"),
+] + [(s, f"2026-10-22_6b66b99_ab-unamb2-on-seed{s}.json", f"2026-10-25_75277ee_ab-camonly-seed{s}.json")
      for s in range(1000, 6000, 1000)]
 
 

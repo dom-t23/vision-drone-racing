@@ -39,30 +39,34 @@ Current simulator (area-coverage gate rendering, since 2026-10-12):
 
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline, pooled over 6 seed sets (300 courses)** | **99.54%** | 99.3% | 11.4–11.7 s per set |
-| **baseline (8 m/s)**, seed set 0 | **100.0%** | 100% | 11.60 s |
-| same, upright PnP off | 97.8% | 96% | 11.59 s |
+| **baseline, pooled over 6 seed sets (300 courses)** | **99.83%** | 99.7% | 11.4–11.7 s per set |
+| **baseline (8 m/s)**, seed set 0 | **100.0%** | 100% | 11.59 s |
+| same, unambiguous yaw votes off | 100.0% | 100% | 11.60 s |
+| same, also upright PnP off | 97.8% | 96% | 11.59 s |
 | same, also feasible lateral guidance off | 100.0% | 100% | 11.26 s |
 | same, also along-track time-to-go off | 96.8% | 94% | 12.27 s |
 | same, also far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
 | same, also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Files: [`baseline`](results/2026-10-19_9acf025_baseline.json),
-pooled: the baseline plus `results/2026-10-19_da2703a_ab-upright-tilt-seed{1000..5000}.json` (same
-code as the baseline), [`upright PnP off`](results/2026-10-16_3395fb0_baseline.json),
+Files: [`baseline`](results/2026-10-22_5143039_baseline.json),
+pooled: the baseline plus `results/2026-10-22_6b66b99_ab-unamb2-on-seed{1000..5000}.json` (same
+code as the baseline), [`unambiguous yaw votes off`](results/2026-10-19_9acf025_baseline.json),
+[`upright PnP off`](results/2026-10-16_3395fb0_baseline.json),
 [`feasible lateral guidance off`](results/2026-10-15_1d4bb7f_baseline.json),
 [`along-track time-to-go off`](results/2026-10-13_0f1e256_baseline.json),
 [`far lone RANSAC outlines kept`](results/2026-10-12_3b6cbbb_baseline.json),
 [`sub-pixel corners off`](results/2026-10-12_06ceff9_baseline.json).
 Single 50-run sets differ by one or two runs from noise alone, so the pooled row is the number
-to quote and components are judged pooled over several seed sets. The latest change is an
-"upright" PnP: gates are vertical, so the gate's pose is solved for position and yaw only, with
-the up direction taken from gravity, which gives a much better gate yaw than a free 6-DoF fit.
-Roll and pitch for the filter still come from the unconstrained fit, because measuring them with
-the filter's own estimate let the tilt drift (that version scored 97.71%). Pooled pass rate
-99.08% → 99.54%, completed 295 → 298, lap times unchanged. Before it, guidance that plans its
-sideways correction within the acceleration limit gave 97.92% → 99.08% for 3% of lap time.
-Two failures remain in 300 courses.
+to quote and components are judged pooled over several seed sets. The latest change concerns
+the next gate's yaw, which the drone estimates from sightings taken while approaching the
+current gate: sightings where the PnP solver left two plausible poses were 17–44° off in yaw
+and, averaged together, produced confident but wrong handoffs. The next gate's yaw now comes
+only from sightings with a single solution (positions still use all of them). Pooled pass rate
+99.54% → 99.83% — one net run, within noise — but the median estimation error fell on all six
+sets (about 0.31 → 0.22 m) at unchanged lap times. Before it, an "upright" PnP (gates are
+vertical, so solve for position and yaw only) gave 99.08% → 99.54%, and guidance that plans its
+sideways correction within the acceleration limit 97.92% → 99.08%. One failure remains in 300
+courses (seed 2003, a gate seen only twice before the drone had to turn to it).
 
 ![Headline benchmark after each kept change](docs/img/history.png)
 
@@ -128,7 +132,10 @@ Files: [`baseline`](results/2026-10-11_68513f6_baseline.json),
 `vdr/sim`: rigid-body quadrotor (thrust + body-rate inputs with motor and rate-loop lags,
 rotor and air drag), IMU with white noise and drifting biases, a 320×240 pinhole FPV camera
 pitched up 20°, and seeded courses whose layout guarantees that after each gate the next one
-is in view and is the nearest gate ahead. The simulator and the flight stack only share the
+is in view and is the nearest gate ahead. Camera latency and motion blur are available as
+knobs (`--sim camera_latency=0.02`, `--sim exposure_time=0.005`) but off by default: the stack
+loses most of its pass rate at 20 ms of uncompensated latency, while blur up to 20 ms costs
+nothing ([write-up section 4.1](docs/WRITEUP.md#41-sensor-sensitivity)). The simulator and the flight stack only share the
 small contract in [`vdr/interface.py`](vdr/interface.py); a test fails if the autonomy ever
 imports the simulator or the contract grows a ground-truth field.
 
@@ -150,7 +157,7 @@ camera noise.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 78 tests, ~80 s
+python -m pytest -q                         # 84 tests, ~75 s
 python -m vdr.harness --runs 50 --seed 0    # the benchmark (~3 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world
@@ -167,20 +174,22 @@ an assumed vehicle model (rate and thrust lags, linear drag). It flies, but less
 
 | seed set | camera + IMU (default) | camera only |
 |---|---|---|
-| 0 | 100.0% | 97.2% |
-| 1000 | 99.0% | 99.0% |
-| 2000 | 100.0% | 99.0% |
+| 0 | 100.0% | 96.25% |
+| 1000 | 100.0% | 98.5% |
+| 2000 | 99.0% | 98.0% |
 | 3000 | 100.0% | 96.5% |
-| 4000 | 100.0% | 100.0% |
-| 5000 | 98.2% | 100.0% |
-| pooled (2400 gates) | **99.54%** | **98.62%** |
+| 4000 | 100.0% | 98.75% |
+| 5000 | 100.0% | 98.75% |
+| pooled (2400 gates) | **99.83%** | **97.79%** |
 
-Files: camera only `results/2026-10-20_dcb8934_ab-camonly[-seedN].json`; default as in the
-results table above (same code). Camera-only completes 294 of 300 courses against 298 (6 runs
-lost, 2 rescued) with laps 11.4–11.6 s per set. With the previous default (before upright PnP)
-the gap was much wider, 92.96% vs 99.08% (`results/2026-10-1{7,8}_21b0f5f_ab-camonly*`): a
-better gate yaw probably matters most when there is no gyro to hold heading between frames. Its vehicle
-model uses the airframe's nominal values; a real drone's model would be less exact.
+Files: camera only `results/2026-10-25_75277ee_ab-camonly[-seedN].json`; default as in the
+results table above (same code). Camera-only completes 290 of 300 courses against 299, with
+laps 11.4–11.6 s per set. Under the previous default (before unambiguous yaw votes) it scored
+98.62% (`results/2026-10-20_dcb8934_ab-camonly*`; 6 failures then, 10 now: 6 new, 2 fixed), and
+before upright PnP 92.96% (`results/2026-10-1{7,8}_21b0f5f_ab-camonly*`). The latest change was
+tuned with the IMU on; whether the 4-run drop without it is noise or a real interaction has not
+been checked yet. Its vehicle model uses the airframe's nominal values; a real drone's model
+would be less exact.
 
 **Building the app.** `pip install . pyinstaller && python packaging/build.py` makes
 `dist/vdr-racing/` for the OS you run it on. Pushing a `v*` tag runs

@@ -1,6 +1,6 @@
 """Write-up figures, generated only from committed results files.
 
-    python -m vdr.report            # writes docs/img/{history,ablations,paired_laps*}.png
+    python -m vdr.report            # writes docs/img/{history,ablations,sensitivity,paired_laps*}.png
 
 Every number plotted is read from a `results/*.json` file listed below, so the
 figures can be regenerated (and checked) by anyone with the repo. Nothing here
@@ -34,6 +34,7 @@ HISTORY = [
     ("2026-10-15_1d4bb7f_baseline.json", "along-track\ntime-to-go", 1),
     ("2026-10-16_3395fb0_baseline.json", "feasible lateral\nguidance", 1),
     ("2026-10-19_9acf025_baseline.json", "upright PnP", 1),
+    ("2026-10-22_5143039_baseline.json", "unambiguous\nyaw votes", 1),
 ]
 
 # Component A/Bs: (label, [(off file, on file), ...] one pair per seed set).
@@ -87,6 +88,11 @@ ABLATIONS = [
         ("2026-10-16_3395fb0_baseline.json", "2026-10-19_da2703a_ab-upright-tilt.json"),
     ] + [(f"2026-10-16_d37cf14_ab-feaslat-seed{s}.json", f"2026-10-19_da2703a_ab-upright-tilt-seed{s}.json")
          for s in range(1000, 6000, 1000)]),
+    # unambiguous_yaw_votes (fallback to all sightings). Off and on flown at fe855c9 / 6b66b99.
+    ("unambiguous next-gate yaw votes", [
+        ("2026-10-22_fe855c9_ab-unamb-off.json", "2026-10-22_6b66b99_ab-unamb2-on.json"),
+    ] + [(f"2026-10-22_fe855c9_ab-unamb-off-seed{s}.json", f"2026-10-22_6b66b99_ab-unamb2-on-seed{s}.json")
+         for s in range(1000, 6000, 1000)]),
 ]
 
 # A/Bs that were tried and left off (shown in the write-up, not in the ablation figure).
@@ -116,7 +122,17 @@ REJECTED = [
         ("2026-10-19_9acf025_baseline.json", "2026-10-19_42e68bf_ab-joint.json"),
     ] + [(f"2026-10-19_da2703a_ab-upright-tilt-seed{s}.json", f"2026-10-20_42e68bf_ab-joint-seed{s}.json")
          for s in range(1000, 6000, 1000)]),
-]
+    # unambiguous_yaw_votes with the bearing prior alone when no sighting is unambiguous.
+    ("yaw votes, bearing-only fallback", [
+        ("2026-10-22_fe855c9_ab-unamb-off.json", "2026-10-22_fe855c9_ab-unamb-on.json"),
+    ] + [(f"2026-10-22_fe855c9_ab-unamb-off-seed{s}.json", f"2026-10-22_fe855c9_ab-unamb-on-seed{s}.json")
+         for s in range(1000, 6000, 1000)]),
+    # Gate hypotheses after a filter re-initialisation (off: the unambiguous-votes default).
+] + [(f"hypotheses after reinit: {kind}", [
+        ("2026-10-22_6b66b99_ab-unamb2-on.json", f"2026-10-24_418da48_ab-reinit-{kind}.json"),
+    ] + [(f"2026-10-22_6b66b99_ab-unamb2-on-seed{s}.json",
+          f"2026-10-2{3 if s == 5000 else 4}_418da48_ab-reinit-{kind}-seed{s}.json")
+         for s in range(1000, 6000, 1000)]) for kind in ("reexpress", "clear")]
 
 # Paired lap-time comparisons (same seeds, flag off vs on): (label, pairs, output file name).
 PAIRED = [
@@ -124,6 +140,27 @@ PAIRED = [
     ("along-track time-to-go", ABLATIONS[5][1], "paired_laps_tgo.png"),
     ("feasible lateral guidance", ABLATIONS[6][1], "paired_laps_feaslat.png"),
     ("upright PnP", ABLATIONS[7][1], "paired_laps_upright.png"),
+    ("unambiguous yaw votes", ABLATIONS[8][1], "paired_laps_unamb.png"),
+]
+
+# Sensor sensitivity sweeps (seed set 0, one SimConfig knob each; the autonomy is not told about
+# either). (label, default the sweep was flown on, [(value in ms, file), ...]).
+SENSITIVITY = [
+    ("camera latency (not compensated)", "upright-PnP default", [
+        (0, "2026-10-19_9acf025_baseline.json"),
+        (10, "2026-10-21_1077d61_latency-10ms.json"),
+        (15, "2026-10-21_1077d61_latency-15ms.json"),
+        (20, "2026-10-20_1077d61_latency-20ms.json"),
+        (30, "2026-10-21_1077d61_latency-30ms.json"),
+        (40, "2026-10-20_1077d61_latency-40ms.json"),
+        (50, "2026-10-20_1077d61_latency-50ms.json"),
+    ]),
+    ("motion blur (exposure time)", "unambiguous-votes default", [
+        (0, "2026-10-22_5143039_baseline.json"),
+        (5, "2026-10-23_f58b856_exposure-5ms.json"),
+        (10, "2026-10-23_f58b856_exposure-10ms.json"),
+        (20, "2026-10-23_f58b856_exposure-20ms.json"),
+    ]),
 ]
 
 C_OFF, C_ON, C_INK, C_GRID = "#9aa5b1", "#d9480f", "#212529", "#e9ecef"
@@ -162,7 +199,7 @@ def plot_history(path, root=RESULTS) -> list:
     for f, label, gen in HISTORY:
         d = load(f, root)
         rows.append((label, gen, 100 * d["pass_rate"], 100 * d["completion_rate"], f))
-    fig, ax = plt.subplots(figsize=(8, 4))
+    fig, ax = plt.subplots(figsize=(9.5, 4))
     xs = range(len(rows))
     ax.plot(xs, [r[2] for r in rows], "-o", color=C_ON, lw=2, label="gate pass rate")
     ax.plot(xs, [r[3] for r in rows], "--s", color=C_OFF, lw=1.5, label="courses completed")
@@ -237,6 +274,33 @@ def plot_paired(path, root=RESULTS, which: int = 0) -> dict:
     return stats
 
 
+def plot_sensitivity(path, root=RESULTS) -> list:
+    rows = []
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3.6))
+    for (label, base, pts), c, m in zip(SENSITIVITY, (C_ON, C_OFF), ("o", "s")):
+        xs, pr, ee = [], [], []
+        for ms, f in pts:
+            d = load(f, root)
+            xs.append(ms); pr.append(100 * d["pass_rate"]); ee.append(d["median_pos_err_rms"])
+            rows.append((label, ms, pr[-1], ee[-1], f))
+        ax1.plot(xs, pr, "-" + m, color=c, lw=2, label=f"{label}\n({base})")
+        ax2.plot(xs, ee, "-" + m, color=c, lw=2)
+    ax1.axvline(25, color=C_INK, lw=0.8, ls=":")
+    ax1.text(25.5, 60, "frame period\n(40 Hz)", fontsize=8, color=C_INK)
+    ax1.set_xlabel("ms"); ax1.set_ylabel("gate pass rate, % (seed set 0)")
+    ax1.set_ylim(0, 103)
+    ax1.legend(loc="lower left", frameon=False, fontsize=8)
+    ax2.set_xlabel("ms"); ax2.set_ylabel("median per-run est. error (m)")
+    ax2.set_ylim(0, None)
+    for ax in (ax1, ax2):
+        _style(ax)
+    fig.suptitle("Sensor sensitivity: when a frame was taken matters, how sharp it is does not", fontsize=10)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return rows
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", default="docs/img")
@@ -252,6 +316,8 @@ def main(argv=None):
         on = pooled_pass([p[1] for p in pairs], a.results)
         print(f"rejected  {label:22} {len(pairs)} set(s)  off {100 * off[0] / off[1]:.2f}%  "
               f"on {100 * on[0] / on[1]:.2f}%")
+    for r in plot_sensitivity(os.path.join(a.out, "sensitivity.png"), a.results):
+        print(f"sensitivity {r[0]:34} {r[1]:3d} ms  pass {r[2]:.2f}%  est. error {r[3]:.3f} m  {r[4]}")
     for i, (label, _, fname) in enumerate(PAIRED):
         s = plot_paired(os.path.join(a.out, fname), a.results, i)
         print(f"paired    {label:22} n={s['n']} mean {s['mean']:+.3f} s  median {s['median']:+.3f} s  "

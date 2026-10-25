@@ -24,32 +24,37 @@ default configuration.
 
 | configuration (current simulator) | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **default** | **100.0%** | 100% | 11.60 s |
-| upright PnP off | 97.8% | 96% | 11.59 s |
+| **default** | **100.0%** | 100% | 11.59 s |
+| unambiguous yaw votes off | 100.0% | 100% | 11.60 s |
+| also upright PnP off | 97.8% | 96% | 11.59 s |
 | also feasible lateral guidance off | 100.0% | 100% | 11.26 s |
 | also along-track time-to-go off | 96.8% | 94% | 12.27 s |
 | also far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
 | also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Source: [`2026-10-19_9acf025_baseline.json`](../results/2026-10-19_9acf025_baseline.json),
+Source: [`2026-10-22_5143039_baseline.json`](../results/2026-10-22_5143039_baseline.json),
+[`2026-10-19_9acf025_baseline.json`](../results/2026-10-19_9acf025_baseline.json),
 [`2026-10-16_3395fb0_baseline.json`](../results/2026-10-16_3395fb0_baseline.json),
 [`2026-10-15_1d4bb7f_baseline.json`](../results/2026-10-15_1d4bb7f_baseline.json),
 [`2026-10-13_0f1e256_baseline.json`](../results/2026-10-13_0f1e256_baseline.json),
 [`2026-10-12_3b6cbbb_baseline.json`](../results/2026-10-12_3b6cbbb_baseline.json),
 [`2026-10-12_06ceff9_baseline.json`](../results/2026-10-12_06ceff9_baseline.json).
 
-**One seed set is not enough; the pooled number is the honest one.** Over six sets of 50
-courses (seeds 0, 1000, 2000, 3000, 4000, 5000; 2400 gates) the default passes **99.54%** of
-gates and completes 298 of 300 courses (per set 100.0 / 99.0 / 100.0 / 100.0 / 100.0 / 98.2%,
-laps 11.4–11.7 s; `results/2026-10-19_9acf025_baseline.json` and
-`results/2026-10-19_da2703a_ab-upright-tilt-seed{1000..5000}.json`, flown with the same code as
-the default). The two failures are seed 1005 (`crash_gate` at gate 4) and seed 5007
-(`wrong_gate` at gate 1). The latest change, a gravity-constrained "upright" PnP that gives a
-better gate yaw (section 6.9), raised the pooled pass rate from 99.08% to 99.54% at unchanged
-lap times. The one before it, guidance that plans its sideways correction within the
-acceleration limit (section 6.7), raised it from 97.92% to 99.08% for 3% of lap time, and on
-seed set 0 alone went *down*, 100.0% → 97.8%: single sets are noisy, and two runs either way is
-within noise for one set.
+**One seed set is not enough; the pooled number is the honest one.** Seed set 0 has been at
+100.0% since the upright PnP change, so it can no longer tell good changes from bad. Over six
+sets of 50 courses (seeds 0, 1000, 2000, 3000, 4000, 5000; 2400 gates) the default passes
+**99.83%** of gates and completes 299 of 300 courses (per set 100.0 / 100.0 / 99.0 / 100.0 /
+100.0 / 100.0%, laps 11.4–11.7 s, median per-run estimation error 0.20–0.24 m;
+`results/2026-10-22_5143039_baseline.json` and `results/2026-10-22_6b66b99_ab-unamb2-on-seed{1000..5000}.json`,
+flown with the same code as the default). The one failure is seed 2003 (`missed_gate` at gate
+4: that gate sits 7 m behind gate 3 and was seen only twice before the pass). The latest change
+takes the next gate's yaw only from sightings whose pose solution is unambiguous (section 6.11):
+pooled 99.54% → 99.83%, which on its own is one net run and inside the noise, but it lowered the
+median estimation error on all six sets (about 0.31 → 0.22 m). Before it, a gravity-constrained
+"upright" PnP (section 6.9) raised the pooled rate from 99.08% to 99.54%, and guidance that plans
+its sideways correction within the acceleration limit (section 6.7) from 97.92% to 99.08% for 3%
+of lap time, while on seed set 0 alone it went *down*, 100.0% → 97.8%: single sets are noisy, and
+two runs either way is within noise for one set.
 
 ![Headline benchmark after each kept change](img/history.png)
 
@@ -72,10 +77,14 @@ sets named; each grey line is one 50-course set):
 | along-track time-to-go | 5 | 97.50% → 97.75% (laps 1.03 s faster) | `2026-10-1{4,5}_131d93c_ab-attgo` |
 | feasible lateral guidance | 6 | 97.92% → 99.08% (laps 0.34 s slower, +3%) | `2026-10-1{5,6}_d37cf14_ab-feaslat` |
 | upright PnP (tilt from IPPE) | 6 | 99.08% → 99.54% (laps flat, −0.036 s) | `2026-10-19_da2703a_ab-upright-tilt` |
+| unambiguous next-gate yaw votes | 6 | 99.54% → 99.83% (laps flat, −0.007 s) | `2026-10-22_{fe855c9_ab-unamb-off,6b66b99_ab-unamb2-on}` |
 | *tried, left off:* lateral-first saturation | 5 | 97.50% → 98.25% (completed 240 → 240) | `2026-10-1{3,4}_2d7e3f6_` |
 | *tried, left off:* handoff yaw sigma floor | 6 | 99.08% → 99.17% (1 run rescued, 0 broken) | `2026-10-17_cbd0150_ab-yawfloor` |
 | *tried, left off:* upright PnP with a yaw-only update | 6 | 99.08% → 97.71% (completed 295 → 289) | `2026-10-1{8,9}_bc81c40_ab-upright` |
 | *tried, left off:* joint outline + opening fit | 6 | 99.54% → 99.54% (1 rescued, 1 broken) | `2026-10-{19,20}_42e68bf_ab-joint` |
+| *tried, left off:* yaw votes, bearing prior alone when none is unambiguous | 6 | 99.54% → 99.54% | `2026-10-22_fe855c9_ab-unamb-on` |
+| *tried, left off:* re-express gate hypotheses after a filter reinit | 6 | 99.83% → 99.83% | `2026-10-2{3,4}_418da48_ab-reinit-reexpress` |
+| *tried, left off:* clear gate hypotheses after a filter reinit | 6 | 99.83% → 99.83% | `2026-10-2{3,4}_418da48_ab-reinit-clear` |
 
 The first three were measured on the earlier renderer. Sub-pixel corners did not change the
 pass rate; they were kept because they made laps faster at equal pass rate (section 5), and
@@ -87,7 +96,8 @@ clear win (section 6.6). The handoff yaw floor changed one run in 300 (section 6
 PnP is a small pass-rate gain on its own, but it is pooled over six sets and comes with a
 consistent mechanism: per-run yaw error RMS fell from 4.20° to 2.87° on average and the median
 estimation error fell on all six sets. The yaw-only variant and the joint fit are sections 6.9
-and 6.10.
+and 6.10. Unambiguous yaw votes are kept on the same grounds (section 6.11); the reinit variants
+changed only the 12 of 300 runs that re-initialise at all, none of which fails (section 6.12).
 
 Two reference points from the bootstrap: at 4 m/s with no race clock the stack passes 97.8% of
 gates ([`0423930_ablation-4mps-noclock`](../results/2026-10-07_0423930_ablation-4mps-noclock.json))
@@ -177,7 +187,9 @@ for the *next* gate (position and yaw in the current gate frame). When the estim
 x = +0.3 m the filter is re-expressed in the next gate's frame: rotate and translate p, v and
 R, and inflate the covariance by the uncertainty of the next gate's estimated pose (position,
 plus yaw uncertainty mapped through the lever arm). That uncertainty is floored at 8% of the
-range at which the gate was seen, because far sightings share a depth bias.
+range at which the gate was seen, because far sightings share a depth bias. The next gate's yaw
+is averaged only over sightings where a single upright pose solution survived (section 6.11);
+if a gate has none, all its sightings vote.
 
 ### 3.4 Chi-squared gating
 
@@ -249,6 +261,34 @@ lockstep scoring. Every "how hard is the world" knob is a `SimConfig` field, and
 can override any of them (`--sim pixel_noise_sigma=8`). The autonomy's own noise assumptions
 live in `AutonomyConfig` and are deliberately not copied from the simulator.
 
+### 4.1 Sensor sensitivity
+
+Two realism knobs exist but are off by default: `camera_latency` (a frame is rendered at capture
+and delivered later; the autonomy is not told by how much) and `exposure_time` (motion blur: the
+frame is the mean of renders along the true motion over the shutter interval). Sweeping each on
+seed set 0:
+
+![Pass rate and estimation error against camera latency and exposure time](img/sensitivity.png)
+
+| knob (seed set 0) | 0 | 5 ms | 10 ms | 15 ms | 20 ms | 30 ms | 40 ms | 50 ms |
+|---|---|---|---|---|---|---|---|---|
+| latency: pass rate | 100.0% | | 100.0% | 92.0% | 52.0% | 18.75% | 4.5% | 8.75% |
+| exposure: pass rate | 100.0% | 100.0% | 100.0% | | 100.0% | | | |
+| exposure: median est. error | 0.203 m | 0.201 m | 0.223 m | | 0.327 m | | | |
+
+Sources: `results/2026-10-2{0,1}_1077d61_latency-*ms.json` (flown on the upright-PnP default,
+0 ms = `2026-10-19_9acf025_baseline.json`) and `results/2026-10-23_f58b856_exposure-*ms.json`
+(current default, 0 ms = `2026-10-22_5143039_baseline.json`). Real FPV pipelines have 20–40 ms of
+latency, so this is the stack's biggest weakness. A scratch split of the 20 ms case (not
+committed; monkeypatched renderer) showed *which* part of a stale frame hurts: a frame from the
+capture-time position but current attitude flew 100%, one from the capture-time attitude but
+current position 52.8%. The 16 cm the drone travels in 20 ms are harmless; the few degrees the
+camera rotates are not, because at 6–10 m they move the gate-centre bearing by tens of
+centimetres and the filter applies it with the current attitude. The fix is cheap (rewind the
+attitude to exposure time with buffered gyro samples) but needs the frame's capture time, which
+the interface does not carry yet. Blur almost up to the 25 ms frame period costs no pass rate; it
+stays off because it doubles benchmark time for no measurable effect at a realistic 5 ms.
+
 ## 5. How changes are evaluated
 
 * **Deterministic seeds.** Each run is bit-for-bit reproducible for a given seed and
@@ -285,6 +325,11 @@ live in `AutonomyConfig` and are deliberately not copied from the simulator.
 
   Upright PnP: 149 of 293 paired runs faster, mean −0.036 s (median −0.003 s): no change in
   pace.
+
+![Paired lap-time differences, unambiguous yaw votes on minus off](img/paired_laps_unamb.png)
+
+  Unambiguous yaw votes: 166 of 297 paired runs faster, mean −0.007 s (median −0.005 s): no
+  change in pace.
 * **Simulator changes** go in as a `SimConfig` field defaulting to the old behaviour, then the
   default is flipped in a separate commit and the benchmark re-baselined.
 
@@ -401,7 +446,10 @@ version rescued 5 runs and broke 2 (pooled 99.08% → 99.54%, completed 295 → 
 times flat on 293 paired runs (−0.036 s). It helps camera-only mode (no IMU; the filter predicts
 from the commanded thrust and rates) even more: pooled 92.96% before, 98.62% with it
 (`results/2026-10-20_dcb8934_ab-camonly[-seedN].json`), probably because without a gyro the heading
-between frames rests on the vision yaw (not yet checked against truth).
+between frames rests on the vision yaw (not yet checked against truth). With the later
+unambiguous yaw votes (6.11) camera-only scores 97.79% (290/300 completed, 6 runs broken and 2
+rescued against 98.62%; `results/2026-10-25_75277ee_ab-camonly[-seedN].json`) while camera + IMU
+rose to 99.83%; whether that drop is noise has not been checked.
 
 ### 6.10 Measure the ceiling on real frames first (joint fit, flat)
 Each gate shows two concentric squares, the outline and the opening, so the next idea was to
@@ -414,17 +462,51 @@ joint fit only helps beyond 12 m. The synthetic model had predicted 1.5°, 4.6°
 the outline alone in the same bands, five to six times too pessimistic, so the remaining yaw error does not come from clean detections; it comes from
 merged or overlapping gates and from averaging sightings taken from one viewpoint.
 
+### 6.11 Split a measurement by how ambiguous its solver was (pooled 99.54% → 99.83%)
+Section 6.8 showed handoff yaw errors of 16–46° in failing runs. Splitting next-gate sightings
+by how many upright PnP solutions survived (checked against truth) found the source: where two
+solutions survive, the sighting's yaw had an RMS error of 17–44°, and even the better of the
+two was 29° off; with a single solution it was 5–10°. Fifty or more such sightings averaged
+into a confident 25–40° handoff error, because averaging only removes independent noise, and
+two-solution sightings are wrong in the same way. The fix keeps two yaw averages per next-gate
+hypothesis — all sightings, and single-solution sightings only — and the handoff uses the
+second; positions still use every sighting. A first version that fell back to the bearing prior
+alone when a gate had no single-solution sighting was flat (99.54%): it broke a retarget to a
+fresh hypothesis whose four sightings were all ambiguous and whose bearing prior was 54° off.
+Falling back to all sightings instead (the old behaviour) rescued 1005 and 5007 and broke 2003
+(pooled 99.54% → 99.83%). The handoff yaw RMS right after the switch fell from 6.3° to 4.2° on
+seed set 1000 and from 7.0° to 6.2° on 5000, and the median per-run estimation error fell on
+all six sets (0.29–0.36 m → 0.20–0.24 m), with laps flat. 2003 is not a yaw problem: its gate 4
+sits 7 m behind gate 3 and was seen twice before the pass (five times before the change), below
+the minimum sighting count, so the handoff went to gate 5. A fallback should never be worse
+than the path it replaces.
+
+### 6.12 Check a recovery was right before repairing what it leaves behind (flat)
+After 8 χ²-rejected measurements in a row the filter re-initialises (section 3.4). In 5007 the
+next-gate hypotheses had been placed with the pre-reinit pose, so the next idea was to apply the
+reinit's pose correction to them (or drop them). Both were exact and flat: pooled 99.83% →
+99.83%, only the 12 of 300 runs that re-initialise changed, all still complete. Hooking the
+reinit with truth showed why it could not help the case it was written for: at the first reinit
+in 5007 the filter was 6 cm and 0° off, and the 8 rejected frames were one *biased* opening
+detection (0.40 m centre error, two upright solutions at +44° and −65°). χ² had been right to
+reject it; the reinit then adopted it and put the filter 4.9 m and 44° off. Re-expressing gate
+hypotheses after such a reinit only makes them agree with a wrong pose. The next step is to stop
+re-initialising from an ambiguous measurement.
+
 ## 7. Limitations and next steps
 
-* The two remaining failures over 300 courses (seeds 1005 and 5007) have not been diagnosed
-  yet. Clean detections are now accurate (section 6.10), so the next perception work is
-  measuring the error of merged and overlapping-gate detections on rendered multi-gate scenes,
-  then a measurement covariance from the PnP Jacobian.
+* The benchmark is close to saturated (one failure in 300 courses), so further pass-rate work
+  needs a harder world. Open items on the current one: never re-initialise the filter from a
+  two-solution measurement (section 6.12), and hand off correctly when the next gate was seen
+  only once or twice (seed 2003).
+* Measurement covariance from the PnP Jacobian instead of the heuristic distance model.
 * The terminal "hold the line" law is weak; a miss-distance law for the last 1.2 m is planned.
 * Guidance plans one gate at a time; a lookahead through the current *and* next gate would
   start turns earlier.
-* The world is still clean: no latency, motion blur, lens distortion, lighting changes,
-  distractors or wind. Each will be added as a `SimConfig` knob with a re-baseline.
+* The default world is still clean. Latency and motion blur exist as knobs (section 4.1) but are
+  off; latency compensation waits on adding a frame capture time to the interface. Lens
+  distortion, lighting changes, distractors and wind are still to come, each as a `SimConfig`
+  knob with a re-baseline.
 * All results are from simulation; nothing here has flown on hardware.
 
 See [ROADMAP.md](../ROADMAP.md) for the ranked list and [NIGHTLY_LOG.md](../NIGHTLY_LOG.md)
