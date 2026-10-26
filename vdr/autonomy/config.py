@@ -81,6 +81,12 @@ class AutonomyConfig:
     # wrong (8 rejects of one biased two-solution opening replaced a 6 cm-accurate pose).
     reinit_reexpress_hyps: bool = False
     reinit_clear_hyps: bool = False
+    # Run 22: 5007's first reinit adopted a biased two-solution opening detection (+44 / -65 deg)
+    # that chi2 had rightly rejected 8 times, over a 6 cm-accurate pose. With this flag an
+    # ambiguous (two-solution) measurement cannot trigger a reinit; the next rejected
+    # single-solution one does, or any one after reinit_ambiguous_max_rejects rejects in a row.
+    reinit_unambiguous_only: bool = False
+    reinit_ambiguous_max_rejects: int = 24
 
     # --- gate tracking & handoff ---------------------------------------------------
     assoc_radius: float = 2.0         # m (+ assoc_radius_per_m * range, capped) to call a detection "the target gate"

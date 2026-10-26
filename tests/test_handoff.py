@@ -97,3 +97,20 @@ def test_reinit_flags_off_keep_hypotheses_and_clear_drops_them():
     assert np.linalg.norm(auto._ahead_hyps[0].mean - g_true) > 1.0     # old behaviour: stale
     auto, _, _ = _hyp_after_reinit(AutonomyConfig(reinit_clear_hyps=True))
     assert auto._ahead_hyps == []
+
+
+def _auto(cfg):
+    return Autonomy(Simulator(SimConfig(), 0).vehicle_info(), cfg)
+
+
+def test_reinit_unambiguous_only_waits_for_a_single_solution():
+    two, one = [object(), object()], [object()]
+    auto = _auto(AutonomyConfig())
+    auto._consec_rejects = 8
+    assert auto._may_reinit_from(two)                 # flag off: old behaviour
+    auto = _auto(AutonomyConfig(reinit_unambiguous_only=True, reinit_ambiguous_max_rejects=24))
+    auto._consec_rejects = 8
+    assert not auto._may_reinit_from(two)             # ambiguous: keep the filter
+    assert auto._may_reinit_from(one)                 # the next clear rejected one re-initialises
+    auto._consec_rejects = 24
+    assert auto._may_reinit_from(two)                 # lock-out recovery still happens

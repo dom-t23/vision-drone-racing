@@ -387,7 +387,7 @@ class Autonomy:
         else:
             self.stats["pos_rejects"] += 1
             self._consec_rejects += 1
-            if self._consec_rejects >= cfg.max_consecutive_rejects:
+            if self._consec_rejects >= cfg.max_consecutive_rejects and self._may_reinit_from(sols):
                 self.stats["reinits"] += 1
                 p_old, R_old = e.p.copy(), e.R.copy()
                 self._init_on_gate(s0, keep_velocity=True)
@@ -432,6 +432,18 @@ class Autonomy:
                 best = (m, R_meas, Rn, r)
         ok, _ = e.update_attitude(best[1], best[2], gate=cfg.chi2_gating, thresh=cfg.chi2_threshold, r=best[3])
         self.stats["att_updates" if ok else "att_rejects"] += 1
+
+    def _may_reinit_from(self, sols: list) -> bool:
+        """Whether this (rejected) measurement is trustworthy enough to re-initialise from.
+
+        With `reinit_unambiguous_only`, a measurement with two valid poses (an ambiguous fit) does
+        not trigger the reinit; the next rejected single-solution one does. After
+        `reinit_ambiguous_max_rejects` rejects in a row we re-initialise anyway (lock-out recovery).
+        """
+        cfg = self.cfg
+        if not cfg.reinit_unambiguous_only or len(sols) <= 1:
+            return True
+        return self._consec_rejects >= cfg.reinit_ambiguous_max_rejects
 
     def _after_reinit(self, p_old: np.ndarray, R_old: np.ndarray) -> None:
         """A reinit moved our pose estimate; deal with gates placed using the old one."""
