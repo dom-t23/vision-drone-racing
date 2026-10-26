@@ -85,6 +85,9 @@ class AutonomyConfig:
     # that chi2 had rightly rejected 8 times, over a 6 cm-accurate pose. With this flag an
     # ambiguous (two-solution) measurement cannot trigger a reinit; the next rejected
     # single-solution one does, or any one after reinit_ambiguous_max_rejects rejects in a row.
+    # Flat (2026-10-26, run 24): pooled 6 sets 99.83% -> 99.83%; only 1005 and 5007 change, both
+    # complete; 5007 has no reinit (3 before), pos err RMS 1.15 -> 0.34 m, lap -0.34 s. Camera-only
+    # never re-initialises (0/300 runs), so it cannot change there. Left off (one run of evidence).
     reinit_unambiguous_only: bool = False
     reinit_ambiguous_max_rejects: int = 24
 

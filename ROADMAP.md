@@ -34,11 +34,9 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
    pixel on each side (see run 4 in NIGHTLY_LOG). Sub-pixel corners (now default)
    and item 4 (both squares, whose biases have opposite signs) attack this directly.
    Also consider requiring a close-range accepted sighting of the target before a pass.
-2. **(next) Bad re-initialisations.** Run 22: fixing hypotheses after a reinit was flat (see
-   Done), but 5007's first reinit was itself wrong — 8 chi2 rejects of one biased opening
-   detection with two upright solutions (+44 / -65 deg) replaced a 6 cm-accurate pose. Behind a
-   flag: never re-initialise from a two-solution measurement (or require the rejected
-   measurements to agree). Also check why camera-only fell 98.62% -> 97.79% with unambiguous
+2. **Bad re-initialisations.** Runs 22 and 24 (see Done): the two-solution reinit guard fixes
+   5007 but is flat on the saturated benchmark; left off — re-test after the world gets harder
+   (B). Also check why camera-only fell 98.62% -> 97.79% with unambiguous
    yaw votes on (run 23; yaw-vote counts per hypothesis without a gyro). Then: next gate seen too few times before a pass (2003: gate 7 m
    behind the target, 2 sightings); re-try `handoff_yaw_floor`; speed up `refine_upright`.
 3. **Two-solution sightings** (done 2026-10-22, see Done): ambiguous upright fits carry no yaw;
@@ -64,6 +62,9 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   gate index, outcome, pre-crash estimation error; `--seed N` re-runs one seed with a
   trajectory/estimate plot saved to `docs/img/`.
 - **Stack unit tests:** handoff, retarget and search logic with scripted detections.
+- **(next) Harder benchmark.** 299/300 pooled runs complete, so (A) changes now show up only in
+  per-run diagnostics of 1-2 runs (run 24). Flip motion blur (~5 ms) together with a second knob
+  (distractors / lens distortion) and re-baseline.
 - **Realism, one knob at a time (each: add SimConfig field defaulting to old behaviour ->
   flip default -> re-baseline):**
   - **camera latency: knob added (run 19, `SimConfig.camera_latency`, default 0)**. Seed 0:
@@ -100,6 +101,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-26 — No reinit from an ambiguous measurement (A, run 24), tried:
+  `reinit_unambiguous_only` — pooled 6 sets 99.83% -> 99.83%; only 1005 and 5007 change, both
+  complete; 5007 reinits 3 -> 0, pos err RMS 1.15 -> 0.34 m, lap -0.34 s. Left off (one run of
+  evidence); camera-only never reinitialises (0/300), so unaffected.
 
 - 2026-10-25 — Write-up refresh (C, run 23): README/WRITEUP/figures report the 5143039 default
   (pooled 6 sets 99.83%, seed 0 100.0%, 11.59 s); unambiguous yaw votes in history/ablations/

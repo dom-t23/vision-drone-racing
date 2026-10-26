@@ -225,6 +225,10 @@ estimate trace and course for one seed — use it to debug a specific failure.
   98.62% -> 97.79%. When a default flips, re-run the camera-only A/B in the same run, so the
   trade-off is seen before the change is kept. (When waiting on a background job, don't
   `pgrep -f` a string that also appears in your own wait command — it matches itself.)
+- 2026-10-26 — Before re-running an A/B in another mode, count how often the mechanism fires
+  there from the committed per-run `diag` (camera-only had 0 reinits in 300 runs, so a reinit
+  guard cannot change it). On a saturated benchmark judge a fix by the diag of the runs it
+  changed (5007: pos err RMS 1.15 -> 0.34 m), and make the world harder before more (A) work.
 
 ## Instruction changes
 

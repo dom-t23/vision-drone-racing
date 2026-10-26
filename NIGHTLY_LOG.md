@@ -1220,3 +1220,52 @@ Verify: pytest 84 passed; 8-run smoke 100.0% (64/64).
 behind a flag; check camera-only's drop against truth (yaw-vote counts per hypothesis with and
 without `unambiguous_yaw_votes` in camera-only mode). Latency compensation still waits on Dom's
 frame-timestamp decision.
+
+## 2026-10-26 — Run 24: (A) no re-initialisation from an ambiguous measurement (flat, left off)
+
+Chunk choice: run 23 was (C), run 22 (A); ROADMAP A2 "(next) bad re-initialisations" (5007's
+first reinit adopted a biased two-solution opening, run 22).
+
+**Baseline check** at d55e023: tests 84 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`
+(not saved). (Checkout was again a detached HEAD; reset `main` to origin/main, no local work.)
+
+**Change** (commit f3542f3, flag `reinit_unambiguous_only`, default off): after
+`max_consecutive_rejects` (8) chi2 rejects, a measurement with two valid poses (`len(sols) > 1`)
+no longer triggers the reinit; the next rejected single-solution one does, or any one once
+`reinit_ambiguous_max_rejects` (24) rejects have piled up (lock-out recovery kept). Test:
+`test_handoff.py::test_reinit_unambiguous_only_waits_for_a_single_solution`.
+
+**A/B** (50 runs per set; off = committed `results/2026-10-22_6b66b99_ab-unamb2-on*.json`, the
+current default, seed 0 re-run tonight identical; on = `results/2026-10-26_f3542f3_ab-reinit-unamb*.json`):
+| seed set | off | on | runs changed |
+|---|---|---|---|
+| 0 | 100.0% | 100.0% | 0 |
+| 1000 | 100.0% | 100.0% | 1 (1005) |
+| 2000 | 99.0% | 99.0% | 0 (2003 still missed_gate at 4) |
+| 3000 | 100.0% | 100.0% | 0 |
+| 4000 | 100.0% | 100.0% | 0 |
+| 5000 | 100.0% | 100.0% | 1 (5007) |
+| pooled (2400 gates) | 99.83% | 99.83% | 2/300 |
+Per-run `diag` of the two changed runs: **5007** reinits 3 -> 0, pos rejects 27 -> 12, pos err
+RMS 1.149 -> 0.335 m (max 4.88 -> 1.90 m), yaw err RMS 9.19 -> 2.01 deg, lap 11.87 -> 11.535 s.
+**1005** still 1 reinit (deferred to a single-solution frame), pos err unchanged (2.44 m RMS),
+yaw RMS 3.58 -> 4.60 deg, lap 11.375 -> 11.342 s. The other 10 runs with a reinit reinitialise
+from a single-solution measurement already and are identical.
+
+The mechanism cannot reach camera-only mode: the committed camera-only files
+(`results/2026-10-25_75277ee_ab-camonly*.json`) have 0 reinits in 300 runs, so no camera-only
+re-run was needed.
+
+**Left off.** It does exactly what it was meant to on the one run that motivated it, and breaks
+nothing, but one run (-0.34 s, no pass-rate change) is not "clearly helps" under the A/B rule.
+The benchmark is saturated (299/300 complete): further (A) work needs a harder world to show up.
+
+Verify: pytest 85 passed; harness clean on all 6 sets.
+
+**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.83%); defaults unchanged.
+
+**Next:** the benchmark no longer discriminates: (B) make the world harder (flip motion blur to
+~5 ms together with a second knob, e.g. orange distractors or lens distortion) and re-baseline,
+so (A) changes like this one can be judged. Latency compensation still waits on Dom's
+frame-timestamp decision. Camera-only drop (98.62% -> 97.79%) still undiagnosed.
