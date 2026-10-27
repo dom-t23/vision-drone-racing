@@ -176,3 +176,36 @@ def test_motion_blur_averages_the_shutter_interval():
     assert abs((yaw_now - first) - w * blur_cfg.exposure_time * (1 - 0.5 / n)) < 0.01
     assert abs((yaw_now - last) - w * blur_cfg.exposure_time * 0.5 / n) < 0.01
     assert SimConfig().exposure_time == 0.0       # default: instantaneous shutter
+
+
+def test_distractors_are_clutter_off_the_racing_line():
+    """n_distractors > 0 adds orange clutter beside the course without changing the course,
+    IMU or camera-noise streams; every object keeps its clearance from the legs and gates,
+    it is painted in gate-like colours, and n_distractors = 0 renders exactly as before."""
+    from vdr.sim.course import _segment_point_dist
+    base_cfg = SimConfig(pixel_noise_sigma=0.0)
+    clut_cfg = base_cfg.override(n_distractors=25)
+    a, b = Simulator(base_cfg, seed=5), Simulator(clut_cfg, seed=5)
+    assert a.course.distractors == [] and len(b.course.distractors) == 25
+    assert np.allclose(a.course.centers(), b.course.centers())
+    assert np.allclose(a.course.start_position, b.course.start_position)
+    again = Simulator(clut_cfg, seed=5)
+    assert all(np.allclose(d.vertices, e.vertices) for d, e in zip(b.course.distractors, again.course.distractors))
+
+    C = b.course.centers()
+    legs = [(b.course.start_position, C[0])] + [(C[i], C[i + 1]) for i in range(len(C) - 1)]
+    for d in b.course.distractors:
+        assert d.kind in ("panel", "cone")
+        assert np.all(d.vertices[:, 2] >= -1e-9)
+        for p, q in legs:
+            for v in d.vertices:
+                assert _segment_point_dist(p, q, v) >= clut_cfg.distractor_clearance - 1e-9
+        hsv = cv2.cvtColor(np.uint8([[d.colour]]), cv2.COLOR_BGR2HSV)[0, 0]
+        assert hsv[0] <= 25 and hsv[1] >= 120 and hsv[2] >= 100    # passes a gate-paint threshold
+
+    ia, ib = a.reset().image, b.reset().image
+    hsv_a = cv2.inRange(cv2.cvtColor(ia, cv2.COLOR_BGR2HSV), (0, 120, 100), (25, 255, 255))
+    hsv_b = cv2.inRange(cv2.cvtColor(ib, cv2.COLOR_BGR2HSV), (0, 120, 100), (25, 255, 255))
+    assert np.count_nonzero(hsv_b) > np.count_nonzero(hsv_a)       # clutter is in view at the start
+    assert np.array_equal(ia, Simulator(base_cfg, seed=5).reset().image)
+    assert SimConfig().n_distractors == 0         # default: no clutter (old behaviour)

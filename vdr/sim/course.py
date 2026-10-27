@@ -14,7 +14,7 @@ Guarantees (checked by rejection sampling, see `_valid`):
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -45,9 +45,22 @@ class Course:
     gates: list
     start_position: np.ndarray
     start_yaw: float
+    distractors: list = field(default_factory=list)   # [Distractor], sim-only clutter
 
     def centers(self) -> np.ndarray:
         return np.array([g.center for g in self.gates])
+
+
+@dataclass
+class Distractor:
+    """A flat, vertical, convex orange polygon beside the course (sim-only clutter)."""
+    vertices: np.ndarray    # (N, 3) world coordinates, convex, planar
+    colour: tuple           # BGR paint
+    kind: str               # "panel" (rectangle / banner) or "cone" (triangle on the ground)
+
+    @property
+    def center(self) -> np.ndarray:
+        return self.vertices.mean(axis=0)
 
 
 def _segment_point_dist(a, b, p) -> float:
@@ -125,3 +138,60 @@ def generate_course(cfg: SimConfig, rng: np.random.Generator, max_tries: int = 2
         if _valid(gates, start_p, start_yaw, cfg):
             return Course(gates, start_p, start_yaw)
     raise RuntimeError("could not generate a valid course; constraints too tight")
+
+
+def generate_distractors(course: Course, cfg: SimConfig, rng: np.random.Generator,
+                         max_tries: int = 200) -> list:
+    """Place `cfg.n_distractors` orange objects beside the course's legs.
+
+    Each is a vertical flat polygon: a rectangle (a banner or panel, 0.4-2.5 m wide,
+    0.3-1.5 m tall, bottom edge 0-1.8 m up; often wider than tall, sometimes nearly
+    square) or a triangle standing on the ground (a cone seen side-on). They are kept
+    `distractor_clearance` from every leg and gate centre, so they never block the
+    racing line, but they can sit behind or in front of gates in the image. Paint is
+    jittered around the gate colour, inside the range a simple colour threshold for the
+    gate paint would accept.
+    """
+    if cfg.n_distractors <= 0:
+        return []
+    C = course.centers()
+    legs = [(course.start_position, C[0])] + [(C[i], C[i + 1]) for i in range(len(C) - 1)]
+    out = []
+    for _ in range(cfg.n_distractors):
+        for _try in range(max_tries):
+            a, b = legs[int(rng.integers(len(legs)))]
+            d = b - a
+            d_h = np.array([d[0], d[1], 0.0])
+            L = float(np.linalg.norm(d_h))
+            if L < 1e-6:
+                continue
+            fwd = d_h / L
+            left = np.array([-fwd[1], fwd[0], 0.0])
+            t = rng.uniform(-0.3, 1.3)
+            side = rng.choice([-1.0, 1.0]) * rng.uniform(cfg.distractor_clearance, cfg.distractor_spread)
+            base = a + t * d + side * left
+            base[2] = 0.0
+            yaw = rng.uniform(-math.pi, math.pi)
+            u = np.array([math.cos(yaw), math.sin(yaw), 0.0])
+            if rng.uniform() < 0.75:
+                kind = "panel"
+                w = rng.uniform(0.4, 2.5)
+                h = rng.uniform(0.3, 1.5)
+                z0 = rng.uniform(0.0, 1.8)
+                V = np.array([base - u * w / 2 + [0, 0, z0], base + u * w / 2 + [0, 0, z0],
+                              base + u * w / 2 + [0, 0, z0 + h], base - u * w / 2 + [0, 0, z0 + h]])
+            else:
+                kind = "cone"
+                w = rng.uniform(0.3, 0.6)
+                h = rng.uniform(0.4, 0.9)
+                V = np.array([base - u * w / 2, base + u * w / 2, base + [0, 0, h]])
+            # clearance from every leg and every gate centre (any vertex)
+            ok = all(_segment_point_dist(p, q, v) >= cfg.distractor_clearance
+                     for p, q in legs for v in V)
+            ok = ok and np.min(np.linalg.norm(C[:, None, :] - V[None, :, :], axis=2)) >= cfg.distractor_clearance
+            if not ok:
+                continue
+            colour = (int(rng.integers(10, 60)), int(rng.integers(85, 140)), int(rng.integers(225, 256)))
+            out.append(Distractor(V, colour, kind))
+            break
+    return out

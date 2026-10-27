@@ -104,6 +104,7 @@ class FpvCamera:
         self._noise = (self._make_noise_bank(8) if cfg.pixel_noise_sigma > 0 and not cfg.pixel_noise_fresh
                        else None)
         self._gate_polys = None
+        self._distractors = []           # [(centre, vertices, colour)]
 
     # ------------------------------------------------------------------ setup
     def _make_noise(self):
@@ -125,6 +126,11 @@ class FpvCamera:
             inner = (g.R @ (sq * [0.0, b, b]).T).T + g.center
             polys.append((g.center.copy(), outer, inner))
         self._gate_polys = polys
+
+    def set_distractors(self, distractors) -> None:
+        """Orange clutter (sim-only): flat convex polygons in world coordinates."""
+        self._distractors = [(d.center.copy(), np.asarray(d.vertices, float), tuple(d.colour))
+                             for d in distractors]
 
     # ---------------------------------------------------------------- render
     def camera_pose(self, p_wb: np.ndarray, R_wb: np.ndarray):
@@ -195,7 +201,8 @@ class FpvCamera:
         f = self.K[0, 0]
         d = f * float(np.linalg.norm(log_so3(Ra.T @ Rb)))
         if self._gate_polys:
-            P = np.vstack([np.vstack([o, i]) for _, o, i in self._gate_polys])
+            P = np.vstack([np.vstack([o, i]) for _, o, i in self._gate_polys]
+                          + [V for _, V, _ in self._distractors])
             Ca = (Ra.T @ (P - pa).T).T
             Cb = (Rb.T @ (P - pb).T).T
             ok = (Ca[:, 2] > _Z_NEAR) & (Cb[:, 2] > _Z_NEAR)
@@ -219,28 +226,30 @@ class FpvCamera:
             pts = np.round(np.array(ground) * _SCALE).astype(np.int32)
             cv2.fillPoly(img, [pts], GROUND_BGR, lineType=cv2.LINE_8, shift=_SHIFT)
 
-        # Gates, far to near (painter's algorithm).
-        if self._gate_polys:
-            depth = [float((R_cw @ (c - p_wc))[2]) for c, _, _ in self._gate_polys]
-            for k in np.argsort(depth)[::-1]:
-                c, outer, inner = self._gate_polys[k]
+        # Gates and clutter, far to near (painter's algorithm).
+        items = [(c, outer, inner, GATE_BGR) for c, outer, inner in (self._gate_polys or [])]
+        items += [(c, V, None, col) for c, V, col in self._distractors]
+        if items:
+            depth = [float((R_cw @ (it[0] - p_wc))[2]) for it in items]
+            for k in np.argsort(depth, kind="stable")[::-1]:
+                c, outer, inner, colour = items[k]
                 if depth[k] < -2.0:
                     continue
                 oc = _clip_poly_near((R_cw @ (outer - p_wc).T).T)
                 if len(oc) < 3:
                     continue
-                ic = _clip_poly_near((R_cw @ (inner - p_wc).T).T)
+                ic = _clip_poly_near((R_cw @ (inner - p_wc).T).T) if inner is not None else oc[:0]
                 if self.cfg.gate_supersample >= 2:
                     polys = [self._project_uv(oc)]
                     if len(ic) >= 3:
                         polys.append(self._project_uv(ic))
-                    self._fill_coverage(img, polys, GATE_BGR)
+                    self._fill_coverage(img, polys, colour)
                     continue
                 contours = [self._project(oc)]
                 if len(ic) >= 3:
                     contours.append(self._project(ic))
                 # Outer + inner contour filled together -> frame with a hole, no seams.
-                cv2.fillPoly(img, contours, GATE_BGR, lineType=cv2.LINE_AA, shift=_SHIFT)
+                cv2.fillPoly(img, contours, colour, lineType=cv2.LINE_AA, shift=_SHIFT)
         return img
 
     def _add_noise(self, img: np.ndarray) -> None:

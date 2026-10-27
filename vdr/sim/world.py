@@ -18,7 +18,7 @@ from vdr.geometry import exp_so3, log_so3, rot_z
 from vdr.interface import Command, Observation, VehicleInfo
 from vdr.sim.camera import FpvCamera
 from vdr.sim.config import SimConfig
-from vdr.sim.course import Course, generate_course
+from vdr.sim.course import Course, generate_course, generate_distractors
 from vdr.sim.dynamics import QuadDynamics, QuadState
 from vdr.sim.imu import ImuModel
 
@@ -64,10 +64,14 @@ class Simulator:
         ss = np.random.SeedSequence(seed)
         course_rng, imu_rng, cam_rng = (np.random.default_rng(s) for s in ss.spawn(3))
         self.course: Course = generate_course(cfg, course_rng)
+        # Clutter has its own stream (spawned after the first three, so courses, IMU and
+        # camera noise are unchanged whatever n_distractors is).
+        self.course.distractors = generate_distractors(self.course, cfg, np.random.default_rng(ss.spawn(1)[0]))
         self.dyn = QuadDynamics(cfg)
         self.imu = ImuModel(cfg, imu_rng)
         self.camera = FpvCamera(cfg, cam_rng)
         self.camera.set_gates(self.course.gates)
+        self.camera.set_distractors(self.course.distractors)
 
         gates = self.course.gates
         self._centers = np.array([g.center for g in gates])

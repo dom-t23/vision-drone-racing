@@ -56,6 +56,13 @@ class SimConfig:
     path_clearance: float = 2.5       # other gates must be this far from each straight leg
     next_gate_cone_deg: float = 60.0  # next gate must be the nearest gate in this cone after a pass
 
+    # --- clutter --------------------------------------------------------------
+    n_distractors: int = 0            # orange clutter beside the course: flat vertical panels/banners and
+                                      # cone-like triangles in gate-like paint (visual only, no collision);
+                                      # 0 = none (old behaviour)
+    distractor_clearance: float = 2.0 # m from every straight leg (incl. start -> gate 0) and gate centre
+    distractor_spread: float = 8.0    # m: placed up to this far to the side of a randomly chosen leg
+
     # --- start ----------------------------------------------------------------
     start_dist_min: float = 5.0       # hover start, this far before gate 0
     start_dist_max: float = 7.0
