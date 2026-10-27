@@ -45,8 +45,9 @@ def test_lost_target_recovery_rescues_a_phantom_handoff():
     # time-to-go guidance it was found with (with along_track_tgo, the default since
     # 2026-10-15, the flight path changes and no recovery is needed either), and the
     # unconstrained IPPE poses (with upright_pnp, the default since 2026-10-19, the handoff
-    # estimate is good enough that no recovery is needed: pos error RMS 0.31 m).
-    r = run_episode(15, sim_cfg=SimConfig(gate_supersample=0),
+    # estimate is good enough that no recovery is needed: pos error RMS 0.31 m), and the
+    # clutter-free world (n_distractors=0, the default before 2026-10-27).
+    r = run_episode(15, sim_cfg=SimConfig(gate_supersample=0, n_distractors=0),
                     auto_cfg=AutonomyConfig(subpixel_corners=False, drop_lone_robust_far=False,
                                             along_track_tgo=False, upright_pnp=False))
     assert r["diag"]["recoveries"] >= 1, r["diag"]

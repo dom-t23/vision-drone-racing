@@ -86,7 +86,8 @@ def test_empty_image_has_no_detections():
 def test_subpixel_corners_reduce_corner_error():
     """With area-coverage rendering, edge refinement brings corners to a fraction of a pixel."""
     from vdr.autonomy.detector import INNER
-    sim = Simulator(SimConfig(pixel_noise_sigma=3.0, gate_supersample=8), seed=11)
+    # scenario measured on a clutter-free world (n_distractors=0, the default before 2026-10-27)
+    sim = Simulator(SimConfig(pixel_noise_sigma=3.0, gate_supersample=8, n_distractors=0), seed=11)
     base = GateDetector(AutonomyConfig(subpixel_corners=False), 320, 240)
     sub = GateDetector(AutonomyConfig(subpixel_corners=True), 320, 240)
     e_base, e_sub = [], []

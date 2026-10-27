@@ -183,7 +183,7 @@ def test_distractors_are_clutter_off_the_racing_line():
     IMU or camera-noise streams; every object keeps its clearance from the legs and gates,
     it is painted in gate-like colours, and n_distractors = 0 renders exactly as before."""
     from vdr.sim.course import _segment_point_dist
-    base_cfg = SimConfig(pixel_noise_sigma=0.0)
+    base_cfg = SimConfig(pixel_noise_sigma=0.0, n_distractors=0)
     clut_cfg = base_cfg.override(n_distractors=25)
     a, b = Simulator(base_cfg, seed=5), Simulator(clut_cfg, seed=5)
     assert a.course.distractors == [] and len(b.course.distractors) == 25
@@ -208,4 +208,4 @@ def test_distractors_are_clutter_off_the_racing_line():
     hsv_b = cv2.inRange(cv2.cvtColor(ib, cv2.COLOR_BGR2HSV), (0, 120, 100), (25, 255, 255))
     assert np.count_nonzero(hsv_b) > np.count_nonzero(hsv_a)       # clutter is in view at the start
     assert np.array_equal(ia, Simulator(base_cfg, seed=5).reset().image)
-    assert SimConfig().n_distractors == 0         # default: no clutter (old behaviour)
+    assert SimConfig().n_distractors == 20        # default since the 2026-10-27 re-baseline
