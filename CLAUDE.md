@@ -25,11 +25,12 @@ vdr/interface.py      VehicleInfo / Observation / Command  — the ONLY sim<->au
 vdr/geometry.py       SO(3) helpers + camera mount (pure maths, shared)
 vdr/sim/              ground truth lives here
   config.py           SimConfig — every "how hard is the world" knob (incl. camera_latency and
-                      exposure_time / motion blur, both default 0)
+                      exposure_time / motion blur, both default 0; n_distractors orange clutter,
+                      default 20 since 2026-10-27)
   dynamics.py         rigid body; acro inner loops as first-order lags; rotor + quadratic drag
   imu.py              white noise + random-walk biases
   camera.py           pinhole renderer: sky/ground, orange gate frames (area-coverage AA fill), noise
-  course.py           seeded courses with visibility / nearest-next-gate guarantees
+  course.py           seeded courses with visibility / nearest-next-gate guarantees; clutter placement
   world.py            Simulator: lockstep stepping, gate pass/crash scoring, race clock
 vdr/autonomy/
   config.py           AutonomyConfig — every tunable + experiment flags
@@ -229,6 +230,12 @@ estimate trace and course for one seed — use it to debug a specific failure.
   there from the committed per-run `diag` (camera-only had 0 reinits in 300 runs, so a reinit
   guard cannot change it). On a saturated benchmark judge a fix by the diag of the runs it
   changed (5007: pos err RMS 1.15 -> 0.34 m), and make the world harder before more (A) work.
+- 2026-10-27 — Look-alike clutter hurt mostly by breaking a gate's *structure*, not by posing as
+  a gate: half the failures on the clutter benchmark had a clean gate-0 outline every frame but
+  clutter seen through the opening merged with the frame, so no hole was found and the lone
+  outline got no PnP candidate (never initialised). When a realism knob costs pass rate, look at
+  what the detector returns on the failing frames before assuming false positives. A sweep (10 / 20
+  / 40 objects: 100 / 95.75 / 89.5%) picks a default that discriminates without swamping.
 
 ## Instruction changes
 

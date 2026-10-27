@@ -1269,3 +1269,70 @@ Verify: pytest 85 passed; harness clean on all 6 sets.
 ~5 ms together with a second knob, e.g. orange distractors or lens distortion) and re-baseline,
 so (A) changes like this one can be judged. Latency compensation still waits on Dom's
 frame-timestamp decision. Camera-only drop (98.62% -> 97.79%) still undiagnosed.
+
+## 2026-10-27 — Run 25: (B) orange clutter knob, default flipped to 20, re-baselined
+
+Chunk choice: run 24 was (A), run 23 (C); runs 24 and the roadmap both said the benchmark is
+saturated (299/300 complete) and (A) changes can no longer be judged, so (B) a harder world.
+
+**Baseline check** at de28867: tests 85 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`
+(not saved).
+
+**Knob** (commit c76b992, `SimConfig.n_distractors`, default 0 = old behaviour): orange clutter
+beside the course — flat vertical rectangles (banners/panels, 0.4-2.5 x 0.3-1.5 m, bottom 0-1.8 m
+up, random yaw; 75%) and ground triangles (cones seen side-on; 25%), paint jittered around the gate
+colour but always inside the gate-paint HSV range. Every vertex stays `distractor_clearance` (2 m)
+from every leg (incl. start -> gate 0) and gate centre, placed up to `distractor_spread` (8 m) to
+the side of a random leg. Visual only (no collision). Own RNG stream spawned after the course/IMU/
+camera ones, so courses and noise are unchanged; drawn painter-sorted together with the gates.
+Sim-only: the autonomy sees pixels, nothing else (separation tests unchanged and passing).
+Test: `test_sim.py::test_distractors_are_clutter_off_the_racing_line`.
+`n_distractors=0` reproduces the baseline per run exactly (50/50 `per_run` entries equal minus
+`wall_s`, `results/2026-10-27_c76b992_knob-clutter0.json`).
+
+**Sweep** (seed 0, 50 runs, c76b992, `results/2026-10-27_c76b992_sweep-clutter{10,20,40}.json`):
+| n_distractors | pass rate | completed | lap (s) | median est. err (m) | wall (s) |
+|---|---|---|---|---|---|
+| 0 | 100.0% | 50/50 | 11.59 | 0.203 | 117 |
+| 10 | 100.0% | 50/50 | 11.61 | 0.305 | 126 |
+| 20 | 95.75% | 47/50 | 11.65 | 0.306 | 131 |
+| 40 | 89.5% | 44/50 | 11.69 | 0.528 | 148 |
+Cheap (+12% benchmark time at 20, vs +100% for motion blur), so motion blur stays off.
+
+**Default flipped to 20** (commit 11f0132; two old scenario tests pinned to `n_distractors=0`,
+the world they were found in). **Numbers before and after this commit are not comparable.**
+Re-baseline, 50 runs per set (`results/2026-10-27_11f0132_rebaseline-clutter[-seedN].json` and
+`..._rebaseline-clutter-camonly[-seedN].json`):
+| seeds | camera + IMU | camera only |
+|---|---|---|
+| 0 | 95.75% (47/50) | 96.75% |
+| 1000 | 98.0% | 98.0% |
+| 2000 | 100.0% | 98.5% |
+| 3000 | 98.0% | 91.75% |
+| 4000 | 96.75% | 95.75% |
+| 5000 | 98.0% | 98.0% |
+| pooled (2400 gates) | **97.75%** (2346/2400, 292/300) | **96.46%** (2315/2400, 286/300) |
+Laps 11.45-11.68 s; median est. error 0.24-0.46 m (was ~0.20-0.22 m without clutter).
+Camera + IMU failures: 4 timeouts at gate 0 (1028, 3027, 4039, 5033 — also in camera-only),
+3 missed_gate (0, 47, 49), 1 crash_gate (4024). Seed 0 tracked the wrong object 38% of the
+time (`wrong_gate_frac` 0.38, 4 retargets) — a distractor taken as the target.
+
+**Why the four never initialise** (scratch check at the hover start, not committed): the gate-0
+outline is found every frame (1028: one corner pulled 7 px out by a cone touching the frame;
+3027: all four corners within 0.2 px of truth), but no inner opening is detected — clutter seen
+through the opening merges with the frame in the colour mask, so the hole is not a quad — and
+the outline gets 0 PnP candidates. Not yet confirmed which rule drops it; the likely one is
+`drop_lone_robust_far` (lone RANSAC outline beyond 6 m with no opening; gate 0 starts 5-7 m away).
+
+Verify: pytest 86 passed; all 17 harness invocations tonight ran cleanly.
+
+**Pass rate (headline, seed 0):** 100.0% -> 95.75% from the harder world (not an autonomy change;
+pooled 6 sets 99.83% -> 97.75%, camera-only 97.79% -> 96.46%).
+
+**Next:** (A) clutter-robust initialisation: confirm which rule drops the clean gate-0 outline in
+1028/3027/4039/5033 and let a lone outline through when it is the only plausible gate (e.g. in
+WAIT, or when its outline is clean), behind a flag. Then: reject distractors as targets (seed 0,
+4024: solid rectangles with no opening, or quads that fail the gate's aspect/size). Re-test
+`reinit_unambiguous_only` on the new benchmark. Write-up (C) due by 11-01 must re-report all
+numbers on the clutter benchmark.

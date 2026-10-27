@@ -3,9 +3,12 @@
 Prioritised. Each overnight run takes ONE item (or a well-argued new one), and updates this
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
-Current baseline (since 2026-10-22, unambiguous next-gate yaw votes):
-`results/2026-10-22_5143039_baseline.json` — 100.0% pass rate, 100% completion, 11.59 s lap,
-median est. error 0.203 m (pooled over seeds 0/1000/.../5000: 99.83%; quote the pooled number).
+Current baseline (since 2026-10-27, orange clutter world `n_distractors=20`; NOT comparable with
+anything earlier): `results/2026-10-27_11f0132_rebaseline-clutter.json` — 95.75% pass rate, 94%
+completion, 11.65 s lap, median est. error 0.306 m (pooled over seeds 0/1000/.../5000: 97.75%,
+292/300 complete; camera-only pooled 96.46%; quote the pooled number).
+Clutter-free world (before 2026-10-27):
+`results/2026-10-22_5143039_baseline.json` — 100.0%, 11.59 s, 0.203 m (pooled 99.83%).
 Previous: `results/2026-10-19_9acf025_baseline.json` — 100.0%, 11.60 s, 0.299 m (pooled 99.54%).
 Before that: `results/2026-10-16_3395fb0_baseline.json` — 97.8%, 11.59 s (pooled 99.08%).
 Before that: `results/2026-10-15_1d4bb7f_baseline.json` — 100.0%, 11.26 s (pooled 6 sets 97.92%).
@@ -16,6 +19,15 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 `2026-10-07_c25234a_baseline.json` (89.2%).
 
 ## (A) Pass rate
+
+-1. **(next) Clutter robustness** (run 25). 8 pooled failures on the clutter benchmark:
+   - 4 never initialise (1028, 3027, 4039, 5033): the gate-0 outline is detected cleanly but the
+     opening is lost (clutter seen through it merges with the frame) and the outline gets no PnP
+     candidate — confirm which rule drops it (likely `drop_lone_robust_far`, gate 0 is 5-7 m
+     away) and let it through when it is the only plausible gate, behind a flag.
+   - distractors taken as targets (seed 0 `wrong_gate_frac` 0.38; 4024): reject solid quads with
+     no opening / wrong size-aspect as targets or next-gate sightings.
+   - re-test `reinit_unambiguous_only` (run 24) here.
 
 0. **Next-gate yaw at handoff (was "phantom handoffs").** Run 14 found the 2-4 m post-handoff
    errors are a wrong next-gate *yaw*: a frame rotated about the gate centre leaves the
@@ -62,9 +74,8 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   gate index, outcome, pre-crash estimation error; `--seed N` re-runs one seed with a
   trajectory/estimate plot saved to `docs/img/`.
 - **Stack unit tests:** handoff, retarget and search logic with scripted detections.
-- **(next) Harder benchmark.** 299/300 pooled runs complete, so (A) changes now show up only in
-  per-run diagnostics of 1-2 runs (run 24). Flip motion blur (~5 ms) together with a second knob
-  (distractors / lens distortion) and re-baseline.
+- **Harder benchmark: done (run 25)** — orange clutter at 20 objects (see Done). Next knobs when
+  this saturates again: motion blur ~5 ms (after making `motion_px` cheaper), lens distortion.
 - **Realism, one knob at a time (each: add SimConfig field defaulting to old behaviour ->
   flip default -> re-baseline):**
   - **camera latency: knob added (run 19, `SimConfig.camera_latency`, default 0)**. Seed 0:
@@ -79,7 +90,8 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
     making `motion_px` cheaper (only corners inside the image).
   - lens distortion (+ give the autonomy calibrated distortion coefficients via VehicleInfo)
   - lighting/exposure changes, gate colour variation, shadows
-  - orange distractor objects (false positives) and partial occlusion
+  - **orange distractor objects: done (run 25, `n_distractors`, default 20).** Still to add:
+    partial occlusion of gates by clutter in front of them (clutter is kept 2 m off the legs).
   - wind gusts; unknown thrust scaling (battery sag)
   - higher-resolution camera option (and runtime budget check)
 
@@ -90,7 +102,8 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 - Current as of run 23 (2026-10-25): unambiguous yaw votes default (pooled 6 sets 99.83%),
   reinit variants as "tried", sensor-sensitivity section and figure, camera-only re-run (97.79%).
-  Next due by 2026-11-01.
+  Next due by 2026-11-01: re-report everything on the clutter benchmark (run 25: pooled 97.75%,
+  camera-only 96.46%; add the clutter sweep to the sensitivity section/figure).
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
   to `vdr/report.py`'s lists and re-run `python -m vdr.report`).
 - When a flight-changing default flips, also re-run the camera-only A/B on the 6 sets (from a
@@ -101,6 +114,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-27 — Orange clutter (B, run 25): `SimConfig.n_distractors` — panels/banners and cone
+  triangles in gate-like paint, >= 2 m off the racing line. Seed-0 sweep: 10 -> 100.0%,
+  20 -> 95.75%, 40 -> 89.5% (+12% benchmark time at 20). Default flipped to 20 and re-baselined:
+  pooled 6 sets 99.83% -> 97.75% (camera-only 97.79% -> 96.46%); not comparable with earlier numbers.
 
 - 2026-10-26 — No reinit from an ambiguous measurement (A, run 24), tried:
   `reinit_unambiguous_only` — pooled 6 sets 99.83% -> 99.83%; only 1005 and 5007 change, both
