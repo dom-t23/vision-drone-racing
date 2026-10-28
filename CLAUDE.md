@@ -235,7 +235,11 @@ estimate trace and course for one seed — use it to debug a specific failure.
   clutter seen through the opening merged with the frame, so no hole was found and the lone
   outline got no PnP candidate (never initialised). When a realism knob costs pass rate, look at
   what the detector returns on the failing frames before assuming false positives. A sweep (10 / 20
-  / 40 objects: 100 / 95.75 / 89.5%) picks a default that discriminates without swamping.
+  / 40 objects: 100 / 95.75 / 89.5%) picks a default that discriminates without swamping.- 2026-10-28 — "Never initialised" had three different causes in four runs (a range rule, one
+  clutter-pulled corner, a merged blob): log *why each detection got no candidate* per run before
+  writing one fix. A recovery path that only runs when the normal path yields nothing leaves every
+  other run bit-identical, so its A/B reads cleanly (14/300 runs changed). A 3-corner upright fit
+  pins range (2%) but not yaw (~14 deg on a 35 px square) — check fallbacks against truth.
 
 ## Instruction changes
 

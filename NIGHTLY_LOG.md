@@ -1336,3 +1336,57 @@ WAIT, or when its outline is clean), behind a flag. Then: reject distractors as 
 4024: solid rectangles with no opening, or quads that fail the gate's aspect/size). Re-test
 `reinit_unambiguous_only` on the new benchmark. Write-up (C) due by 11-01 must re-report all
 numbers on the clutter benchmark.
+
+## 2026-10-28 — Run 26: (A) init_rescue — clutter-robust initialisation (pooled 97.75% -> 98.58%, kept)
+
+Chunk choice: run 25 was (B) and asked for this (A) item next; write-up (C) is due by 11-01.
+
+**Baseline check** at 765fb5b: tests 86 passed; `--runs 50 --seed 0` 95.75% (383/400), 47/50,
+11.65 s, 0.306 m — identical to `results/2026-10-27_11f0132_rebaseline-clutter.json` (not saved).
+
+**Diagnosis** (scratch hook on `_detection_solutions` in WAIT, not committed) of the 4 runs that
+never initialise:
+- 3027, 4039: lone RANSAC outline at 6.2-6.7 m with no opening -> dropped by
+  `drop_lone_robust_far` (6 m limit) on every frame. Run 25's guess was right for these two.
+- 1028: a clean (non-RANSAC) outline; IPPE fits (0.82 px) but the upright fit is 4.3 px because a
+  cone touching the frame pulls one corner ~7 px out. Upright fit to the other 3 corners: 0.23 px,
+  range 6.38 m vs true 6.51 m; no other corner choice fits (>= 4.4 px).
+- 5033: a merged blob (reproj 12-20 px) plus a 39 px² "opening" at a fake 22 m — not rescuable here.
+
+**Change** (059848c, flag `init_rescue`; `pnp.refine_upright` gets a corner mask `use`): in WAIT
+only, when a frame yields no PnP candidate at all, retry its detections leniently — keep lone far
+RANSAC outlines, and if the 4-corner upright fit fails accept a 3-corner upright fit when exactly
+one dropped corner fits the rest to <= 1 px and the 4 corners don't fit. Frames that already
+give a candidate are untouched. Test: `test_pnp.py::test_upright_fit_to_three_corners_ignores_one_pulled_corner`.
+Flag off reproduces the baseline per run exactly (`results/2026-10-28_059848c_ab-init-rescue-off.json`).
+
+**A/B** (50 runs per set, flag on: `results/2026-10-28_059848c_ab-init-rescue[-seedN].json`,
+`..._ab-init-rescue-camonly[-seedN].json`; off = run 25's re-baseline files):
+| seeds | camera + IMU off -> on | camera only off -> on |
+|---|---|---|
+| 0 | 95.75 -> 95.75% | 96.75 -> 96.75% |
+| 1000 | 98.0 -> 100.0% (1028) | 98.0 -> 100.0% (1028) |
+| 2000 | 100.0 -> 100.0% | 98.5 -> 98.5% |
+| 3000 | 98.0 -> 100.0% (3027) | 91.75 -> 93.75% (3027) |
+| 4000 | 96.75 -> 97.75% (4039 fixed, 4038 broken) | 95.75 -> 97.75% (4039) |
+| 5000 | 98.0 -> 98.0% | 98.0 -> 98.0% |
+| pooled | **97.75 -> 98.58%** (2346 -> 2366/2400; 292 -> 294/300) | **96.46 -> 97.46%** (2315 -> 2339; 286 -> 289) |
+Paired lap time: 0.000 s (291 runs), camera-only -0.005 s (286). The rescue fired in 14/300 runs.
+
+**Init error against truth** (scratch hook on `_init_on_gate`): lone-outline inits 0.41 m (3027),
+0.19 m (4039); 3-corner inits 1.69 m (1028) and 1.53 m (4038), mostly lateral — 3 corners of a
+~35 px square pin range well but yaw poorly (~14 deg), which the filter then corrects. 4038 (was
+complete) crashed at gate 4, four gates after that init; not traced further.
+Side finding: in the baseline, runs 0 and 39 (seed 0) and 4038 initialise on an object 10-12 m
+from every gate (a distractor, chosen as the biggest candidate) — run 0 then misses gate 1.
+
+**Kept**: default flipped to True (e65b78d); `results/2026-10-28_e65b78d_baseline.json` equals the
+flag-on seed-0 file per run. Verify: pytest 87 passed; all 16 harness invocations ran cleanly.
+
+**Pass rate (headline, seed 0):** 95.75% -> 95.75% (no change on seed 0); pooled 6 sets
+97.75% -> 98.58%, camera-only 96.46% -> 97.46%.
+
+**Next:** (C) write-up due by 11-01 (clutter benchmark numbers, init_rescue, update `vdr/demo.py`
+BENCHMARK). Then (A): reject distractors at initialisation and as targets — the WAIT rule "biggest
+candidate" picks clutter (seed 0 run 0, 39; 4038); gate 0 should be a quad with an opening or the
+nearest upright 1.7 m square straight ahead.

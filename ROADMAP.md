@@ -4,9 +4,11 @@ Prioritised. Each overnight run takes ONE item (or a well-argued new one), and u
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
 Current baseline (since 2026-10-27, orange clutter world `n_distractors=20`; NOT comparable with
-anything earlier): `results/2026-10-27_11f0132_rebaseline-clutter.json` — 95.75% pass rate, 94%
-completion, 11.65 s lap, median est. error 0.306 m (pooled over seeds 0/1000/.../5000: 97.75%,
-292/300 complete; camera-only pooled 96.46%; quote the pooled number).
+anything earlier): `results/2026-10-28_e65b78d_baseline.json` — 95.75% pass rate, 94%
+completion, 11.65 s lap, median est. error 0.306 m (pooled over seeds 0/1000/.../5000 with
+init_rescue: 98.58%, 294/300 complete, `results/2026-10-28_059848c_ab-init-rescue*.json`;
+camera-only pooled 97.46%; quote the pooled number).
+Clutter re-baseline before init_rescue: `results/2026-10-27_11f0132_rebaseline-clutter.json` (pooled 97.75%).
 Clutter-free world (before 2026-10-27):
 `results/2026-10-22_5143039_baseline.json` — 100.0%, 11.59 s, 0.203 m (pooled 99.83%).
 Previous: `results/2026-10-19_9acf025_baseline.json` — 100.0%, 11.60 s, 0.299 m (pooled 99.54%).
@@ -20,13 +22,15 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (A) Pass rate
 
--1. **(next) Clutter robustness** (run 25). 8 pooled failures on the clutter benchmark:
-   - 4 never initialise (1028, 3027, 4039, 5033): the gate-0 outline is detected cleanly but the
-     opening is lost (clutter seen through it merges with the frame) and the outline gets no PnP
-     candidate — confirm which rule drops it (likely `drop_lone_robust_far`, gate 0 is 5-7 m
-     away) and let it through when it is the only plausible gate, behind a flag.
-   - distractors taken as targets (seed 0 `wrong_gate_frac` 0.38; 4024): reject solid quads with
-     no opening / wrong size-aspect as targets or next-gate sightings.
+-1. **(next) Clutter robustness** (runs 25-26). 6 pooled failures left:
+   - never-initialised: done (run 26, `init_rescue`, see Done); 5033 left (merged blob, no
+     usable quad at all).
+   - distractors taken as targets: WAIT initialises on the biggest candidate, which is sometimes
+     clutter 10-12 m from any gate (seed 0 runs 0 and 39, 4038); seed 0 run 0 then misses gate 1.
+     Prefer a quad with its opening / an upright square straight ahead at init, and reject solid
+     quads with no opening / wrong size-aspect as targets or next-gate sightings (4024).
+   - 3-corner init fits carry ~14 deg yaw error (1.5-1.7 m lateral at 6 m): give them a larger
+     initial yaw sigma.
    - re-test `reinit_unambiguous_only` (run 24) here.
 
 0. **Next-gate yaw at handoff (was "phantom handoffs").** Run 14 found the 2-4 m post-handoff
@@ -103,7 +107,8 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 - Current as of run 23 (2026-10-25): unambiguous yaw votes default (pooled 6 sets 99.83%),
   reinit variants as "tried", sensor-sensitivity section and figure, camera-only re-run (97.79%).
   Next due by 2026-11-01: re-report everything on the clutter benchmark (run 25: pooled 97.75%,
-  camera-only 96.46%; add the clutter sweep to the sensitivity section/figure).
+  camera-only 96.46%; run 26 init_rescue: 98.58% / 97.46%; add the clutter sweep to the
+  sensitivity section/figure; `vdr/demo.py` BENCHMARK still points at clutter-free files).
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
   to `vdr/report.py`'s lists and re-run `python -m vdr.report`).
 - When a flight-changing default flips, also re-run the camera-only A/B on the 6 sets (from a
@@ -114,6 +119,11 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-28 — Clutter-robust initialisation (A, run 26): `init_rescue` (default on). In WAIT, a
+  frame with no PnP candidate keeps lone far RANSAC outlines and accepts a 3-corner upright fit
+  when exactly one corner is an outlier. Pooled 6 sets 97.75% -> 98.58% (camera-only 96.46% ->
+  97.46%); 1028/3027/4039 fly, 4038 breaks at gate 4; laps flat.
 
 - 2026-10-27 — Orange clutter (B, run 25): `SimConfig.n_distractors` — panels/banners and cone
   triangles in gate-like paint, >= 2 m off the racing line. Seed-0 sweep: 10 -> 100.0%,
