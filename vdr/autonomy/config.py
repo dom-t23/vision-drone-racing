@@ -94,7 +94,9 @@ class AutonomyConfig:
     # by drop_lone_robust_far) and, when the 4-corner upright fit fails, accept a fit to 3 corners
     # if exactly one corner is the outlier (clutter touching the frame pulls one corner out).
     # Frames that already give a candidate are untouched, so runs that initialise today don't change.
-    init_rescue: bool = False
+    # Kept (2026-10-28, run 26): pooled 6 sets 97.75% -> 98.58% (camera-only 96.46% -> 97.46%);
+    # 1028/3027/4039 now fly (never initialised), 4038 crashes at gate 4 (was complete); laps flat.
+    init_rescue: bool = True
     init_rescue_reproj_px: float = 1.0   # the 3 kept corners must fit this well
     reinit_ambiguous_max_rejects: int = 24
 
