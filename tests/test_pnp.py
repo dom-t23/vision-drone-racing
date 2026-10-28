@@ -157,3 +157,25 @@ def test_joint_outline_and_opening_fit_is_exact_and_keeps_seed():
         j = pnp.refine_upright_squares(us[0], [(qo, L), (qi, LI)], K, up_cam)
         assert np.allclose(j.t_co, t_true, atol=1e-5) and j.reproj_err < 1e-4
         assert j.size == L and j.ippe is us[0].ippe
+
+
+def test_upright_fit_to_three_corners_ignores_one_pulled_corner():
+    # init_rescue: clutter touching a gate pulls one corner out; the other 3 still fix the
+    # 4 upright DoF (position + yaw) exactly.
+    rng = np.random.default_rng(11)
+    n = 0
+    for _ in range(40):
+        p_G, R_Gb, uv, t_true, up_cam = _scene(rng)
+        q = order_clockwise(uv).copy()
+        k = int(rng.integers(4))
+        q[k] += 7.0 * (q[k] - q.mean(axis=0)) / np.linalg.norm(q[k] - q.mean(axis=0))
+        sols = pnp.solve_gate_pose(q, K, L, up_cam)
+        if not sols:
+            continue
+        use = np.ones(4, bool)
+        use[k] = False
+        u = min((pnp.refine_upright(s, q, K, up_cam, use=use) for s in sols), key=lambda u: u.reproj_err)
+        assert u.reproj_err < 1e-6
+        assert np.linalg.norm(u.t_co - t_true) < 1e-4 * np.linalg.norm(t_true)
+        n += 1
+    assert n >= 30

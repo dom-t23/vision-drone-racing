@@ -155,13 +155,16 @@ def _upright_R(psi: float, up, a, b) -> np.ndarray:
 
 
 def refine_upright(pose: GatePose, corners: np.ndarray, K: np.ndarray, up_cam: np.ndarray,
-                   iters: int = 10) -> GatePose:
+                   iters: int = 10, use: Optional[np.ndarray] = None) -> GatePose:
     """Re-solve a square's pose with the gate constrained upright (4 DoF: position + yaw).
 
     Gates are vertical, so with roll/pitch known (the filter's gravity direction, `up_cam`)
     only the gate's heading and position are unknown. Gauss-Newton on the 8 reprojection
     residuals, seeded from an (up-aligned) IPPE solution. The 2 rotational DoF a single small
     square constrains worst -- and the source of the IPPE "flip" -- are taken from gravity.
+
+    `use` (4 bools, default all) fits only those corners (3 corners still fix the 4 DoF);
+    the reported reprojection error is over the used corners only.
     """
     up, a, b = _upright_basis(up_cam)
     obj = _UNIT_SQUARE * pose.size
@@ -200,6 +203,9 @@ def refine_upright(pose: GatePose, corners: np.ndarray, K: np.ndarray, up_cam: n
         J[:, 1, 3] = -fy * X[:, 1] * iz * iz
         J[:, :, 0] = np.einsum("nij,nj->ni", J[:, :, 1:4], dX_dpsi)
         J = J.reshape(8, 4)
+        if use is not None:
+            m = np.repeat(np.asarray(use, bool), 2)
+            J, r = J[m], r[m]
         step = np.linalg.solve(J.T @ J + 1e-9 * np.eye(4), -J.T @ r)
         psi += float(step[0])
         t = t + step[1:]
@@ -209,7 +215,10 @@ def refine_upright(pose: GatePose, corners: np.ndarray, K: np.ndarray, up_cam: n
             break
     R = _upright_R(psi, up, a, b)
     pr, _ = project(R, t, P)
-    err = float(np.sqrt(np.mean(np.sum((pr - uv) ** 2, axis=1))))
+    d2 = np.sum((pr - uv) ** 2, axis=1)
+    if use is not None:
+        d2 = d2[np.asarray(use, bool)]
+    err = float(np.sqrt(np.mean(d2)))
     return GatePose(R, t, err, pose.size, ippe=pose)
 
 

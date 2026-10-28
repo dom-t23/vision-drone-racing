@@ -89,6 +89,13 @@ class AutonomyConfig:
     # complete; 5007 has no reinit (3 before), pos err RMS 1.15 -> 0.34 m, lap -0.34 s. Camera-only
     # never re-initialises (0/300 runs), so it cannot change there. Left off (one run of evidence).
     reinit_unambiguous_only: bool = False
+    # Initialisation in clutter (run 26): while hovering in WAIT, if a frame gives no PnP candidate
+    # at all, retry its detections leniently -- keep a lone far RANSAC outline (normally dropped
+    # by drop_lone_robust_far) and, when the 4-corner upright fit fails, accept a fit to 3 corners
+    # if exactly one corner is the outlier (clutter touching the frame pulls one corner out).
+    # Frames that already give a candidate are untouched, so runs that initialise today don't change.
+    init_rescue: bool = False
+    init_rescue_reproj_px: float = 1.0   # the 3 kept corners must fit this well
     reinit_ambiguous_max_rejects: int = 24
 
     # --- gate tracking & handoff ---------------------------------------------------

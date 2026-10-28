@@ -213,6 +213,13 @@ class Autonomy:
             sols = self._detection_solutions(d, up_c)
             if sols:
                 cands.append((d, sols))
+        if not cands and self.mode == WAIT and cfg.init_rescue:
+            for d in dets:
+                sols = self._detection_solutions(d, up_c, lenient=True)
+                if sols:
+                    cands.append((d, sols))
+            if cands:
+                self.stats["init_rescue_frames"] = self.stats.get("init_rescue_frames", 0) + 1
         if not cands:
             return
 
@@ -280,11 +287,13 @@ class Autonomy:
             a = min(ahead, key=lambda a: np.linalg.norm(a[2]))
             self._switch_to(self._add_sighting([], a), passed=False)
 
-    def _detection_solutions(self, d, up_c: np.ndarray) -> list:
-        """Valid PnP solutions for one detection (best first), choosing which square to trust."""
+    def _detection_solutions(self, d, up_c: np.ndarray, lenient: bool = False) -> list:
+        """Valid PnP solutions for one detection (best first), choosing which square to trust.
+
+        lenient (init_rescue, WAIT only): keep lone far RANSAC outlines and allow one outlier corner."""
         info, cfg = self.info, self.cfg
         size = info.gate_outer_size if d.kind == OUTER else info.gate_inner_size
-        sols = self._valid_solutions(d.corners, size, up_c)
+        sols = self._valid_solutions(d.corners, size, up_c, lenient)
         if sols and cfg.robust_outer_use_inner and d.kind == OUTER and d.robust and d.inner is not None:
             # A RANSAC outline usually means this gate's frame merged with another gate in
             # the image, and the fitted corners can overshoot (gate ~20% too near at 7-16 m).
@@ -293,7 +302,7 @@ class Autonomy:
             inner = self._valid_solutions(d.inner, info.gate_inner_size, up_c)
             if inner and abs(sols[0].distance / inner[0].distance - 1.0) > cfg.robust_inner_depth_tol:
                 sols = inner
-        if (sols and cfg.drop_lone_robust_far and d.kind == OUTER and d.robust
+        if (sols and cfg.drop_lone_robust_far and not lenient and d.kind == OUTER and d.robust
                 and sols[0].distance > cfg.lone_robust_max_range
                 and (d.inner is None or not self._valid_solutions(d.inner, info.gate_inner_size, up_c))):
             # A RANSAC outline with no usable opening of its own has nothing to cross-check
@@ -303,7 +312,7 @@ class Autonomy:
             return []
         if not sols and d.inner is not None:
             # the outline fit was bad (often two gates merged) -- try the gate's own opening
-            sols = self._valid_solutions(d.inner, info.gate_inner_size, up_c)
+            sols = self._valid_solutions(d.inner, info.gate_inner_size, up_c, lenient)
         elif (cfg.joint_squares and cfg.upright_pnp and sols and d.kind == OUTER and d.inner is not None
               and sols[0].size == info.gate_outer_size):
             # Outline and opening are concentric squares of one gate: fit both at once (8 points).
@@ -317,14 +326,36 @@ class Autonomy:
                 sols = joint
         return sols
 
-    def _valid_solutions(self, corners: np.ndarray, size: float, up_c: np.ndarray) -> list:
+    def _valid_solutions(self, corners: np.ndarray, size: float, up_c: np.ndarray,
+                         lenient: bool = False) -> list:
         cfg = self.cfg
-        sols = [s for s in pnp.solve_gate_pose(corners, self.info.K, size, up_c)
+        ippe = [s for s in pnp.solve_gate_pose(corners, self.info.K, size, up_c)
                 if s.reproj_err <= cfg.max_reproj_px and pnp.gate_tilt_deg(s, up_c) <= cfg.max_gate_tilt_deg]
-        if cfg.upright_pnp and sols:
-            sols = [s for s in pnp.upright_solutions(sols, corners, self.info.K, up_c)
+        sols = ippe
+        if cfg.upright_pnp and ippe:
+            sols = [s for s in pnp.upright_solutions(ippe, corners, self.info.K, up_c)
                     if s.reproj_err <= cfg.max_reproj_px]
+            if not sols and lenient:
+                sols = self._one_outlier_corner(ippe, corners, up_c)
         return sols
+
+    def _one_outlier_corner(self, ippe: list, corners: np.ndarray, up_c: np.ndarray) -> list:
+        """Upright fit to 3 of the 4 corners, if exactly one choice of dropped corner fits cleanly
+        (<= init_rescue_reproj_px on the 3) and the dropped corner itself is off (> max_reproj_px)."""
+        cfg, K = self.cfg, self.info.K
+        fits = {}
+        for s in ippe:
+            for k in range(4):
+                use = np.ones(4, bool)
+                use[k] = False
+                u = pnp.refine_upright(s, corners, K, up_c, use=use)
+                if u.R_co[:, 2] @ u.t_co > 0.0 or u.reproj_err > cfg.init_rescue_reproj_px:
+                    continue
+                if pnp.refine_upright(u, corners, K, up_c, iters=0).reproj_err * 2.0 <= cfg.max_reproj_px:
+                    continue            # all 4 fit after all -- not a one-outlier case
+                if k not in fits or u.reproj_err < fits[k].reproj_err:
+                    fits[k] = u
+        return list(fits.values()) if len(fits) == 1 else []
 
     def _yaw_meas(self, s: pnp.GatePose) -> float:
         """Yaw of a detected gate's frame relative to the current navigation frame."""
