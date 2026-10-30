@@ -1390,3 +1390,38 @@ flag-on seed-0 file per run. Verify: pytest 87 passed; all 16 harness invocation
 BENCHMARK). Then (A): reject distractors at initialisation and as targets — the WAIT rule "biggest
 candidate" picks clutter (seed 0 run 0, 39; 4038); gate 0 should be a quad with an opening or the
 nearest upright 1.7 m square straight ahead.
+
+## 2026-10-30 — Run 27: (C) write-up refresh on the clutter benchmark (no flight change)
+
+Chunk choice: run 26 was (A) and run 25 (B), so (A) was not the default; the write-up was due by
+11-01 (last (C) run 23 on 10-25) and run 26 named it next.
+
+**Baseline check** at 31d08cd: tests 87 passed; `--runs 50 --seed 0` 95.75% (383/400), 47/50,
+11.65 s, median est. error 0.306 m — identical to `results/2026-10-28_e65b78d_baseline.json`
+(not saved). (Checkout was again a detached HEAD at an older commit; reset `main` to origin/main.)
+
+**Done** (fe9dbe3; no new results files, every number from committed ones):
+- README: results re-reported on the clutter world (pooled 6 sets 98.58%, 294/300; seed 0 95.75%;
+  init rescue off 97.75%; clean world 99.83% as reference), clean-world ablation table kept as
+  history, camera-only table now the init-rescue files (pooled 97.46%, 289/300), simulator
+  section describes the clutter, test count/benchmark time updated.
+- WRITEUP: section 1/2 for the clutter world, ablation table rows for init rescue (kept) and
+  `reinit_unambiguous_only` (tried), init rescue in 3.3, new 4.2 (clutter, sweep table + figure),
+  stories 6.13 (reinit guard), 6.14 (clutter breaks structure), 6.15 (init rescue), section 7.
+- `vdr/report.py`: generation-2 entries in HISTORY (second "not comparable" line), init rescue in
+  ABLATIONS, the reinit guard in REJECTED, CAMONLY list, new `plot_clutter` -> `docs/img/clutter.png`;
+  `tests/test_report.py` covers the new lists. Unchanged figures (paired laps, sensitivity) were
+  not re-committed (only matplotlib byte noise).
+- `vdr/demo.py` BENCHMARK -> init-rescue files; `docs/demo/{benchmark,flights}.js` regenerated
+  (seed 0 camera + IMU now shows its missed gate 1; the others complete); demo page notes the clutter.
+- README GIF regenerated on seed 1 (completes) instead of seed 0, which misses gate 1 on the
+  clutter world; caption says which seed.
+
+Verify: pytest 87 passed; harness, report, demo and flightviz ran cleanly.
+
+**Pass rate (headline, seed 0):** no change (95.75%; pooled 6 sets 98.58%, camera-only 97.46%).
+
+**Next:** (A) reject distractors at initialisation and as targets (seed 0 runs 0/47/49, 4024,
+4038): prefer a quad with its opening or the nearest upright 1.7 m square straight ahead over the
+biggest candidate in WAIT; give 3-corner inits a wider initial yaw sigma; re-test
+`reinit_unambiguous_only` on the clutter world.

@@ -104,11 +104,10 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (C) Write-up
 
-- Current as of run 23 (2026-10-25): unambiguous yaw votes default (pooled 6 sets 99.83%),
-  reinit variants as "tried", sensor-sensitivity section and figure, camera-only re-run (97.79%).
-  Next due by 2026-11-01: re-report everything on the clutter benchmark (run 25: pooled 97.75%,
-  camera-only 96.46%; run 26 init_rescue: 98.58% / 97.46%; add the clutter sweep to the
-  sensitivity section/figure; `vdr/demo.py` BENCHMARK still points at clutter-free files).
+- Current as of run 27 (2026-10-30): clutter benchmark (pooled 98.58%, camera-only 97.46%, seed 0
+  95.75%), section 4.2 + `docs/img/clutter.png`, stories 6.13-6.15, init rescue in history and
+  ablations, demo BENCHMARK/flights and README GIF (now seed 1) regenerated on the clutter world.
+  Next due by 2026-11-06.
 - Keep `docs/WRITEUP.md` and the README current after each kept change (add new results files
   to `vdr/report.py`'s lists and re-run `python -m vdr.report`).
 - When a flight-changing default flips, also re-run the camera-only A/B on the 6 sets (from a
@@ -119,6 +118,9 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-10-30 — Write-up refresh (C, run 27): README/WRITEUP/figures/demo re-reported on the
+  clutter world (see the (C) section); no flight change.
 
 - 2026-10-28 — Clutter-robust initialisation (A, run 26): `init_rescue` (default on). In WAIT, a
   frame with no PnP candidate keeps lone far RANSAC outlines and accepts a 3-corner upright fit
