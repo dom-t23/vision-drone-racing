@@ -37,9 +37,10 @@ METHODS = {
 DEFAULT_SEEDS = [0, 1017, 2034]
 
 # Committed benchmark files shown on the page: (seed set, camera + IMU file, camera-only file).
+# Current default (orange clutter world, init rescue on); the 059848c flag-on files fly the same code.
 BENCHMARK = [
-    (0, "2026-10-22_5143039_baseline.json", "2026-10-25_75277ee_ab-camonly.json"),
-] + [(s, f"2026-10-22_6b66b99_ab-unamb2-on-seed{s}.json", f"2026-10-25_75277ee_ab-camonly-seed{s}.json")
+    (0, "2026-10-28_e65b78d_baseline.json", "2026-10-28_059848c_ab-init-rescue-camonly.json"),
+] + [(s, f"2026-10-28_059848c_ab-init-rescue-seed{s}.json", f"2026-10-28_059848c_ab-init-rescue-camonly-seed{s}.json")
      for s in range(1000, 6000, 1000)]
 
 

@@ -5,12 +5,12 @@ its monocular FPV camera and IMU** — no GPS, no depth sensor, no map of where 
 Everything is self-contained Python: the simulator renders real camera images, and the
 flight stack has to find the gates in the pixels.
 
-![Seed 0: onboard camera (left) and top-down course view (right)](docs/img/flight.gif)
+![Seed 1: onboard camera (left) and top-down course view (right)](docs/img/flight.gif)
 
-*Course seed 0, default configuration, real-time playback at 8 fps. Left: the 320×240 camera
+*Course seed 1, default configuration (orange clutter beside the course), real-time playback at 8 fps. Left: the 320×240 camera
 image the flight stack actually receives, with a HUD (time, true speed, gates passed, tracker
 mode). Right: true trajectory over the course (for viewing only — the drone never gets the
-map). Regenerate with `python -m vdr.flightviz --seed 0`.*
+map). Regenerate with `python -m vdr.flightviz --seed 1`.*
 
 [![tests](https://github.com/dom-t23/vision-drone-racing/actions/workflows/tests.yml/badge.svg)](https://github.com/dom-t23/vision-drone-racing/actions/workflows/tests.yml)
 
@@ -35,12 +35,37 @@ Benchmark: 50 seeded random courses × 8 gates, default configuration, race cloc
 (each run must average ≥ 5 m/s or it times out). Every number links to a committed results
 file; see [NIGHTLY_LOG.md](NIGHTLY_LOG.md) for the history.
 
-Current simulator (area-coverage gate rendering, since 2026-10-12):
+Current simulator (area-coverage gate rendering, plus 20 gate-coloured clutter objects —
+banners, panels and cones — beside every course since 2026-10-27):
 
 | configuration | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **baseline, pooled over 6 seed sets (300 courses)** | **99.83%** | 99.7% | 11.4–11.7 s per set |
-| **baseline (8 m/s)**, seed set 0 | **100.0%** | 100% | 11.59 s |
+| **default, pooled over 6 seed sets (300 courses)** | **98.58%** | 98.0% | 11.45–11.67 s per set |
+| **default (8 m/s)**, seed set 0 | **95.75%** | 94% | 11.65 s |
+| same world, init rescue off (pooled) | 97.75% | 97.3% | 11.45–11.68 s per set |
+| clutter-free world, same flight stack without init rescue (pooled) | 99.83% | 99.7% | 11.4–11.7 s per set |
+
+Files: [`default`](results/2026-10-28_e65b78d_baseline.json), pooled: `results/2026-10-28_059848c_ab-init-rescue-seed{1000..5000}.json`
+(flag on, same code as the default); init rescue off:
+`results/2026-10-27_11f0132_rebaseline-clutter[-seedN].json`; clutter-free:
+[`2026-10-22_5143039_baseline.json`](results/2026-10-22_5143039_baseline.json) plus
+`results/2026-10-22_6b66b99_ab-unamb2-on-seed{1000..5000}.json`.
+Single 50-run sets differ by one or two runs from noise alone, so the pooled row is the number
+to quote. The clutter is painted in the gates' own orange, so the colour threshold cannot reject
+it: 10 objects cost nothing on seed set 0, 20 cost about 4 points, 40 about 10
+([write-up section 4.2](docs/WRITEUP.md#42-gate-coloured-clutter)). Half of the failures it caused
+were not false gates but drones that never took off: clutter seen through the first gate's
+opening merged with its frame, so no opening was found and the lone outline was dropped by a
+rule written for the clean world. The latest change (*init rescue*) retries such frames leniently
+while the drone is still hovering, and raised the pooled pass rate from 97.75% to 98.58%. Six
+failures remain in 300 courses: distractors taken for gates (seed 0 runs 0, 47, 49 miss a gate;
+4024 and 4038 crash) and one course whose first gate is never seen as a usable square (5033).
+
+Before the clutter, on the clean world, each component was measured on and off:
+
+| configuration (clutter-free world) | gate pass rate | courses completed | mean lap |
+|---|---|---|---|
+| baseline (8 m/s), seed set 0 | 100.0% | 100% | 11.59 s |
 | same, unambiguous yaw votes off | 100.0% | 100% | 11.60 s |
 | same, also upright PnP off | 97.8% | 96% | 11.59 s |
 | same, also feasible lateral guidance off | 100.0% | 100% | 11.26 s |
@@ -49,24 +74,17 @@ Current simulator (area-coverage gate rendering, since 2026-10-12):
 | same, also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
 Files: [`baseline`](results/2026-10-22_5143039_baseline.json),
-pooled: the baseline plus `results/2026-10-22_6b66b99_ab-unamb2-on-seed{1000..5000}.json` (same
-code as the baseline), [`unambiguous yaw votes off`](results/2026-10-19_9acf025_baseline.json),
+[`unambiguous yaw votes off`](results/2026-10-19_9acf025_baseline.json),
 [`upright PnP off`](results/2026-10-16_3395fb0_baseline.json),
 [`feasible lateral guidance off`](results/2026-10-15_1d4bb7f_baseline.json),
 [`along-track time-to-go off`](results/2026-10-13_0f1e256_baseline.json),
 [`far lone RANSAC outlines kept`](results/2026-10-12_3b6cbbb_baseline.json),
 [`sub-pixel corners off`](results/2026-10-12_06ceff9_baseline.json).
-Single 50-run sets differ by one or two runs from noise alone, so the pooled row is the number
-to quote and components are judged pooled over several seed sets. The latest change concerns
-the next gate's yaw, which the drone estimates from sightings taken while approaching the
-current gate: sightings where the PnP solver left two plausible poses were 17–44° off in yaw
-and, averaged together, produced confident but wrong handoffs. The next gate's yaw now comes
-only from sightings with a single solution (positions still use all of them). Pooled pass rate
-99.54% → 99.83% — one net run, within noise — but the median estimation error fell on all six
-sets (about 0.31 → 0.22 m) at unchanged lap times. Before it, an "upright" PnP (gates are
-vertical, so solve for position and yaw only) gave 99.08% → 99.54%, and guidance that plans its
-sideways correction within the acceleration limit 97.92% → 99.08%. One failure remains in 300
-courses (seed 2003, a gate seen only twice before the drone had to turn to it).
+Pooled over six seed sets, the last three kept changes on that world were: guidance that plans
+its sideways correction within the acceleration limit (97.92% → 99.08%), an "upright" PnP that
+solves for position and yaw only because gates are vertical (99.08% → 99.54%), and taking the
+next gate's yaw only from sightings where the PnP solver left one plausible pose (99.54% →
+99.83%, with the median estimation error down on all six sets).
 
 ![Headline benchmark after each kept change](docs/img/history.png)
 
@@ -132,7 +150,9 @@ Files: [`baseline`](results/2026-10-11_68513f6_baseline.json),
 `vdr/sim`: rigid-body quadrotor (thrust + body-rate inputs with motor and rate-loop lags,
 rotor and air drag), IMU with white noise and drifting biases, a 320×240 pinhole FPV camera
 pitched up 20°, and seeded courses whose layout guarantees that after each gate the next one
-is in view and is the nearest gate ahead. Camera latency and motion blur are available as
+is in view and is the nearest gate ahead. By default 20 pieces of orange clutter (flat
+banners and panels, and cones) stand beside the course in the gates' own paint, never closer than
+2 m to the racing line; `--sim n_distractors=0` gives the clean world. Camera latency and motion blur are available as
 knobs (`--sim camera_latency=0.02`, `--sim exposure_time=0.005`) but off by default: the stack
 loses most of its pass rate at 20 ms of uncompensated latency, while blur up to 20 ms costs
 nothing ([write-up section 4.1](docs/WRITEUP.md#41-sensor-sensitivity)). The simulator and the flight stack only share the
@@ -157,8 +177,8 @@ camera noise.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                         # 84 tests, ~75 s
-python -m vdr.harness --runs 50 --seed 0    # the benchmark (~3 min on 2 cores)
+python -m pytest -q                         # 87 tests, ~60 s
+python -m vdr.harness --runs 50 --seed 0    # the benchmark (~2.5 min on 2 cores)
 python -m vdr.harness --runs 50 --flag chi2_gating=false      # an ablation
 python -m vdr.harness --runs 50 --sim pixel_noise_sigma=8     # a harder world
 python -m vdr.harness --runs 8 --link udp                     # autonomy in its own process
@@ -174,22 +194,20 @@ an assumed vehicle model (rate and thrust lags, linear drag). It flies, but less
 
 | seed set | camera + IMU (default) | camera only |
 |---|---|---|
-| 0 | 100.0% | 96.25% |
-| 1000 | 100.0% | 98.5% |
-| 2000 | 99.0% | 98.0% |
-| 3000 | 100.0% | 96.5% |
-| 4000 | 100.0% | 98.75% |
-| 5000 | 100.0% | 98.75% |
-| pooled (2400 gates) | **99.83%** | **97.79%** |
+| 0 | 95.75% | 96.75% |
+| 1000 | 100.0% | 100.0% |
+| 2000 | 100.0% | 98.5% |
+| 3000 | 100.0% | 93.75% |
+| 4000 | 97.75% | 97.75% |
+| 5000 | 98.0% | 98.0% |
+| pooled (2400 gates) | **98.58%** | **97.46%** |
 
-Files: camera only `results/2026-10-25_75277ee_ab-camonly[-seedN].json`; default as in the
-results table above (same code). Camera-only completes 290 of 300 courses against 299, with
-laps 11.4–11.6 s per set. Under the previous default (before unambiguous yaw votes) it scored
-98.62% (`results/2026-10-20_dcb8934_ab-camonly*`; 6 failures then, 10 now: 6 new, 2 fixed), and
-before upright PnP 92.96% (`results/2026-10-1{7,8}_21b0f5f_ab-camonly*`). The latest change was
-tuned with the IMU on; whether the 4-run drop without it is noise or a real interaction has not
-been checked yet. Its vehicle model uses the airframe's nominal values; a real drone's model
-would be less exact.
+Files: `results/2026-10-28_059848c_ab-init-rescue[-camonly][-seedN].json` (init rescue on, the
+same code as the default; seed 0 camera + IMU is `results/2026-10-28_e65b78d_baseline.json`).
+Camera-only completes 289 of 300 courses against 294, with laps 11.42–11.65 s per set. Init
+rescue helped it about as much as the default (96.46% → 97.46%). Five of its 11 failures are crashes
+within the first three gates, which the IMU version never has. Its vehicle model uses the
+airframe's nominal values; a real drone's model would be less exact.
 
 **Building the app.** `pip install . pyinstaller && python packaging/build.py` makes
 `dist/vdr-racing/` for the OS you run it on. Pushing a `v*` tag runs

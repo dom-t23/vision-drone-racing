@@ -1,6 +1,6 @@
 """Write-up figures, generated only from committed results files.
 
-    python -m vdr.report            # writes docs/img/{history,ablations,sensitivity,paired_laps*}.png
+    python -m vdr.report            # writes docs/img/{history,ablations,clutter,sensitivity,paired_laps*}.png
 
 Every number plotted is read from a `results/*.json` file listed below, so the
 figures can be regenerated (and checked) by anyone with the repo. Nothing here
@@ -23,7 +23,8 @@ import matplotlib.pyplot as plt  # noqa: E402
 RESULTS = "results"
 
 # Headline baselines (seed 0, default config) in the order they were set.
-# (file, short label, simulator generation: 0 = legacy cv2 fill, 1 = area-coverage renderer)
+# (file, short label, simulator generation: 0 = legacy cv2 fill, 1 = area-coverage renderer,
+#  2 = area-coverage renderer + 20 orange clutter objects, the default since 2026-10-27)
 HISTORY = [
     ("2026-10-07_c25234a_baseline.json", "bootstrap", 0),
     ("2026-10-10_0181f50_baseline.json", "lost-target\nrecovery", 0),
@@ -35,6 +36,8 @@ HISTORY = [
     ("2026-10-16_3395fb0_baseline.json", "feasible lateral\nguidance", 1),
     ("2026-10-19_9acf025_baseline.json", "upright PnP", 1),
     ("2026-10-22_5143039_baseline.json", "unambiguous\nyaw votes", 1),
+    ("2026-10-27_11f0132_rebaseline-clutter.json", "orange clutter\n(re-baseline)", 2),
+    ("2026-10-28_e65b78d_baseline.json", "init rescue", 2),
 ]
 
 # Component A/Bs: (label, [(off file, on file), ...] one pair per seed set).
@@ -93,6 +96,20 @@ ABLATIONS = [
         ("2026-10-22_fe855c9_ab-unamb-off.json", "2026-10-22_6b66b99_ab-unamb2-on.json"),
     ] + [(f"2026-10-22_fe855c9_ab-unamb-off-seed{s}.json", f"2026-10-22_6b66b99_ab-unamb2-on-seed{s}.json")
          for s in range(1000, 6000, 1000)]),
+    # init_rescue, on the clutter world. Off: the clutter re-baseline (same code path at 059848c,
+    # per run identical: 2026-10-28_059848c_ab-init-rescue-off.json).
+    ("init rescue (lone far outline, 3-corner fit)", [
+        ("2026-10-27_11f0132_rebaseline-clutter.json", "2026-10-28_059848c_ab-init-rescue.json"),
+    ] + [(f"2026-10-27_11f0132_rebaseline-clutter-seed{s}.json", f"2026-10-28_059848c_ab-init-rescue-seed{s}.json")
+         for s in range(1000, 6000, 1000)]),
+]
+
+# Camera-only mode (no IMU) A/B of the same change, shown in the write-up table.
+CAMONLY = [
+    ("init rescue, camera only", [
+        ("2026-10-27_11f0132_rebaseline-clutter-camonly.json", "2026-10-28_059848c_ab-init-rescue-camonly.json"),
+    ] + [(f"2026-10-27_11f0132_rebaseline-clutter-camonly-seed{s}.json",
+          f"2026-10-28_059848c_ab-init-rescue-camonly-seed{s}.json") for s in range(1000, 6000, 1000)]),
 ]
 
 # A/Bs that were tried and left off (shown in the write-up, not in the ablation figure).
@@ -132,7 +149,13 @@ REJECTED = [
         ("2026-10-22_6b66b99_ab-unamb2-on.json", f"2026-10-24_418da48_ab-reinit-{kind}.json"),
     ] + [(f"2026-10-22_6b66b99_ab-unamb2-on-seed{s}.json",
           f"2026-10-2{3 if s == 5000 else 4}_418da48_ab-reinit-{kind}-seed{s}.json")
-         for s in range(1000, 6000, 1000)]) for kind in ("reexpress", "clear")]
+         for s in range(1000, 6000, 1000)]) for kind in ("reexpress", "clear")] + [
+    # reinit_unambiguous_only (no reinit from a two-solution measurement), clutter-free world.
+    ("no reinit from an ambiguous measurement", [
+        ("2026-10-22_6b66b99_ab-unamb2-on.json", "2026-10-26_f3542f3_ab-reinit-unamb.json"),
+    ] + [(f"2026-10-22_6b66b99_ab-unamb2-on-seed{s}.json", f"2026-10-26_f3542f3_ab-reinit-unamb-seed{s}.json")
+         for s in range(1000, 6000, 1000)]),
+]
 
 # Paired lap-time comparisons (same seeds, flag off vs on): (label, pairs, output file name).
 PAIRED = [
@@ -161,6 +184,14 @@ SENSITIVITY = [
         (10, "2026-10-23_f58b856_exposure-10ms.json"),
         (20, "2026-10-23_f58b856_exposure-20ms.json"),
     ]),
+]
+
+# Orange clutter sweep (seed set 0, SimConfig.n_distractors; 20 became the default).
+CLUTTER = [
+    (0, "2026-10-27_c76b992_knob-clutter0.json"),
+    (10, "2026-10-27_c76b992_sweep-clutter10.json"),
+    (20, "2026-10-27_c76b992_sweep-clutter20.json"),
+    (40, "2026-10-27_c76b992_sweep-clutter40.json"),
 ]
 
 C_OFF, C_ON, C_INK, C_GRID = "#9aa5b1", "#d9480f", "#212529", "#e9ecef"
@@ -199,17 +230,19 @@ def plot_history(path, root=RESULTS) -> list:
     for f, label, gen in HISTORY:
         d = load(f, root)
         rows.append((label, gen, 100 * d["pass_rate"], 100 * d["completion_rate"], f))
-    fig, ax = plt.subplots(figsize=(9.5, 4))
+    fig, ax = plt.subplots(figsize=(11, 4))
     xs = range(len(rows))
     ax.plot(xs, [r[2] for r in rows], "-o", color=C_ON, lw=2, label="gate pass rate")
     ax.plot(xs, [r[3] for r in rows], "--s", color=C_OFF, lw=1.5, label="courses completed")
     for x, r in zip(xs, rows):
         ax.annotate(f"{r[2]:.1f}%", (x, r[2]), textcoords="offset points", xytext=(0, 8),
                     ha="center", fontsize=9, color=C_INK)
-    split = next(i for i, r in enumerate(rows) if r[1] == 1) - 0.5
-    ax.axvline(split, color=C_INK, lw=0.8, ls=":")
-    ax.text(split + 0.05, 77, "simulator renderer fixed:\nnot comparable across this line",
-            fontsize=8, color=C_INK, va="bottom")
+    notes = {1: "renderer fixed", 2: "20 orange clutter\nobjects added"}
+    for gen, note in notes.items():
+        split = next(i for i, r in enumerate(rows) if r[1] == gen) - 0.5
+        ax.axvline(split, color=C_INK, lw=0.8, ls=":")
+        ax.text(split + 0.05, 77, f"{note}:\nnot comparable\nacross this line", fontsize=8, color=C_INK,
+                va="bottom")
     ax.set_xticks(list(xs), [r[0] for r in rows], fontsize=8)
     ax.set_ylim(75, 103)
     ax.set_ylabel("% (50 courses, seed set 0)")
@@ -229,7 +262,7 @@ def plot_ablations(path, root=RESULTS) -> list:
         on = pooled_pass([p[1] for p in pairs], root)
         per_set = [(100 * load(a, root)["pass_rate"], 100 * load(b, root)["pass_rate"]) for a, b in pairs]
         rows.append((label, len(pairs), 100 * off[0] / off[1], 100 * on[0] / on[1], per_set))
-    fig, ax = plt.subplots(figsize=(12, 4.6))
+    fig, ax = plt.subplots(figsize=(13, 4.6))
     w = 0.36
     for i, (label, n, off, on, per_set) in enumerate(rows):
         ax.bar(i - w / 2, off, w, color=C_OFF, label="off" if i == 0 else None)
@@ -238,7 +271,8 @@ def plot_ablations(path, root=RESULTS) -> list:
             ax.plot([i - w / 2, i + w / 2], [a, b], color=C_INK, lw=0.6, alpha=0.6, marker=".", ms=4)
         ax.text(i - w / 2, 71, f"{off:.1f}", ha="center", fontsize=9, color="white", weight="bold")
         ax.text(i + w / 2, 71, f"{on:.1f}", ha="center", fontsize=9, color="white", weight="bold")
-    sim = ["legacy renderer" if pairs[0][0] < "2026-10-12" else "current renderer" for _, pairs in ABLATIONS]
+    sim = ["legacy renderer" if pairs[0][0] < "2026-10-12" else
+           "clutter-free" if pairs[0][0] < "2026-10-27" else "clutter world" for _, pairs in ABLATIONS]
     ax.set_xticks(range(len(rows)),
                   [f"{textwrap.fill(r[0], 16)}\n{r[1]} set{'s' if r[1] > 1 else ''},\n{sim[i]}"
                    for i, r in enumerate(rows)],
@@ -301,6 +335,32 @@ def plot_sensitivity(path, root=RESULTS) -> list:
     return rows
 
 
+def plot_clutter(path, root=RESULTS) -> list:
+    rows = []
+    for n, f in CLUTTER:
+        d = load(f, root)
+        rows.append((n, 100 * d["pass_rate"], 100 * d["completion_rate"], d["median_pos_err_rms"], f))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 3.4))
+    xs = [r[0] for r in rows]
+    ax1.plot(xs, [r[1] for r in rows], "-o", color=C_ON, lw=2, label="gate pass rate")
+    ax1.plot(xs, [r[2] for r in rows], "--s", color=C_OFF, lw=1.5, label="courses completed")
+    ax1.axvline(20, color=C_INK, lw=0.8, ls=":")
+    ax1.text(20.5, 81, "default", fontsize=8, color=C_INK)
+    ax1.set_ylim(80, 102); ax1.set_xlabel("orange clutter objects per course")
+    ax1.set_ylabel("% (seed set 0)")
+    ax1.legend(loc="lower left", frameon=False, fontsize=8)
+    ax2.plot(xs, [r[3] for r in rows], "-o", color=C_ON, lw=2)
+    ax2.set_ylim(0, None); ax2.set_xlabel("orange clutter objects per course")
+    ax2.set_ylabel("median per-run est. error (m)")
+    for ax in (ax1, ax2):
+        _style(ax)
+    fig.suptitle("Gate-coloured clutter beside the course (before init rescue)", fontsize=10)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return rows
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", default="docs/img")
@@ -316,6 +376,13 @@ def main(argv=None):
         on = pooled_pass([p[1] for p in pairs], a.results)
         print(f"rejected  {label:22} {len(pairs)} set(s)  off {100 * off[0] / off[1]:.2f}%  "
               f"on {100 * on[0] / on[1]:.2f}%")
+    for label, pairs in CAMONLY:
+        off = pooled_pass([p[0] for p in pairs], a.results)
+        on = pooled_pass([p[1] for p in pairs], a.results)
+        print(f"camonly   {label:22} {len(pairs)} set(s)  off {100 * off[0] / off[1]:.2f}%  "
+              f"on {100 * on[0] / on[1]:.2f}%")
+    for r in plot_clutter(os.path.join(a.out, "clutter.png"), a.results):
+        print(f"clutter   {r[0]:3d} objects  pass {r[1]:.2f}%  completed {r[2]:.0f}%  est. error {r[3]:.3f} m  {r[4]}")
     for r in plot_sensitivity(os.path.join(a.out, "sensitivity.png"), a.results):
         print(f"sensitivity {r[0]:34} {r[1]:3d} ms  pass {r[2]:.2f}%  est. error {r[3]:.3f} m  {r[4]}")
     for i, (label, _, fname) in enumerate(PAIRED):
