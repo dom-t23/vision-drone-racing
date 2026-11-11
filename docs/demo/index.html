@@ -128,24 +128,24 @@ footer { color: var(--muted); font-size: 13px; }
   </div>
 
   <div class="readout">
-    <div><span class="label">Result</span><b id="r-out">–</b></div>
-    <div><span class="label">Gates passed</span><b id="r-gates">–</b></div>
-    <div><span class="label">Speed</span><b id="r-speed">–</b></div>
-    <div><span class="label">Estimate error</span><b id="r-err">–</b></div>
-    <div><span class="label">Mode</span><b id="r-mode">–</b></div>
+    <div><span class="label">Result</span><b id="r-out">-</b></div>
+    <div><span class="label">Gates passed</span><b id="r-gates">-</b></div>
+    <div><span class="label">Speed</span><b id="r-speed">-</b></div>
+    <div><span class="label">Estimate error</span><b id="r-err">-</b></div>
+    <div><span class="label">Mode</span><b id="r-mode">-</b></div>
   </div>
 
   <div class="cols">
     <section>
       <h2>What the drone does</h2>
       <ol class="steps">
-        <li><b>Find gates in the image.</b> Threshold the orange paint, fit a four-cornered outline to each gate and to its opening (outlined in the camera view).</li>
-        <li><b>Measure where the gate is.</b> A gate's known size and its four corners give its position relative to the camera (perspective-n-point).</li>
-        <li><b>Fuse.</b> An error-state Kalman filter tracks position, velocity and attitude <em>in the frame of the gate it is flying to</em>, so no map is needed. Bad measurements are rejected with a chi-squared test.</li>
-        <li><b>Hand off.</b> Once past a gate, the state is re-expressed in the next gate's frame, estimated from sightings made on the approach.</li>
-        <li><b>Fly.</b> Guidance aims through the gate centre at race pace and is turned into thrust and body-rate commands, like an FPV pilot in acro mode.</li>
+        <li>It finds gates in the image by thresholding the orange paint and fitting a four-cornered outline to each gate and to its opening (outlined in the camera view).</li>
+        <li>A gate's known size and its four corners give its position relative to the camera (perspective-n-point).</li>
+        <li>An error-state Kalman filter tracks position, velocity and attitude <em>in the frame of the gate it is flying to</em>, so no map is needed. Bad measurements are rejected with a chi-squared test.</li>
+        <li>Once past a gate, the state is re-expressed in the next gate's frame, estimated from sightings made on the approach.</li>
+        <li>Guidance aims through the gate centre at race pace and is turned into thrust and body-rate commands, like an FPV pilot in acro mode.</li>
       </ol>
-      <p><b>Camera only</b> drops the IMU. Between camera frames the filter predicts motion from the drone's own commands through a simple vehicle model.</p>
+      <p>The camera-only flights drop the IMU. Between camera frames the filter predicts motion from the drone's own commands through a simple vehicle model.</p>
     </section>
     <section>
       <h2>Benchmark</h2>
@@ -156,7 +156,7 @@ footer { color: var(--muted); font-size: 13px; }
   </div>
 
   <footer>Every flight here was simulated in Python and recorded; this page only plays the recording back. The top view and the
-    estimate error use ground truth for display only — the flight never sees it.
+    estimate error use ground truth for display only; the flight never sees it.
     Source and install instructions: <a href="https://github.com/dom-t23/vision-drone-racing">github.com/dom-t23/vision-drone-racing</a>.</footer>
 </div>
 
@@ -291,7 +291,7 @@ footer { color: var(--muted); font-size: 13px; }
     $("r-gates").textContent = Math.min(fr.g, flight.n_gates) + " / " + flight.n_gates;
     $("r-speed").textContent = speedAt(idx).toFixed(1) + " m/s";
     if (fr.e) { var dx = fr.e[0] - fr.p[0], dy = fr.e[1] - fr.p[1], dz = fr.e[2] - fr.p[2]; $("r-err").textContent = Math.sqrt(dx * dx + dy * dy + dz * dz).toFixed(2) + " m"; }
-    else $("r-err").textContent = "–";
+    else $("r-err").textContent = "-";
     $("r-mode").textContent = MODES[fr.m] || fr.m;
   }
 

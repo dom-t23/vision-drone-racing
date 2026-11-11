@@ -4,8 +4,8 @@ A racing quadrotor has to fly through eight identical square gates at 8 m/s usin
 320×240 forward camera and an IMU. There is no GPS, no depth sensor, no map, and the gates
 carry no IDs. This document explains how the flight stack works, how it is evaluated, and
 what went wrong along the way. Every number below comes from a committed file in
-[`results/`](../results); the figures are regenerated from those files with
-`python -m vdr.report`.
+[`results/`](../results), listed table by table in the [appendix](#appendix-results-files);
+the figures are regenerated from those files with `python -m vdr.report`.
 
 ## 1. The problem and its rules
 
@@ -13,7 +13,7 @@ what went wrong along the way. Every number below comes from a committed file in
 |---|---|
 | **Sensors** | 40 Hz monocular FPV camera (320×240, 100° horizontal FOV, pitched up 20°, pixel noise σ = 3), 200 Hz IMU with white noise and drifting biases |
 | **Actuation** | Acro mode: collective thrust + body rates, the way a human FPV pilot flies (rate loops modelled as first-order lags) |
-| **Course** | 8 identical upright gates (1.7 m outer, 1.4 m opening), 6–11 m apart, turns up to 35°, heights 1.4–3.0 m. The generator guarantees the next gate is visible and is the nearest gate ahead after each pass. Since 2026-10-27, 20 pieces of clutter in the gates' own orange (banners, panels, cones) stand at least 2 m off the racing line |
+| **Course** | 8 identical upright gates (1.7 m outer, 1.4 m opening), 6-11 m apart, turns up to 35°, heights 1.4-3.0 m. The generator guarantees the next gate is visible and is the nearest gate ahead after each pass. Since 2026-10-27, 20 pieces of clutter in the gates' own orange (banners, panels, cones) stand at least 2 m off the racing line |
 | **Scoring** | Gates must be passed in order. A run ends at the first crash, missed gate, wrong gate or timeout. A race clock requires ≥ 5 m/s average along the gate-to-gate path |
 | **Separation** | The autonomy sees only [`vdr/interface.py`](../vdr/interface.py): images, IMU samples, camera intrinsics/extrinsics, gate size, vehicle limits. `tests/test_separation.py` fails if it imports simulator code or the contract grows a ground-truth field. In UDP link mode the autonomy is a separate process |
 
@@ -24,16 +24,12 @@ default configuration.
 
 | configuration (current simulator: clutter world) | gate pass rate | courses completed | mean lap |
 |---|---|---|---|
-| **default, pooled over 6 seed sets** | **98.58%** | 294/300 | 11.45–11.67 s per set |
+| **default, pooled over 6 seed sets** | **98.58%** | 294/300 | 11.45-11.67 s per set |
 | **default, seed set 0** | **95.75%** | 47/50 | 11.65 s |
-| init rescue off, pooled over 6 seed sets | 97.75% | 292/300 | 11.45–11.68 s per set |
-| camera only (no IMU), pooled over 6 seed sets | 97.46% | 289/300 | 11.42–11.65 s per set |
+| init rescue off, pooled over 6 seed sets | 97.75% | 292/300 | 11.45-11.68 s per set |
+| camera only (no IMU), pooled over 6 seed sets | 97.46% | 289/300 | 11.42-11.65 s per set |
 
-Source: [`2026-10-28_e65b78d_baseline.json`](../results/2026-10-28_e65b78d_baseline.json) and
-`results/2026-10-28_059848c_ab-init-rescue[-camonly][-seedN].json` (flag on, same code as the
-default), `results/2026-10-27_11f0132_rebaseline-clutter[-seedN].json` (off).
-
-**The world got harder on 2026-10-27.** The clean benchmark had saturated (one failure in 300
+The world got harder on 2026-10-27. The clean benchmark had saturated (one failure in 300
 courses), so it could no longer tell a good change from a bad one. Adding 20 pieces of
 gate-coloured clutter beside every course (section 4.2) dropped the pooled pass rate from 99.83%
 to 97.75%; numbers on the two sides of that change are not comparable. The first change made on
@@ -53,28 +49,20 @@ On the clutter-free world, the flight stack without init rescue scored:
 | also far lone RANSAC outlines kept | 97.5% | 96% | 12.33 s |
 | also sub-pixel corners off | 96.2% | 94% | 12.5 s |
 
-Source: [`2026-10-22_5143039_baseline.json`](../results/2026-10-22_5143039_baseline.json),
-[`2026-10-19_9acf025_baseline.json`](../results/2026-10-19_9acf025_baseline.json),
-[`2026-10-16_3395fb0_baseline.json`](../results/2026-10-16_3395fb0_baseline.json),
-[`2026-10-15_1d4bb7f_baseline.json`](../results/2026-10-15_1d4bb7f_baseline.json),
-[`2026-10-13_0f1e256_baseline.json`](../results/2026-10-13_0f1e256_baseline.json),
-[`2026-10-12_3b6cbbb_baseline.json`](../results/2026-10-12_3b6cbbb_baseline.json),
-[`2026-10-12_06ceff9_baseline.json`](../results/2026-10-12_06ceff9_baseline.json).
-
-**One seed set is not enough; the pooled number is the honest one.** Seed set 0 was at
+One seed set is not enough; the pooled number is the honest one. Seed set 0 was at
 100.0% on the clean world from the upright PnP change on, so it could no longer tell good changes
 from bad. Over six sets of 50 courses (seeds 0, 1000, 2000, 3000, 4000, 5000; 2400 gates) the
 clean-world default passed **99.83%** of gates and completed 299 of 300 courses (per set 100.0 /
-100.0 / 99.0 / 100.0 / 100.0 / 100.0%, laps 11.4–11.7 s, median per-run estimation error
-0.20–0.24 m; `results/2026-10-22_5143039_baseline.json` and
+100.0 / 99.0 / 100.0 / 100.0 / 100.0%, laps 11.4-11.7 s, median per-run estimation error
+0.20-0.24 m; `results/2026-10-22_5143039_baseline.json` and
 `results/2026-10-22_6b66b99_ab-unamb2-on-seed{1000..5000}.json`). The one failure was seed 2003
 (`missed_gate` at gate 4: that gate sits 7 m behind gate 3 and was seen only twice before the
 pass). Taking the next gate's yaw only from unambiguous sightings (section 6.11) moved the pooled
-rate 99.54% → 99.83%, which on its own is one net run and inside the noise, but it lowered the
-median estimation error on all six sets (about 0.31 → 0.22 m). Before it, a gravity-constrained
+rate 99.54% to 99.83%, which on its own is one net run and inside the noise, but it lowered the
+median estimation error on all six sets (about 0.31 to 0.22 m). Before it, a gravity-constrained
 "upright" PnP (section 6.9) raised the pooled rate from 99.08% to 99.54%, and guidance that plans
 its sideways correction within the acceleration limit (section 6.7) from 97.92% to 99.08% for 3%
-of lap time, while on seed set 0 alone it went *down*, 100.0% → 97.8%: single sets are noisy, and
+of lap time, while on seed set 0 alone it went *down*, 100.0% to 97.8%: single sets are noisy, and
 two runs either way is within noise for one set. The same holds on the clutter world: init
 rescue left seed set 0 unchanged (95.75%) and gained on three of the other five.
 
@@ -90,26 +78,26 @@ are measured in different worlds and are not compared directly.
 What each piece is worth, switched off and on over the same courses (bars pooled over the seed
 sets named; each grey line is one 50-course set):
 
-| component | seed sets | off → on | file prefix |
+| component | seed sets | off to on | file prefix |
 |---|---|---|---|
-| chi-squared gating | 1 | 75.5% → 89.2% | `2026-10-07_c25234a_` |
-| lost-target recovery | 3 | 89.1% → 94.3% | `2026-10-10_0181f50_` |
-| robust-outline check | 4 | 92.7% → 95.8% | `2026-10-11_68513f6_` |
-| sub-pixel corners | 4 | 96.9% → 96.7% (laps 0.155 s faster) | `2026-10-12_06ceff9_` |
-| drop far lone RANSAC outlines | 5 | 96.25% → 97.50% (laps unchanged) | `2026-10-1{2,3}_b6a6a31_` |
-| along-track time-to-go | 5 | 97.50% → 97.75% (laps 1.03 s faster) | `2026-10-1{4,5}_131d93c_ab-attgo` |
-| feasible lateral guidance | 6 | 97.92% → 99.08% (laps 0.34 s slower, +3%) | `2026-10-1{5,6}_d37cf14_ab-feaslat` |
-| upright PnP (tilt from IPPE) | 6 | 99.08% → 99.54% (laps flat, −0.036 s) | `2026-10-19_da2703a_ab-upright-tilt` |
-| unambiguous next-gate yaw votes | 6 | 99.54% → 99.83% (laps flat, −0.007 s) | `2026-10-22_{fe855c9_ab-unamb-off,6b66b99_ab-unamb2-on}` |
-| init rescue (clutter world) | 6 | 97.75% → 98.58% (laps flat, 0.000 s); camera only 96.46% → 97.46% | `2026-10-27_11f0132_rebaseline-clutter`, `2026-10-28_059848c_ab-init-rescue` |
-| *tried, left off:* lateral-first saturation | 5 | 97.50% → 98.25% (completed 240 → 240) | `2026-10-1{3,4}_2d7e3f6_` |
-| *tried, left off:* handoff yaw sigma floor | 6 | 99.08% → 99.17% (1 run rescued, 0 broken) | `2026-10-17_cbd0150_ab-yawfloor` |
-| *tried, left off:* upright PnP with a yaw-only update | 6 | 99.08% → 97.71% (completed 295 → 289) | `2026-10-1{8,9}_bc81c40_ab-upright` |
-| *tried, left off:* joint outline + opening fit | 6 | 99.54% → 99.54% (1 rescued, 1 broken) | `2026-10-{19,20}_42e68bf_ab-joint` |
-| *tried, left off:* yaw votes, bearing prior alone when none is unambiguous | 6 | 99.54% → 99.54% | `2026-10-22_fe855c9_ab-unamb-on` |
-| *tried, left off:* re-express gate hypotheses after a filter reinit | 6 | 99.83% → 99.83% | `2026-10-2{3,4}_418da48_ab-reinit-reexpress` |
-| *tried, left off:* clear gate hypotheses after a filter reinit | 6 | 99.83% → 99.83% | `2026-10-2{3,4}_418da48_ab-reinit-clear` |
-| *tried, left off:* no reinit from a two-solution measurement | 6 | 99.83% → 99.83% (2 runs changed) | `2026-10-26_f3542f3_ab-reinit-unamb` |
+| chi-squared gating | 1 | 75.5% to 89.2% | `2026-10-07_c25234a_` |
+| lost-target recovery | 3 | 89.1% to 94.3% | `2026-10-10_0181f50_` |
+| robust-outline check | 4 | 92.7% to 95.8% | `2026-10-11_68513f6_` |
+| sub-pixel corners | 4 | 96.9% to 96.7% (laps 0.155 s faster) | `2026-10-12_06ceff9_` |
+| drop far lone RANSAC outlines | 5 | 96.25% to 97.50% (laps unchanged) | `2026-10-1{2,3}_b6a6a31_` |
+| along-track time-to-go | 5 | 97.50% to 97.75% (laps 1.03 s faster) | `2026-10-1{4,5}_131d93c_ab-attgo` |
+| feasible lateral guidance | 6 | 97.92% to 99.08% (laps 0.34 s slower, +3%) | `2026-10-1{5,6}_d37cf14_ab-feaslat` |
+| upright PnP (tilt from IPPE) | 6 | 99.08% to 99.54% (laps flat, -0.036 s) | `2026-10-19_da2703a_ab-upright-tilt` |
+| unambiguous next-gate yaw votes | 6 | 99.54% to 99.83% (laps flat, -0.007 s) | `2026-10-22_{fe855c9_ab-unamb-off,6b66b99_ab-unamb2-on}` |
+| init rescue (clutter world) | 6 | 97.75% to 98.58% (laps flat, 0.000 s); camera only 96.46% to 97.46% | `2026-10-27_11f0132_rebaseline-clutter`, `2026-10-28_059848c_ab-init-rescue` |
+| *tried, left off:* lateral-first saturation | 5 | 97.50% to 98.25% (completed 240 to 240) | `2026-10-1{3,4}_2d7e3f6_` |
+| *tried, left off:* handoff yaw sigma floor | 6 | 99.08% to 99.17% (1 run rescued, 0 broken) | `2026-10-17_cbd0150_ab-yawfloor` |
+| *tried, left off:* upright PnP with a yaw-only update | 6 | 99.08% to 97.71% (completed 295 to 289) | `2026-10-1{8,9}_bc81c40_ab-upright` |
+| *tried, left off:* joint outline + opening fit | 6 | 99.54% to 99.54% (1 rescued, 1 broken) | `2026-10-{19,20}_42e68bf_ab-joint` |
+| *tried, left off:* yaw votes, bearing prior alone when none is unambiguous | 6 | 99.54% to 99.54% | `2026-10-22_fe855c9_ab-unamb-on` |
+| *tried, left off:* re-express gate hypotheses after a filter reinit | 6 | 99.83% to 99.83% | `2026-10-2{3,4}_418da48_ab-reinit-reexpress` |
+| *tried, left off:* clear gate hypotheses after a filter reinit | 6 | 99.83% to 99.83% | `2026-10-2{3,4}_418da48_ab-reinit-clear` |
+| *tried, left off:* no reinit from a two-solution measurement | 6 | 99.83% to 99.83% (2 runs changed) | `2026-10-26_f3542f3_ab-reinit-unamb` |
 
 The first three were measured on the earlier renderer. Sub-pixel corners did not change the
 pass rate; they were kept because they made laps faster at equal pass rate (section 5), and
@@ -150,11 +138,9 @@ exact.
 | 5000 | 98.0% | 98.0% |
 | pooled (2400 gates) | **98.58%** | **97.46%** |
 
-Source: `results/2026-10-28_059848c_ab-init-rescue[-camonly][-seedN].json` (init rescue on, the
-same code as the default; seed 0 camera + IMU is
-[`2026-10-28_e65b78d_baseline.json`](../results/2026-10-28_e65b78d_baseline.json)). Camera
-only completes 289 of 300 courses against 294, with laps 11.42–11.65 s per set. Init rescue
-helped it about as much as the default (96.46% → 97.46%). Five of its 11 failures are crashes
+Camera
+only completes 289 of 300 courses against 294, with laps 11.42-11.65 s per set. Init rescue
+helped it about as much as the default (96.46% to 97.46%). Five of its 11 failures are crashes
 within the first three gates, which the IMU version never has.
 
 ### 2.2 Before the renderer fix
@@ -168,13 +154,7 @@ The earlier renderer (cv2 anti-aliased fill) painted gates about 0.7 px too wide
 | same, robust-outline check off | 94.5% | 90% | 12.0 s |
 | earlier baseline, lost-target recovery off | 89.2% | 82% | 11.9 s |
 | earlier baseline, chi-squared gating off | 75.5% | 60% | 12.0 s |
-| cruise 4 m/s (race clock expires) | 57.0% | 0% | — |
-
-Source: [`baseline`](../results/2026-10-11_68513f6_baseline.json),
-[`no robust-outline check`](../results/2026-10-11_68513f6_ablation-no-robust-inner.json),
-[`no recovery`](../results/2026-10-10_0181f50_ablation-no-recovery.json),
-[`no chi2`](../results/2026-10-07_c25234a_ablation-no-chi2.json),
-[`4 m/s`](../results/2026-10-07_c25234a_ablation-4mps.json).
+| cruise 4 m/s (race clock expires) | 57.0% | 0% | n/a |
 
 ### 2.3 UDP link mode
 
@@ -216,23 +196,23 @@ often survive overlaps that ruin outlines, so unused holes become detections on 
 Finally each quad edge is re-measured at sub-pixel precision: sample intensity profiles across
 the edge, find where they cross half the paint-vs-background contrast, fit a line through the
 crossings, and intersect neighbouring lines. On the current renderer this cuts corner RMS
-error from ~0.8–0.9 px to 0.1–0.3 px.
+error from ~0.8-0.9 px to 0.1-0.3 px.
 
 ### 3.2 Pose from one square ([`pnp.py`](../vdr/autonomy/pnp.py))
 
 `cv2.solvePnP(..., SOLVEPNP_IPPE_SQUARE)` gives the gate pose from four corners. A square has
 two ambiguities:
 
-* **4-fold symmetry**: any cyclic relabelling of the corners fits equally well. Gates are
+* 4-fold symmetry: any cyclic relabelling of the corners fits equally well. Gates are
   upright, so the gate's "up" is the object axis closest to world up (from the filter's
   attitude, or the accelerometer before initialisation).
-* **Planar flip**: IPPE returns two solutions, which are nearly equally good for small or
+* Planar flip: IPPE returns two solutions, which are nearly equally good for small or
   distant squares. Both are kept and the filter's prediction picks one.
 
-A single square gives good **position** (centimetres at 6 m) but poor **rotation** (5–30° at
-6–11 m). The filter design follows from that.
+A single square gives good **position** (centimetres at 6 m) but poor **rotation** (5-30° at
+6-11 m). The filter design follows from that.
 
-**Upright refinement.** Gates are vertical, so once roll and pitch are known the gate pose has
+Gates are vertical, so once roll and pitch are known the gate pose has
 4 unknowns (position + yaw), not 6. `pnp.refine_upright` runs Gauss-Newton on the 8 reprojection
 residuals with the gate's up axis fixed to the filter's gravity direction, seeded from each
 up-aligned IPPE solution; the two IPPE solutions usually converge to the same upright pose, so
@@ -248,23 +228,23 @@ the filter is expressed **in the frame of the gate it is flying to**: origin at 
 centre, x through the gate, z up. Gates are upright and static, so this frame is gravity
 aligned and inertial, and the IMU can be integrated in it directly.
 
-* **State**: position, velocity, attitude, accelerometer bias, gyro bias. It is an
+* State: position, velocity, attitude, accelerometer bias, gyro bias. It is an
   error-state filter (15 error states, attitude error as a 3-vector rotation), following
   Solà's ESKF notes.
-* **Prediction**: IMU at 200 Hz.
-* **Main measurement**: the gate centre in the camera frame, `t_co`. Its noise is anisotropic:
+* Prediction: IMU at 200 Hz.
+* Main measurement: the gate centre in the camera frame, `t_co`. Its noise is anisotropic:
   across the line of sight it is σ_px·d/f, along it roughly 0.7·σ_px·d²/(f·L). For example,
   with f ≈ 134 px, σ_px = 1.5 and the 1.7 m outline, that is about 0.11 m sideways but
   0.46 m in depth at 10 m.
-* **Second measurement**: the relative attitude from PnP, with a much larger, distance-scaled
+* Second measurement: the relative attitude from PnP, with a much larger, distance-scaled
   noise, because single-square rotation is poor.
-* **Initialisation**: roll and pitch from 40 averaged accelerometer samples while hovering
+* Initialisation: roll and pitch from 40 averaged accelerometer samples while hovering
   (one sample tilted the filter by up to ~10°), position and yaw from the first PnP. If a
   hovering frame gives no PnP candidate at all, its detections are retried leniently (*init
   rescue*, section 6.15): a lone far RANSAC outline is kept, and a square with one corner pulled
   off by clutter is fitted to its other three corners.
 
-**Handoff.** While approaching a gate, detections far beyond it are clustered into hypotheses
+While approaching a gate, detections far beyond it are clustered into hypotheses
 for the *next* gate (position and yaw in the current gate frame). When the estimate crosses
 x = +0.3 m the filter is re-expressed in the next gate's frame: rotate and translate p, v and
 R, and inflate the covariance by the uncertainty of the next gate's estimated pose (position,
@@ -297,7 +277,7 @@ transformed into the current gate frame by the filter, falls into one category:
 
 The association radius is generous on purpose: the χ² test, not the radius, decides whether a
 detection is used. The last row exists because a depth-biased handoff can leave the real gate
-2–5 m beyond the estimate: too far to associate, too near to be "next". Before recovery
+2-5 m beyond the estimate: too far to associate, too near to be "next". Before recovery
 existed such detections were silently dropped and the drone flew on IMU alone with a falsely
 small covariance (section 6.2).
 
@@ -310,18 +290,18 @@ Far from the gate, guidance re-solves each tick for the unique cubic that starts
 position p and velocity v and reaches the gate centre at time-to-go T with velocity
 v_f = (8 m/s, 0, 0) along the gate normal. Its initial acceleration has a closed form:
 
-  a = (6 (p_f − p) − 2T (2v + v_f)) / T²
+  a = (6 (p_f - p) - 2T (2v + v_f)) / T²
 
-Time-to-go comes from the along-track motion only, T = 2(−p_x)/(v_x + |v_f|), so a drone on the
+Time-to-go comes from the along-track motion only, T = 2(-p_x)/(v_x + |v_f|), so a drone on the
 gate axis at cruise speed gets zero along-track demand. The lateral and vertical axes use the
 same T floored at 0.3 s (their gain grows as 1/T²); the along-track axis is not floored. Inside
-x > −1.2 m guidance switches to "hold the line": a velocity loop towards v_f plus lateral and
+x > -1.2 m guidance switches to "hold the line": a velocity loop towards v_f plus lateral and
 vertical position feedback. (A floor on T used instead made the drone brake to a stop 0.7 m
 short of the gate.) The total demand is clipped to 14 m/s².
 
-**Planning within the limit.** The cubic's acceleration is linear in time, so on each lateral
+The cubic's acceleration is linear in time, so on each lateral
 axis its largest value is at one end of the manoeuvre, and both ends have closed forms:
-a(0) = (−6y − 4T v_y)/T² and a(T) = (6y + 2T v_y)/T² (gate at y = 0). Guidance picks the
+a(0) = (-6y - 4T v_y)/T² and a(T) = (6y + 2T v_y)/T² (gate at y = 0). Guidance picks the
 shortest lateral time-to-go T_lat whose peak stays within 11 m/s². If that is later than the
 along-track arrival, it buys the time by braking along x at a constant deceleration so the drone
 reaches the gate plane at T_lat (never planning to arrive slower than 3 m/s, and braking only
@@ -358,14 +338,13 @@ seed set 0:
 | exposure: pass rate | 100.0% | 100.0% | 100.0% | | 100.0% | | | |
 | exposure: median est. error | 0.203 m | 0.201 m | 0.223 m | | 0.327 m | | | |
 
-Sources: `results/2026-10-2{0,1}_1077d61_latency-*ms.json` (flown on the upright-PnP default,
-0 ms = `2026-10-19_9acf025_baseline.json`) and `results/2026-10-23_f58b856_exposure-*ms.json`
-(current default, 0 ms = `2026-10-22_5143039_baseline.json`). Real FPV pipelines have 20–40 ms of
+The latency sweep was flown on the upright-PnP default and the exposure sweep on the default
+of 2026-10-22. Real FPV pipelines have 20-40 ms of
 latency, so this is the stack's biggest weakness. A scratch split of the 20 ms case (not
 committed; monkeypatched renderer) showed *which* part of a stale frame hurts: a frame from the
 capture-time position but current attitude flew 100%, one from the capture-time attitude but
 current position 52.8%. The 16 cm the drone travels in 20 ms are harmless; the few degrees the
-camera rotates are not, because at 6–10 m they move the gate-centre bearing by tens of
+camera rotates are not, because at 6-10 m they move the gate-centre bearing by tens of
 centimetres and the filter applies it with the current attitude. The fix is cheap (rewind the
 attitude to exposure time with buffered gyro samples) but needs the frame's capture time, which
 the interface does not carry yet. Blur almost up to the 25 ms frame period costs no pass rate; it
@@ -375,7 +354,7 @@ stays off because it doubles benchmark time for no measurable effect at a realis
 
 The clean world had one kind of orange object, so colour alone found every gate. Since
 2026-10-27 the default world (`n_distractors=20`) adds clutter beside each course: flat vertical
-rectangles (banners and panels, 0.4–2.5 m wide, 0.3–1.5 m tall, random yaw; 75%) and cones seen
+rectangles (banners and panels, 0.4-2.5 m wide, 0.3-1.5 m tall, random yaw; 75%) and cones seen
 side-on (25%), painted with jitter around the gate colour but always inside the detector's HSV
 range, so thresholding cannot reject them. Every vertex stays at least 2 m from every leg of the
 course (including the start) and from every gate centre; the clutter is visual only (nothing to
@@ -391,34 +370,33 @@ crash into) and drawn on its own random stream, so courses and sensor noise are 
 | courses completed | 50 | 50 | 47 | 44 |
 | median est. error | 0.203 m | 0.305 m | 0.306 m | 0.528 m |
 
-Sources: `results/2026-10-27_c76b992_{knob-clutter0,sweep-clutter10,sweep-clutter20,sweep-clutter40}.json`
-(flown before init rescue). 20 was chosen as the default because it discriminates without
+The sweep was flown before init rescue. 20 was chosen as the default because it discriminates without
 swamping the stack, and it is cheap: benchmark time +12%, against +100% for motion blur.
 
 ## 5. How changes are evaluated
 
-* **Deterministic seeds.** Each run is bit-for-bit reproducible for a given seed and
+* Deterministic seeds. Each run is bit-for-bit reproducible for a given seed and
   configuration, so a change is evaluated by flying the *same* 50 courses with it off and on.
-* **Experiment flags.** Every idea goes in behind an `AutonomyConfig` boolean, default off.
+* Experiment flags. Every idea goes in behind an `AutonomyConfig` boolean, default off.
   It is kept (default flipped, flag kept for ablation) only if it clearly helps.
-* **Noise.** Outcomes are chaotic: in one test, replacing an SVD line fit with a closed-form
-  one changed corners by 1e-13 px yet altered 40+ of 50 trajectories and flipped 1–2 outcomes
+* Noise. Outcomes are chaotic: in one test, replacing an SVD line fit with a closed-form
+  one changed corners by 1e-13 px yet altered 40+ of 50 trajectories and flipped 1-2 outcomes
   per seed set. Because a run ends at its first failure, one early crash can cost up to 2% of
   the 400 gates. So differences under ~8 percentage points on one set are treated as noise,
   and smaller effects are judged only pooled over several seed sets (0, 1000, 2000, 3000, 4000, and 5000 since run 13), with
   a set held out when a threshold was tuned on the others.
-* **Pace rule.** A change counts only if the pass rate rises without the mean lap time getting
+* Pace rule. A change counts only if the pass rate rises without the mean lap time getting
   more than 5% worse; going faster at equal pass rate also counts.
-* **Paired lap times.** Mean lap time of completed runs mixes in *which* runs completed. For
+* Paired lap times. Mean lap time of completed runs mixes in *which* runs completed. For
   speed, only runs completed both ways are compared, seed by seed:
 
 ![Paired lap-time differences, sub-pixel corners on minus off](img/paired_laps.png)
 
-  Sub-pixel corners: 145 of 179 paired runs faster, mean −0.155 s (median −0.147 s).
+  Sub-pixel corners: 145 of 179 paired runs faster, mean -0.155 s (median -0.147 s).
 
 ![Paired lap-time differences, along-track time-to-go on minus off](img/paired_laps_tgo.png)
 
-  Along-track time-to-go: 232 of 233 paired runs faster, mean −1.025 s (median −1.033 s),
+  Along-track time-to-go: 232 of 233 paired runs faster, mean -1.025 s (median -1.033 s),
   about 8% of a lap.
 
 ![Paired lap-time differences, feasible lateral guidance on minus off](img/paired_laps_feaslat.png)
@@ -429,14 +407,14 @@ swamping the stack, and it is cheap: benchmark time +12%, against +100% for moti
 
 ![Paired lap-time differences, upright PnP on minus off](img/paired_laps_upright.png)
 
-  Upright PnP: 149 of 293 paired runs faster, mean −0.036 s (median −0.003 s): no change in
+  Upright PnP: 149 of 293 paired runs faster, mean -0.036 s (median -0.003 s): no change in
   pace.
 
 ![Paired lap-time differences, unambiguous yaw votes on minus off](img/paired_laps_unamb.png)
 
-  Unambiguous yaw votes: 166 of 297 paired runs faster, mean −0.007 s (median −0.005 s): no
+  Unambiguous yaw votes: 166 of 297 paired runs faster, mean -0.007 s (median -0.005 s): no
   change in pace.
-* **Simulator changes** go in as a `SimConfig` field defaulting to the old behaviour, then the
+* Simulator changes go in as a `SimConfig` field defaulting to the old behaviour, then the
   default is flipped in a separate commit and the benchmark re-baselined.
 
 ## 6. Debugging stories
@@ -447,68 +425,68 @@ one, so the outline is not a 4-gon and `approxPolyDP` fails. RANSAC edge fitting
 hole contours as detections fixed it. Later, merged outlines sometimes failed the uprightness
 check, so the stack falls back to the gate's own opening (89.2% at the end of bootstrap).
 
-### 6.2 Phantom handoffs (89.2% → 94.5%)
+### 6.2 Phantom handoffs (89.2% to 94.5%)
 Hooking the handoff with ground truth (diagnostics only, never fed back) showed that in 6 of
-the 9 seed-0 failures the next gate's estimate was 2–5 m short. The real gate then fell into
+the 9 seed-0 failures the next gate's estimate was 2-5 m short. The real gate then fell into
 no category: outside the association radius, not far enough to be "next", not nearer. The
-filter flew about a second on IMU alone, declared a pass 2–3 m early and clipped the frame.
+filter flew about a second on IMU alone, declared a pass 2-3 m early and clipped the frame.
 The fix was a rule that every detection must land in some category that can correct the
-target (lost-target recovery). Pooled over 3 seed sets: 89.1% → 94.3%.
+target (lost-target recovery). Pooled over 3 seed sets: 89.1% to 94.3%.
 
-### 6.3 Measure bias per detection type (pooled 92.7% → 95.8%)
+### 6.3 Range bias by detection type (pooled 92.7% to 95.8%)
 Comparing every PnP range with the nearest true gate, split by detection type, showed that
-RANSAC outlines of merged gates read 16–20% too near at 7–16 m: the fit overshoots onto the
+RANSAC outlines of merged gates read 16-20% too near at 7-16 m: the fit overshoots onto the
 other gate, so the gate looks bigger. These are exactly the detections that make next-gate
 sightings, so they caused the short handoffs. "Always use the opening" was noise and broke
 some seeds; "use the opening only when the two size cues disagree by more than 8%" helped on
 all four seed sets.
 
-### 6.4 The bug was in the simulator
+### 6.4 Renderer anti-aliasing bug
 A first sub-pixel corner refinement made squares read *more* wrong, by exactly 1.0 px RMS at
 every range. A constant pixel offset meant the edges were drawn in the wrong place: OpenCV's
 `fillPoly(LINE_AA)` paints about 0.7 px beyond every edge (a 20 px square covers 456 px², not
 400). The detector had been tuned to a renderer defect. The fix went into the simulator
 (area-coverage anti-aliasing, 8× supersampled), followed by a re-baseline. With the corrected
-renderer, sub-pixel corners have 0.1–0.3 px RMS error at 2–20 m.
+renderer, sub-pixel corners have 0.1-0.3 px RMS error at 2-20 m.
 
-### 6.5 A cue with nothing to check it against (pooled 96.25% → 97.50%)
+### 6.5 Far RANSAC outlines with no opening (pooled 96.25% to 97.50%)
 After the renderer fix and sub-pixel corners, the same per-type bias measurement (seeds 0-19,
 about 20 000 detections) showed clean outlines and openings within ~1% of the true range up
 to 13 m. What was still wrong were RANSAC outlines with *no valid opening of their own*: the
 6.3 check cannot run on them, and beyond 7 m they read gates a median 12% too near (about
 three in four more than 5% near). Dropping them beyond 6 m measured range lowered the median
-estimation error on all five seed sets (seed 0: 0.556 → 0.394 m), removed every
-`missed_gate` outcome (4 → 0) and raised the pooled pass rate from 96.25% to 97.50% (11 runs
-rescued, 4 broken) with unchanged lap times (paired mean −0.007 s over 229 runs). Re-tuning
+estimation error on all five seed sets (seed 0: 0.556 to 0.394 m), removed every
+`missed_gate` outcome (4 to 0) and raised the pooled pass rate from 96.25% to 97.50% (11 runs
+rescued, 4 broken) with unchanged lap times (paired mean -0.007 s over 229 runs). Re-tuning
 the 8% disagreement threshold instead would have done little: on the same data, RANSAC
 outlines beyond 7 m read a median 2.8% near with a 0% threshold and 3.5% near with 8%, and
 about half stay more than 5% off either way, because more than half of them have no opening
 to compare against.
 
-### 6.6 The crashes were control, not perception (laps −1.03 s)
+### 6.6 Time-to-go floor and saturated guidance (laps -1.03 s)
 With perception fixed up, the remaining failures looked different. Re-flying the 10 failed
 runs over five seed sets with truth logged showed every crash hitting the target gate's frame
-0.5–0.8 m off centre, and in 8 of 10 the estimate was within 6 cm of the truth at impact: the
-drone knew where the gate was but could not get there. The guidance was asking for 30–75 m/s²
+0.5-0.8 m off centre, and in 8 of 10 the estimate was within 6 cm of the truth at impact: the
+drone knew where the gate was but could not get there. The guidance was asking for 30-75 m/s²
 against a 14 m/s² limit, and clipping the vector uniformly spent most of the budget on
 along-track *braking*.
 
 The first try reordered the clip (lateral first, along-track gets what is left). It rescued 8
 runs and broke 8 others: with the full budget sideways until about 1.8 m out, the drone built
-4–5 m/s of lateral speed it could not remove and overshot into the other side of the frame.
+4-5 m/s of lateral speed it could not remove and overshot into the other side of the frame.
 Left off.
 
 The better question was why there was braking at all. Printing the demand per axis on a
 nominal state (on the gate axis, at cruise speed) showed it: the 0.3 s floor on time-to-go is
 active from about 2.4 m out at 8 m/s, so the cubic believes it will arrive *early* and brakes
-(−27 m/s² at x = −2 m with 0.6 m lateral offset). Taking T from the along-track motion and
+(-27 m/s² at x = -2 m with 0.6 m lateral offset). Taking T from the along-track motion and
 dropping the floor on that axis removed the phantom braking. Pooled pass rate stayed flat
-(97.50% → 97.75%; 8 runs rescued, 7 broken) and laps got 1.03 s faster on 233 paired runs,
+(97.50% to 97.75%; 8 runs rescued, 7 broken) and laps got 1.03 s faster on 233 paired runs,
 which counts as an improvement under the pace rule. The 7 broken runs are the same failure at
 higher speed: lateral demand saturating close to the gate, often after a late correction
 following a handoff.
 
-### 6.7 Plan around the limit instead of clipping at it (pooled 97.92% → 99.08%)
+### 6.7 Feasible lateral guidance (pooled 97.92% to 99.08%)
 Both attempts in 6.6 still let guidance ask for the impossible and then decided what to drop.
 The fix was to never ask: because the cubic's acceleration is linear in time, its peak sideways
 demand has a closed form, so guidance can choose the lateral time-to-go that keeps the peak at
@@ -516,30 +494,30 @@ demand has a closed form, so guidance can choose the lateral time-to-go that kee
 (section 3.6). Over six seed sets it rescued 9 runs (8 of them the lateral-saturation crashes
 from 6.6) and broke 4, raising the pooled pass rate from 97.92% to 99.08% and completed courses
 from 290 to 295, for 0.34 s (3%) of lap time. Re-flying the broken runs showed what comes next:
-three were handoffs where the next gate's estimate started 2–4 m off sideways, and the new law
+three were handoffs where the next gate's estimate started 2-4 m off sideways, and the new law
 braked and chased it until sightings corrected it. Fixing one subsystem tends to expose the
 next one.
 
-### 6.8 An error the main measurement cannot see (handoff yaw)
-Those 2–4 m post-handoff errors persisted for 0.5–0.7 s even though the first sighting after
-each handoff was *accepted* by the χ² test within 0.01–0.08 s. The reason is geometric. The
+### 6.8 Next-gate yaw error at handoff
+Those 2-4 m post-handoff errors persisted for 0.5-0.7 s even though the first sighting after
+each handoff was *accepted* by the χ² test within 0.01-0.08 s. The reason is geometric. The
 filter lives in the target gate's frame, and its main measurement is the gate centre seen from
 the camera (direction and range). If the next gate's *yaw* is estimated wrong by θ, the handoff
 re-expresses the drone's pose in a frame rotated by θ about the gate centre: the estimated drone
 is a rigid rotation of the true one about that centre, so the gate centre looks exactly where
 it should and the innovation is zero. Only the weak PnP attitude update can see θ. Checked
 against truth over 685 handoffs on seed sets 0 and 1000, the averaged next-gate yaw had an RMS
-error of 9–10.5° (worse below 7 m), 8–11% of handoffs were more than 15° off, the failing ones
-16–46°, and its claimed σ was 2–3× too small because sightings from one viewpoint share their
+error of 9-10.5° (worse below 7 m), 8-11% of handoffs were more than 15° off, the failing ones
+16-46°, and its claimed σ was 2-3× too small because sightings from one viewpoint share their
 bias. Flooring that σ at 12° (so the attitude updates can pull it in) was flat: pooled
-99.08% → 99.17%, one run rescued, none broken, so it was left off. A wider prior cannot help
-much while the attitude measurement itself is single-square PnP rotation (5–30° noise); the
+99.08% to 99.17%, one run rescued, none broken, so it was left off. A wider prior cannot help
+much while the attitude measurement itself is single-square PnP rotation (5-30° noise); the
 planned fix is a better yaw measurement (section 6.9).
 
-### 6.9 Don't measure a quantity with the filter's own estimate (pooled 99.08% → 99.54%)
+### 6.9 Upright PnP (pooled 99.08% to 99.54%)
 The better yaw measurement is the upright PnP of section 3.2. Offline, on synthetic corners with
-0.5 px noise and 1° error in "up", it cut the drone's yaw error RMS from 3.3° to 2.1° at 2–5 m
-and from 7.9° to 5.4° at 5–8 m (yaw errors over 15°: 8.0% → 1.2%). The first version also
+0.5 px noise and 1° error in "up", it cut the drone's yaw error RMS from 3.3° to 2.1° at 2-5 m
+and from 7.9° to 5.4° at 5-8 m (yaw errors over 15°: 8.0% to 1.2%). The first version also
 replaced the 3-axis attitude update with a yaw-only one, since the constrained pose's roll and
 pitch are just the filter's own values fed back. In flight it was *worse*: pooled 97.71%,
 completed 289 instead of 295. It rescued 4 of the handoff-yaw runs and broke 10. Re-flying a
@@ -548,8 +526,8 @@ tilt update, only the accelerometer constrains tilt, and an upright fit made wit
 quietly absorbs that tilt error instead of exposing it. Constraining a measurement with the
 estimate removes that quantity's observability. The fix was to keep an independent source:
 roll and pitch from the unconstrained IPPE fit, yaw and position from the upright fit. That
-version rescued 5 runs and broke 2 (pooled 99.08% → 99.54%, completed 295 → 298), with lap
-times flat on 293 paired runs (−0.036 s). It helps camera-only mode (no IMU; the filter predicts
+version rescued 5 runs and broke 2 (pooled 99.08% to 99.54%, completed 295 to 298), with lap
+times flat on 293 paired runs (-0.036 s). It helps camera-only mode (no IMU; the filter predicts
 from the commanded thrust and rates) even more: pooled 92.96% before, 98.62% with it
 (`results/2026-10-20_dcb8934_ab-camonly[-seedN].json`), probably because without a gyro the heading
 between frames rests on the vision yaw (not yet checked against truth). With the later
@@ -557,61 +535,61 @@ unambiguous yaw votes (6.11) camera-only scores 97.79% (290/300 completed, 6 run
 rescued against 98.62%; `results/2026-10-25_75277ee_ab-camonly[-seedN].json`) while camera + IMU
 rose to 99.83%; whether that drop is noise has not been checked.
 
-### 6.10 Measure the ceiling on real frames first (joint fit, flat)
+### 6.10 Joint outline and opening fit (flat)
 Each gate shows two concentric squares, the outline and the opening, so the next idea was to
-fit all 8 corners in one upright solve. The synthetic 0.5 px noise model predicted 15–20%
-better yaw. In flight it was flat (pooled 99.54% → 99.54%, one run rescued and one broken), so
+fit all 8 corners in one upright solve. The synthetic 0.5 px noise model predicted 15-20%
+better yaw. In flight it was flat (pooled 99.54% to 99.54%, one run rescued and one broken), so
 it was left off. Measuring on frames from the real renderer and detector (250 clean single-gate
 detections per range band) showed why: with sub-pixel corners the outline alone already gives
-yaw RMS 0.27° at 2–5 m, 0.77° at 5–8 m and 1.59° at 8–12 m, with range bias under 0.1%. The
+yaw RMS 0.27° at 2-5 m, 0.77° at 5-8 m and 1.59° at 8-12 m, with range bias under 0.1%. The
 joint fit only helps beyond 12 m. The synthetic model had predicted 1.5°, 4.6° and 9.3° for
 the outline alone in the same bands, five to six times too pessimistic, so the remaining yaw error does not come from clean detections; it comes from
 merged or overlapping gates and from averaging sightings taken from one viewpoint.
 
-### 6.11 Split a measurement by how ambiguous its solver was (pooled 99.54% → 99.83%)
-Section 6.8 showed handoff yaw errors of 16–46° in failing runs. Splitting next-gate sightings
+### 6.11 Unambiguous yaw votes (pooled 99.54% to 99.83%)
+Section 6.8 showed handoff yaw errors of 16-46° in failing runs. Splitting next-gate sightings
 by how many upright PnP solutions survived (checked against truth) found the source: where two
-solutions survive, the sighting's yaw had an RMS error of 17–44°, and even the better of the
-two was 29° off; with a single solution it was 5–10°. Fifty or more such sightings averaged
-into a confident 25–40° handoff error, because averaging only removes independent noise, and
+solutions survive, the sighting's yaw had an RMS error of 17-44°, and even the better of the
+two was 29° off; with a single solution it was 5-10°. Fifty or more such sightings averaged
+into a confident 25-40° handoff error, because averaging only removes independent noise, and
 two-solution sightings are wrong in the same way. The fix keeps two yaw averages per next-gate
-hypothesis — all sightings, and single-solution sightings only — and the handoff uses the
+hypothesis (all sightings, and single-solution sightings only) and the handoff uses the
 second; positions still use every sighting. A first version that fell back to the bearing prior
 alone when a gate had no single-solution sighting was flat (99.54%): it broke a retarget to a
 fresh hypothesis whose four sightings were all ambiguous and whose bearing prior was 54° off.
 Falling back to all sightings instead (the old behaviour) rescued 1005 and 5007 and broke 2003
-(pooled 99.54% → 99.83%). The handoff yaw RMS right after the switch fell from 6.3° to 4.2° on
+(pooled 99.54% to 99.83%). The handoff yaw RMS right after the switch fell from 6.3° to 4.2° on
 seed set 1000 and from 7.0° to 6.2° on 5000, and the median per-run estimation error fell on
-all six sets (0.29–0.36 m → 0.20–0.24 m), with laps flat. 2003 is not a yaw problem: its gate 4
+all six sets (0.29-0.36 m to 0.20-0.24 m), with laps flat. 2003 is not a yaw problem: its gate 4
 sits 7 m behind gate 3 and was seen twice before the pass (five times before the change), below
 the minimum sighting count, so the handoff went to gate 5. A fallback should never be worse
 than the path it replaces.
 
-### 6.12 Check a recovery was right before repairing what it leaves behind (flat)
+### 6.12 Gate hypotheses after a filter reinit (flat)
 After 8 χ²-rejected measurements in a row the filter re-initialises (section 3.4). In 5007 the
 next-gate hypotheses had been placed with the pre-reinit pose, so the next idea was to apply the
-reinit's pose correction to them (or drop them). Both were exact and flat: pooled 99.83% →
+reinit's pose correction to them (or drop them). Both were exact and flat: pooled 99.83% to
 99.83%, only the 12 of 300 runs that re-initialise changed, all still complete. Hooking the
 reinit with truth showed why it could not help the case it was written for: at the first reinit
 in 5007 the filter was 6 cm and 0° off, and the 8 rejected frames were one *biased* opening
-detection (0.40 m centre error, two upright solutions at +44° and −65°). χ² had been right to
+detection (0.40 m centre error, two upright solutions at +44° and -65°). χ² had been right to
 reject it; the reinit then adopted it and put the filter 4.9 m and 44° off. Re-expressing gate
 hypotheses after such a reinit only makes them agree with a wrong pose. The next step is to stop
 re-initialising from an ambiguous measurement.
 
-### 6.13 Fix the cause, then find the benchmark can't see it (flat)
+### 6.13 Reinit guard for two-solution measurements (flat)
 Following 6.12, a reinit can no longer be triggered by a measurement with two valid poses; the
 next rejected single-solution measurement triggers it instead, or any measurement once 24 rejects
 have piled up, so a filter that really has drifted still recovers. On 5007 it did what it was
-written for: no reinit, position error RMS 1.15 → 0.34 m (max 4.88 → 1.90 m), yaw error RMS
-9.2° → 2.0°. But only 2 of 300 runs changed and both had completed anyway (pooled 99.83% →
+written for: no reinit, position error RMS 1.15 to 0.34 m (max 4.88 to 1.90 m), yaw error RMS
+9.2° to 2.0°. But only 2 of 300 runs changed and both had completed anyway (pooled 99.83% to
 99.83%, `results/2026-10-26_f3542f3_ab-reinit-unamb[-seedN].json`), so under the A/B rule it was
 left off. The camera-only files had 0 reinits in 300 runs, so a camera-only re-run was not needed
 (count how often a mechanism fires before re-running an A/B in another mode). A benchmark with
 one failure in 300 courses can no longer judge changes like this one, which is why the world was
 made harder next (section 4.2).
 
-### 6.14 Clutter broke the gate's structure, not the gate count
+### 6.14 Clutter seen through the gate opening
 On the clutter world the expected failure was the drone chasing a distractor. Some runs did
 (in seed 0 the filter was tracking the wrong object 38% of the time). But half the failures were runs
 that never left the hover: 1028, 3027, 4039 and 5033 timed out at gate 0 in both sensing modes.
@@ -621,30 +599,30 @@ frame, in 3027 with all four corners within 0.2 px of the truth. What was missin
 not a quadrilateral. Without the opening, the lone outline got no PnP candidate, and the filter
 never initialised. The look-alikes hurt by breaking a real gate's structure, not by posing as one.
 
-### 6.15 Log why each detection was dropped before writing one fix (pooled 97.75% → 98.58%)
+### 6.15 Init rescue (pooled 97.75% to 98.58%)
 Hooking the stack's candidate selection while hovering showed three different causes in the four
 runs:
 
-* **3027, 4039:** a lone RANSAC outline at 6.2–6.7 m with no opening, dropped every frame by the
+* 3027, 4039: a lone RANSAC outline at 6.2-6.7 m with no opening, dropped every frame by the
   rule of section 6.5 (lone RANSAC outlines beyond 6 m read gates too near, and with no opening
-  there is nothing to cross-check them against). The first gate starts 5–7 m away.
-* **1028:** a clean outline whose upright fit failed (4.3 px reprojection error) because a cone
+  there is nothing to cross-check them against). The first gate starts 5-7 m away.
+* 1028: a clean outline whose upright fit failed (4.3 px reprojection error) because a cone
   touching the frame pulled one corner about 7 px out. Fitted to the other three corners, the
   upright pose reprojects to 0.23 px at 6.38 m (true 6.51 m); no other choice of three corners fits.
-* **5033:** a merged blob and a 39 px² false "opening" at an apparent 22 m: nothing usable.
+* 5033: a merged blob and a 39 px² false "opening" at an apparent 22 m: nothing usable.
 
 The fix applies only while hovering and only to a frame that produced no candidate at all: keep
 lone far RANSAC outlines, and when the 4-corner upright fit fails, accept a 3-corner fit if exactly
 one dropped corner brings the rest within 1 px. Because every other frame takes the normal path,
 the other runs are bit-identical (the mechanism fired in 14 of 300 runs), which makes the A/B easy
-to read. With the IMU it rescued 1028, 3027 and 4039 and broke 4038 (pooled 97.75% → 98.58%,
-completed 292 → 294); camera-only it rescued the same three and broke none (96.46% → 97.46%).
+to read. With the IMU it rescued 1028, 3027 and 4039 and broke 4038 (pooled 97.75% to 98.58%,
+completed 292 to 294); camera-only it rescued the same three and broke none (96.46% to 97.46%).
 Paired lap times did not change (0.000 s over 291 runs). Checked against truth, the lone-outline
-initialisations were 0.19–0.41 m off, but the 3-corner ones 1.5–1.7 m off, mostly sideways: three
+initialisations were 0.19-0.41 m off, but the 3-corner ones 1.5-1.7 m off, mostly sideways: three
 corners of a 35 px square pin the range to about 2% but the yaw only to about 14°, which the
 filter then has to correct. 4038 crashed four gates after such an initialisation (not traced
 further). The same check found that in seed 0 runs 0 and 39, and in 4038, the filter initialises
-on a distractor 10–12 m from every gate, chosen because it was the biggest candidate: that is the
+on a distractor 10-12 m from every gate, chosen because it was the biggest candidate: that is the
 next problem.
 
 ## 7. Limitations and next steps
@@ -666,3 +644,19 @@ next problem.
 
 See [ROADMAP.md](../ROADMAP.md) for the ranked list and [NIGHTLY_LOG.md](../NIGHTLY_LOG.md)
 for the full history.
+
+## Appendix: results files
+
+The files behind each table, all in [`results/`](../results). `[-seedN]` stands for the seed
+sets 1000 to 5000; the seed-0 file has no suffix.
+
+| table | files |
+|---|---|
+| 2, current simulator | [`2026-10-28_e65b78d_baseline.json`](../results/2026-10-28_e65b78d_baseline.json) (seed set 0), `2026-10-28_059848c_ab-init-rescue[-camonly][-seedN].json` (init rescue on, same code as the default), `2026-10-27_11f0132_rebaseline-clutter[-seedN].json` (init rescue off) |
+| 2, clutter-free world | [`2026-10-22_5143039_baseline.json`](../results/2026-10-22_5143039_baseline.json), [`2026-10-19_9acf025_baseline.json`](../results/2026-10-19_9acf025_baseline.json), [`2026-10-16_3395fb0_baseline.json`](../results/2026-10-16_3395fb0_baseline.json), [`2026-10-15_1d4bb7f_baseline.json`](../results/2026-10-15_1d4bb7f_baseline.json), [`2026-10-13_0f1e256_baseline.json`](../results/2026-10-13_0f1e256_baseline.json), [`2026-10-12_3b6cbbb_baseline.json`](../results/2026-10-12_3b6cbbb_baseline.json), [`2026-10-12_06ceff9_baseline.json`](../results/2026-10-12_06ceff9_baseline.json), one per row from the top |
+| 2, component A/Bs | the file prefix is given in the table's last column |
+| 2.1 camera only | `2026-10-28_059848c_ab-init-rescue[-camonly][-seedN].json`; seed 0 camera + IMU is [`2026-10-28_e65b78d_baseline.json`](../results/2026-10-28_e65b78d_baseline.json) |
+| 2.2 before the renderer fix | [`2026-10-11_68513f6_baseline.json`](../results/2026-10-11_68513f6_baseline.json), [`2026-10-11_68513f6_ablation-no-robust-inner.json`](../results/2026-10-11_68513f6_ablation-no-robust-inner.json), [`2026-10-10_0181f50_ablation-no-recovery.json`](../results/2026-10-10_0181f50_ablation-no-recovery.json), [`2026-10-07_c25234a_ablation-no-chi2.json`](../results/2026-10-07_c25234a_ablation-no-chi2.json), [`2026-10-07_c25234a_ablation-4mps.json`](../results/2026-10-07_c25234a_ablation-4mps.json) |
+| 4.1 latency | `2026-10-2{0,1}_1077d61_latency-*ms.json`; 0 ms is `2026-10-19_9acf025_baseline.json` |
+| 4.1 exposure | `2026-10-23_f58b856_exposure-*ms.json`; 0 ms is `2026-10-22_5143039_baseline.json` |
+| 4.2 clutter sweep | `2026-10-27_c76b992_{knob-clutter0,sweep-clutter10,sweep-clutter20,sweep-clutter40}.json` |
