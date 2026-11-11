@@ -133,6 +133,57 @@ but every run would time out under the clock (57.0%,
 [`c25234a_ablation-4mps`](../results/2026-10-07_c25234a_ablation-4mps.json)). Flying slowly is
 not a way to score, which is why the benchmark runs at 8 m/s.
 
+### 2.1 Camera only, per seed set
+
+`--flag camera_only=true` drops the IMU: between frames the filter predicts motion from the
+drone's own thrust and body-rate commands through an assumed vehicle model (rate and thrust
+lags, linear drag), using the airframe's nominal values. A real drone's model would be less
+exact.
+
+| seed set | camera + IMU (default) | camera only |
+|---|---|---|
+| 0 | 95.75% | 96.75% |
+| 1000 | 100.0% | 100.0% |
+| 2000 | 100.0% | 98.5% |
+| 3000 | 100.0% | 93.75% |
+| 4000 | 97.75% | 97.75% |
+| 5000 | 98.0% | 98.0% |
+| pooled (2400 gates) | **98.58%** | **97.46%** |
+
+Source: `results/2026-10-28_059848c_ab-init-rescue[-camonly][-seedN].json` (init rescue on, the
+same code as the default; seed 0 camera + IMU is
+[`2026-10-28_e65b78d_baseline.json`](../results/2026-10-28_e65b78d_baseline.json)). Camera
+only completes 289 of 300 courses against 294, with laps 11.42–11.65 s per set. Init rescue
+helped it about as much as the default (96.46% → 97.46%). Five of its 11 failures are crashes
+within the first three gates, which the IMU version never has.
+
+### 2.2 Before the renderer fix
+
+The earlier renderer (cv2 anti-aliased fill) painted gates about 0.7 px too wide on every edge
+(section 6.4). Numbers from that world are not comparable with the tables above:
+
+| configuration | gate pass rate | courses completed | mean lap |
+|---|---|---|---|
+| baseline (8 m/s) | 95.2% | 94% | 12.1 s |
+| same, robust-outline check off | 94.5% | 90% | 12.0 s |
+| earlier baseline, lost-target recovery off | 89.2% | 82% | 11.9 s |
+| earlier baseline, chi-squared gating off | 75.5% | 60% | 12.0 s |
+| cruise 4 m/s (race clock expires) | 57.0% | 0% | — |
+
+Source: [`baseline`](../results/2026-10-11_68513f6_baseline.json),
+[`no robust-outline check`](../results/2026-10-11_68513f6_ablation-no-robust-inner.json),
+[`no recovery`](../results/2026-10-10_0181f50_ablation-no-recovery.json),
+[`no chi2`](../results/2026-10-07_c25234a_ablation-no-chi2.json),
+[`4 m/s`](../results/2026-10-07_c25234a_ablation-4mps.json).
+
+### 2.3 UDP link mode
+
+With `--link udp` the autonomy runs as its own process and exchanges Observations and Commands
+with the simulator over localhost UDP in lockstep. Arrays travel as raw bytes and floats as
+exact JSON reprs, so the 50-run benchmark gives per-run results identical to in-process mode
+([`2026-10-11_8d3e44c_link-udp.json`](../results/2026-10-11_8d3e44c_link-udp.json) vs
+[`2026-10-11_8d3e44c_baseline.json`](../results/2026-10-11_8d3e44c_baseline.json)).
+
 ## 3. Pipeline
 
 ```mermaid
