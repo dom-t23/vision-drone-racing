@@ -1,23 +1,23 @@
-# CLAUDE.md — working rules for this repo
+# CLAUDE.md: working rules for this repo
 
 Vision-based autonomous drone racing in a self-contained Python simulator. A racing
 quadrotor flies a course of identical square gates using only its monocular FPV camera
 and IMU. This file is read at the start of every overnight run. The scheduled task's
 prompt is the top-level authority; nothing here may weaken it.
 
-## Non-negotiables (summary — the task prompt has the full text)
+## Non-negotiables (summary: the task prompt has the full text)
 
-- **Separation rule.** The autonomy (`vdr/autonomy/`) receives only what is in
+- Separation rule. The autonomy (`vdr/autonomy/`) receives only what is in
   `vdr/interface.py`: camera images, IMU samples, camera intrinsics/extrinsics, gate size,
   vehicle limits. Never pass ground truth, gate positions, course layout or projected
-  corners. `tests/test_separation.py` enforces this — never weaken it.
-- **Standalone project.** No references to any competition, its simulator, rules or branding.
-- **Honest results.** Every number in docs comes from a committed `results/*.json`.
-- **Design decisions fixed by Dom:** thrust + body-rate (acro) commands; all gates identical
+  corners. `tests/test_separation.py` enforces this - never weaken it.
+- Standalone project. No references to any competition, its simulator, rules or branding.
+- Honest results. Every number in docs comes from a committed `results/*.json`.
+- Design decisions fixed by Dom: thrust + body-rate (acro) commands; all gates identical
   with no IDs (the course guarantees the next gate is visible after each pass); first-week
   extras: README flight GIF, optional UDP link mode, GitHub Actions CI.
 - Git: work on `main`, small commits, never force-push, never delete Dom's work.
-- **README voice.** `README.md` is written in Dom's voice, in plain prose. When updating it,
+- README voice. `README.md` is written in Dom's voice, in plain prose. When updating it,
   keep its tone, length and structure: change numbers and facts, not the style. Do not add a
   "How this was built" section back (Dom removed it). Detailed tables and per-seed results belong in
   `docs/WRITEUP.md`, not the README.
@@ -25,10 +25,10 @@ prompt is the top-level authority; nothing here may weaken it.
 ## Architecture
 
 ```
-vdr/interface.py      VehicleInfo / Observation / Command  — the ONLY sim<->autonomy contract
+vdr/interface.py      VehicleInfo / Observation / Command  - the ONLY sim<->autonomy contract
 vdr/geometry.py       SO(3) helpers + camera mount (pure maths, shared)
 vdr/sim/              ground truth lives here
-  config.py           SimConfig — every "how hard is the world" knob (incl. camera_latency and
+  config.py           SimConfig - every "how hard is the world" knob (incl. camera_latency and
                       exposure_time / motion blur, both default 0; n_distractors orange clutter,
                       default 20 since 2026-10-27)
   dynamics.py         rigid body; acro inner loops as first-order lags; rotor + quadratic drag
@@ -37,7 +37,7 @@ vdr/sim/              ground truth lives here
   course.py           seeded courses with visibility / nearest-next-gate guarantees; clutter placement
   world.py            Simulator: lockstep stepping, gate pass/crash scoring, race clock
 vdr/autonomy/
-  config.py           AutonomyConfig — every tunable + experiment flags
+  config.py           AutonomyConfig - every tunable + experiment flags
   detector.py         HSV threshold -> contours (outer + holes) -> quad fit (approxPolyDP, RANSAC fallback)
   pnp.py              IPPE_SQUARE + upright 4-DoF refinement, gravity-resolved labelling, frame maths, noise
   eskf.py             15-state error-state KF in the target gate's frame; chi2-gated updates; frame change
@@ -75,24 +75,24 @@ python -m vdr.report                                  # regenerate write-up figu
 ```
 
 `from vdr.runner import run_episode; run_episode(seed, record=True)` returns the trajectory,
-estimate trace and course for one seed — use it to debug a specific failure.
+estimate trace and course for one seed - use it to debug a specific failure.
 
 ## Benchmark rules
 
-- **Headline metric:** gate pass rate on `--runs 50 --seed 0` with default configs
+- Headline metric: gate pass rate on `--runs 50 --seed 0` with default configs
   (gates passed in order / gates on course; a run ends at the first crash, miss or timeout).
   Also report completion rate, outcomes, and mean lap time of completed runs.
-- **Race clock:** each run must average >= `race_min_speed` (5 m/s) along the gate-to-gate
-  path or it times out. Slowing down is not a way to score (4 m/s gives 57% — see results).
-- **Pace rule:** do not lower `cruise_speed` (or otherwise slow the drone) to gain pass rate.
+- Race clock: each run must average >= `race_min_speed` (5 m/s) along the gate-to-gate
+  path or it times out. Slowing down is not a way to score (4 m/s gives 57% - see results).
+- Pace rule: do not lower `cruise_speed` (or otherwise slow the drone) to gain pass rate.
   A change only counts as an improvement if pass rate rises without mean lap time getting
   more than 5% worse. Going faster at equal pass rate is an improvement.
-- **Noise:** with 50 runs, differences under ~8 percentage points are noise. Confirm smaller
+- Noise: with 50 runs, differences under ~8 percentage points are noise. Confirm smaller
   gains on a second seed set (`--seed 1000`) before keeping them.
-- **A/B procedure:** add the idea behind an `AutonomyConfig` bool (default False), run the
+- A/B procedure: add the idea behind an `AutonomyConfig` bool (default False), run the
   harness with it on and off on the same seeds, keep it only if it clearly helps (then flip
   the default to True, keep the flag for ablation), otherwise revert/leave off and log why.
-- **Making the sim harder:** add a `SimConfig` field whose default keeps old behaviour, then
+- Making the sim harder: add a `SimConfig` field whose default keeps old behaviour, then
   flip the default in a separate commit, re-baseline with `--tag rebaseline-<what>`, and say
   in NIGHTLY_LOG that numbers before/after aren't comparable.
 - Results files: `results/<date>_<commit>[-dirty]_<tag>.json`. Commit code first so the
@@ -107,147 +107,152 @@ estimate trace and course for one seed — use it to debug a specific failure.
 
 ## Lessons learned
 
-- 2026-10-07 — Initialising roll/pitch from a single accelerometer sample tilted the filter
+- 2026-10-07: Initialising roll/pitch from a single accelerometer sample tilted the filter
   by up to ~10 deg (IMU noise is ~0.7 m/s^2 per sample), which showed up as a 1 m height error
   at 6 m and a slow yaw divergence (seed 7 crashed). Averaging 40 samples while hovering
   fixed it (`init_min_imu_samples`).
-- 2026-10-07 — Identical gates overlap in the image all the time (the next gate is seen
+- 2026-10-07: Identical gates overlap in the image all the time (the next gate is seen
   through or touching the current one), so 4-vertex `approxPolyDP` alone fails at the start
   of most runs. RANSAC edge fitting + using hole contours as INNER detections fixed it; reject
   RANSAC fits whose edges don't cover >= 60% of the outline (merged distant gates).
-- 2026-10-07 — Single-square PnP gives good gate *position* (cm at 6 m) but poor *rotation*
+- 2026-10-07: Single-square PnP gives good gate *position* (cm at 6 m) but poor *rotation*
   (5-30 deg, plus IPPE flips at range). Hence the filter uses the gate centre in the camera
   frame as its main measurement and treats attitude as a separate, weaker, gated update.
-- 2026-10-07 — Next-gate estimates from far sightings share a depth bias; trusting them too
+- 2026-10-07: Next-gate estimates from far sightings share a depth bias; trusting them too
   much caused phantom targets ~1.5 m short of the real gate. Floor the handoff position
   uncertainty by range (`switch_pos_sigma_per_m`) and keep the target association radius
   generous (the chi2 gate decides), with "next gate" requiring >= 3 m beyond the target.
-- 2026-10-07 — A time-to-go floor in the cubic guidance made the drone brake to a stop 0.7 m
+- 2026-10-07: A time-to-go floor in the cubic guidance made the drone brake to a stop 0.7 m
   before a gate. Switch to a terminal "hold the line" mode at x > -1.2 m instead.
-- 2026-10-07 — When a gate's outline merges with another gate, its RANSAC quad can fail the
+- 2026-10-07: When a gate's outline merges with another gate, its RANSAC quad can fail the
   uprightness check; fall back to the gate's own inner opening rather than dropping it
   (seed 25 never initialised before; baseline 82.2% -> 89.2%).
-- 2026-10-07 — Chi-squared gating is worth ~14 pp of pass rate at race pace
+- 2026-10-07: Chi-squared gating is worth ~14 pp of pass rate at race pace
   (results/2026-10-07_c25234a_ablation-no-chi2.json 75.5% vs _baseline.json 89.2%).
 
-- 2026-10-10 — A depth-biased handoff estimate (2-5 m short) leaves the real gate outside
+- 2026-10-10: A depth-biased handoff estimate (2-5 m short) leaves the real gate outside
   the association radius but short of "next gate" range, so it was silently ignored and the
   filter flew blind with a falsely small covariance. Every detection must land in *some*
   category that can correct the target: a gate straight ahead beyond an unmatched target now
   becomes the target (`recover_lost_target`; 89.2% -> 94.5%). Diagnose handoffs by hooking
   `_handoff` with truth (estimate minus true position right after the switch).
 
-- 2026-10-11 — Measure PnP bias per detection *type* before tuning filters: a scratch script
+- 2026-10-11: Measure PnP bias per detection *type* before tuning filters: a scratch script
   comparing each solution's range with the nearest true gate (by outer / inner / RANSAC) found
-  RANSAC outlines of merged gates reading ~18% too near at 7-16 m — the main source of short
+  RANSAC outlines of merged gates reading ~18% too near at 7-16 m - the main source of short
   handoffs. "Always use the opening instead" was noise; "use it only when the two size cues
   disagree" helped on all four seed sets (pooled 92.7% -> 95.8%). When a fix breaks some seeds,
   look at what was different in those cases rather than discarding it.
-- 2026-10-11 — To show two execution paths are equivalent, compare `per_run` entries (minus
+- 2026-10-11: To show two execution paths are equivalent, compare `per_run` entries (minus
   `wall_s`), not summaries: identical pass rates can hide different per-seed outcomes. UDP mode
   sends arrays as raw bytes and floats via JSON repr, both exact, so it matches bit-for-bit.
 
-- 2026-10-12 — When a perception fix makes a bias *worse* by a constant number of pixels,
+- 2026-10-12: When a perception fix makes a bias *worse* by a constant number of pixels,
   check the renderer before the detector: cv2 `fillPoly(LINE_AA)` paints ~0.7 px beyond every
   edge (a 20 px square covers 456 px², not 400). Measure the renderer against geometry (painted
   area, half-coverage at an edge) whenever a sub-pixel effect matters; fix the sim, don't tune
   the autonomy to it. Scenario tests found on an old renderer pin that renderer.
-- 2026-10-12 — Per-seed outcomes are chaotic: swapping an SVD line fit for a closed-form one
+- 2026-10-12: Per-seed outcomes are chaotic: swapping an SVD line fit for a closed-form one
   (corners equal to 1e-13 px) changed 40+ of 50 trajectories and flipped 1-2 outcomes per seed
   set (seed 0 96.8% -> 97.5%, seed 1000 96.0% -> 94.8%). Judge sub-8 pp changes only pooled
   over several seed sets, and use paired per-run lap times (runs completed both ways) for
-  speed — sub-pixel corners: pass rate flat, -0.155 s on 145/179 paired runs.
+  speed - sub-pixel corners: pass rate flat, -0.155 s on 145/179 paired runs.
 
-- 2026-10-13 — Before tuning a threshold, check how many of the bad cases it can even reach:
+- 2026-10-13: Before tuning a threshold, check how many of the bad cases it can even reach:
   re-tuning the 8% outline/opening agreement check was pointless because more than half of
   the biased RANSAC outlines had no opening to compare against. Dropping those beyond 6 m
   (no cross-check possible) gave pooled 96.25% -> 97.50% on 5 seed sets while seed 0 alone
   went *down* one run; report the pooled number and the per-set ones, not just seed 0.
 
-- 2026-10-14 — The remaining crashes are control, not perception: 8/10 had < 6 cm estimation
+- 2026-10-14: The remaining crashes are control, not perception: 8/10 had < 6 cm estimation
   error when they hit the frame; the guidance asked for 30-75 m/s² and uniform clipping to
   `max_accel` spent the budget on along-track braking. Re-ordering the clip (lateral first) just
   traded those crashes for bang-bang overshoots (8 rescued, 8 broken). Saturation must be
   planned for in the guidance law, and check the tilt limit too (a downward request shrinks
   `f_z` and with it the horizontal authority).
 
-- 2026-10-15 — Before changing how a saturated command is clipped, print the guidance demand per
+- 2026-10-15: Before changing how a saturated command is clipped, print the guidance demand per
   axis on a nominal state (on the line, at cruise speed): the "braking" eating the lateral budget
   was the `t_go_min` floor making the cubic think it arrived early, not a real need. Taking
   time-to-go from along-track motion (floor on lateral only) kept pass rate and cut laps by 1 s.
   Old scenario tests found with the floored law need `along_track_tgo=False` pinned.
 
-- 2026-10-16 — A saturating guidance law should plan around the limit, not clip at it: the
+- 2026-10-16: A saturating guidance law should plan around the limit, not clip at it: the
   cubic's acceleration is linear in time, so its peak (one of the two ends) has a closed form;
   choose the time-to-go that keeps it in budget and buy that time by braking. It rescued 8 of 9
   lateral-saturation crashes (pooled 97.92% -> 99.08%) but costs ~3% lap time and hands more
-  time to phantom handoff estimates — what breaks next is usually the other subsystem.
+  time to phantom handoff estimates - what breaks next is usually the other subsystem.
 
-- 2026-10-17 — A filter in the target gate's frame cannot see that frame's *yaw* error from the
+- 2026-10-17: A filter in the target gate's frame cannot see that frame's *yaw* error from the
   gate-centre measurement: rotating the frame about the gate centre rotates the drone's estimated
   pose with it, so the bearing+range innovation is zero. Post-handoff lateral errors of 2-4 m that
   persist despite accepted updates are a next-gate yaw error (16-46 deg in failing runs), not
   position. Check yaw error per handoff against truth before tuning position covariances, and
   don't trust an averaged yaw's 1/sqrt(n) sigma (same-viewpoint sightings share their bias).
 
-- 2026-10-19 — Constraining a measurement with the filter's own estimate removes that quantity's
+- 2026-10-19: Constraining a measurement with the filter's own estimate removes that quantity's
   observability: upright PnP (roll/pitch fixed from the filter) plus a yaw-only update let tilt
   drift to 5 deg, and the upright fit absorbed the error (pooled 99.08% -> 97.71%). Keep an
   independent source for whatever you constrain (here: roll/pitch from the unconstrained IPPE fit,
   yaw + position from the upright fit; 99.54%). Check tilt error against truth, not just yaw.
 
-- 2026-10-20 — Measure a perception idea's ceiling on frames from the real renderer + detector,
+- 2026-10-20: Measure a perception idea's ceiling on frames from the real renderer + detector,
   not on synthetic corner noise: a 0.5 px Gaussian model predicted 15-20% better yaw from
   fitting the outline and opening together, but sub-pixel outline corners on rendered frames
   already give < 1.6 deg yaw to 12 m, so the joint fit was flat in flight (pooled 99.54% both).
 
-- 2026-10-21 — Before designing compensation for a sensor imperfection, split it into its parts
+- 2026-10-21: Before designing compensation for a sensor imperfection, split it into its parts
   in a scratch monkeypatch of the sim: for 20 ms camera latency, a frame from the capture-time
-  *position* flew 100% but one from the capture-time *attitude* 52.8% (all-stale 52.0%) — so
+  *position* flew 100% but one from the capture-time *attitude* 52.8% (all-stale 52.0%) - so
   only the rotation since exposure matters. Read the swept value back from each results file's
   `sim_config`; a shell typo (`0.0$L` with L=5 -> 0.05) silently mislabelled a run.
 
-- 2026-10-22 — Split a measurement's error by how ambiguous its solver was before averaging it:
+- 2026-10-22: Split a measurement's error by how ambiguous its solver was before averaging it:
   next-gate sightings where two upright PnP solutions survive had yaw RMS 17-44 deg (neither
   solution close; the better one still 29 deg) vs 5-10 deg with one solution, and 50+ of them
   averaged to a confident 25-40 deg handoff error. Dropping their yaw votes (positions kept) cut
   est. error ~30% on every seed set (pooled 99.54% -> 99.83%). Make fallbacks no worse than the
   old path: "bearing prior alone when no clear vote" broke a retarget to a fresh hypothesis.
 
-- 2026-10-23 — Price a realism knob before flipping it: motion blur up to the frame period (20 ms
+- 2026-10-23: Price a realism knob before flipping it: motion blur up to the frame period (20 ms
   of 25) cost no pass rate on seed 0 (est. error 0.20 -> 0.33 m) but doubled benchmark time, so
   it stays off until it buys something. The stack is sensitive to *when* a frame was taken
   (run 19), not to how sharp it is. Never read numbers from a 2-run smoke test (0.90 m est.
   error vs 0.22 m over 50 runs).
 
-- 2026-10-24 — Before repairing what a recovery leaves behind, check the recovery was right:
+- 2026-10-24: Before repairing what a recovery leaves behind, check the recovery was right:
   re-expressing gate hypotheses after a filter reinit was exact but flat, because in the one
-  failure it targeted (5007) the reinit itself was wrong — chi2 had correctly rejected 8 frames
+  failure it targeted (5007) the reinit itself was wrong - chi2 had correctly rejected 8 frames
   of a biased two-solution opening, and the reinit then adopted it over a 6 cm-accurate pose.
   Hook the recovery with truth (error before -> after) first.
-- 2026-10-25 — A default tuned in one sensing mode is not free in another: unambiguous yaw
+- 2026-10-25: A default tuned in one sensing mode is not free in another: unambiguous yaw
   votes gained 0.29 pp pooled with the IMU, but camera-only (re-run only at write-up time) went
   98.62% -> 97.79%. When a default flips, re-run the camera-only A/B in the same run, so the
   trade-off is seen before the change is kept. (When waiting on a background job, don't
-  `pgrep -f` a string that also appears in your own wait command — it matches itself.)
-- 2026-10-26 — Before re-running an A/B in another mode, count how often the mechanism fires
+  `pgrep -f` a string that also appears in your own wait command - it matches itself.)
+- 2026-10-26: Before re-running an A/B in another mode, count how often the mechanism fires
   there from the committed per-run `diag` (camera-only had 0 reinits in 300 runs, so a reinit
   guard cannot change it). On a saturated benchmark judge a fix by the diag of the runs it
   changed (5007: pos err RMS 1.15 -> 0.34 m), and make the world harder before more (A) work.
-- 2026-10-27 — Look-alike clutter hurt mostly by breaking a gate's *structure*, not by posing as
+- 2026-10-27: Look-alike clutter hurt mostly by breaking a gate's *structure*, not by posing as
   a gate: half the failures on the clutter benchmark had a clean gate-0 outline every frame but
   clutter seen through the opening merged with the frame, so no hole was found and the lone
   outline got no PnP candidate (never initialised). When a realism knob costs pass rate, look at
   what the detector returns on the failing frames before assuming false positives. A sweep (10 / 20
-  / 40 objects: 100 / 95.75 / 89.5%) picks a default that discriminates without swamping.- 2026-10-28 — "Never initialised" had three different causes in four runs (a range rule, one
+  / 40 objects: 100 / 95.75 / 89.5%) picks a default that discriminates without swamping.- 2026-10-28 - "Never initialised" had three different causes in four runs (a range rule, one
   clutter-pulled corner, a merged blob): log *why each detection got no candidate* per run before
   writing one fix. A recovery path that only runs when the normal path yields nothing leaves every
   other run bit-identical, so its A/B reads cleanly (14/300 runs changed). A 3-corner upright fit
-  pins range (2%) but not yaw (~14 deg on a 35 px square) — check fallbacks against truth.
+  pins range (2%) but not yaw (~14 deg on a 35 px square) - check fallbacks against truth.
 
 ## Instruction changes
 
-- 2026-11-11 — Dom added the README voice rule (Non-negotiables). The README was rewritten
-  that day and its detailed tables moved to `docs/WRITEUP.md` sections 2.1–2.3.
-- 2026-11-11 — Dom removed the README's "How this was built" section and had the bold-label
+- 2026-11-11: Dom added the README voice rule (Non-negotiables). The README was rewritten
+  that day and its detailed tables moved to `docs/WRITEUP.md` sections 2.1-2.3.
+- 2026-11-11: Dom removed the README's "How this was built" section and had the bold-label
   bullets and box-drawing diagram replaced with plain prose and ASCII. Keep the README that way.
+- 2026-11-11: Dom had the docs and code comments restyled. Keep them that way: no em dashes or
+  Unicode arrows (write `-`, `:` or `->`), no bold labels at the start of bullets, paragraphs or
+  log entries, no ruler-style comment banners in code, and no references to this file from code.
+  Section titles in `docs/WRITEUP.md` name the topic, and the results files behind each table go
+  in its appendix, not under the table.

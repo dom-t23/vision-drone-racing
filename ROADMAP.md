@@ -4,17 +4,17 @@ Prioritised. Each overnight run takes ONE item (or a well-argued new one), and u
 file: move finished items to "Done" with the result, re-rank the rest on new evidence.
 
 Current baseline (since 2026-10-27, orange clutter world `n_distractors=20`; NOT comparable with
-anything earlier): `results/2026-10-28_e65b78d_baseline.json` — 95.75% pass rate, 94%
+anything earlier): `results/2026-10-28_e65b78d_baseline.json` - 95.75% pass rate, 94%
 completion, 11.65 s lap, median est. error 0.306 m (pooled over seeds 0/1000/.../5000 with
 init_rescue: 98.58%, 294/300 complete, `results/2026-10-28_059848c_ab-init-rescue*.json`;
 camera-only pooled 97.46%; quote the pooled number).
 Clutter re-baseline before init_rescue: `results/2026-10-27_11f0132_rebaseline-clutter.json` (pooled 97.75%).
 Clutter-free world (before 2026-10-27):
-`results/2026-10-22_5143039_baseline.json` — 100.0%, 11.59 s, 0.203 m (pooled 99.83%).
-Previous: `results/2026-10-19_9acf025_baseline.json` — 100.0%, 11.60 s, 0.299 m (pooled 99.54%).
-Before that: `results/2026-10-16_3395fb0_baseline.json` — 97.8%, 11.59 s (pooled 99.08%).
-Before that: `results/2026-10-15_1d4bb7f_baseline.json` — 100.0%, 11.26 s (pooled 6 sets 97.92%).
-Before that: `results/2026-10-13_0f1e256_baseline.json` — 96.8%, 12.27 s (pooled 97.50%).
+`results/2026-10-22_5143039_baseline.json` - 100.0%, 11.59 s, 0.203 m (pooled 99.83%).
+Previous: `results/2026-10-19_9acf025_baseline.json` - 100.0%, 11.60 s, 0.299 m (pooled 99.54%).
+Before that: `results/2026-10-16_3395fb0_baseline.json` - 97.8%, 11.59 s (pooled 99.08%).
+Before that: `results/2026-10-15_1d4bb7f_baseline.json` - 100.0%, 11.26 s (pooled 6 sets 97.92%).
+Before that: `results/2026-10-13_0f1e256_baseline.json` - 96.8%, 12.27 s (pooled 97.50%).
 Evidence older than 2026-10-12 was measured on
 the legacy renderer (gates painted ~0.7 px too wide) and is not directly comparable:
 `2026-10-11_8d3e44c_baseline.json` (95.2%), `2026-10-10_0181f50_baseline.json` (94.5%),
@@ -22,7 +22,7 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## (A) Pass rate
 
--1. **(next) Clutter robustness** (runs 25-26). 6 pooled failures left:
+-1. (next) Clutter robustness (runs 25-26). 6 pooled failures left:
    - never-initialised: done (run 26, `init_rescue`, see Done); 5033 left (merged blob, no
      usable quad at all).
    - distractors taken as targets: WAIT initialises on the biggest candidate, which is sometimes
@@ -33,7 +33,7 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
      initial yaw sigma.
    - re-test `reinit_unambiguous_only` (run 24) here.
 
-0. **Next-gate yaw at handoff (was "phantom handoffs").** Run 14 found the 2-4 m post-handoff
+0. Next-gate yaw at handoff (was "phantom handoffs"). Run 14 found the 2-4 m post-handoff
    errors are a wrong next-gate *yaw*: a frame rotated about the gate centre leaves the
    gate-centre measurement with zero innovation, so only the weak PnP attitude update fixes it
    (~0.5-0.7 s). Averaged sighting yaw: RMS 9-10.5 deg, 4-11% of handoffs > 15 deg, worse
@@ -41,7 +41,7 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
    flat (pooled 99.08% -> 99.17%, left off). The fix has to improve the yaw measurement itself
    -> item 2 first, then re-try the floor. Also: replace the weak terminal hold-the-line law
    with a miss-distance law.
-1. **Remaining next-gate range bias.** Re-measured 2026-10-13 (run 9): clean outlines and
+1. Remaining next-gate range bias. Re-measured 2026-10-13 (run 9): clean outlines and
    openings are within ~1% to 13 m; beyond 13 m outlines read 1-4% near and openings 1-4% far
    (opposite signs -> item 4). Far lone RANSAC outlines are now dropped. Older notes: the worst source (RANSAC outlines of merged gates,
    ~18% short at 7-16 m) is fixed (robust-outline check, done); handoffs > 1.5 m off along x
@@ -50,56 +50,56 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
    pixel on each side (see run 4 in NIGHTLY_LOG). Sub-pixel corners (now default)
    and item 4 (both squares, whose biases have opposite signs) attack this directly.
    Also consider requiring a close-range accepted sighting of the target before a pass.
-2. **Bad re-initialisations.** Runs 22 and 24 (see Done): the two-solution reinit guard fixes
-   5007 but is flat on the saturated benchmark; left off — re-test after the world gets harder
+2. Bad re-initialisations. Runs 22 and 24 (see Done): the two-solution reinit guard fixes
+   5007 but is flat on the saturated benchmark; left off - re-test after the world gets harder
    (B). Also check why camera-only fell 98.62% -> 97.79% with unambiguous
    yaw votes on (run 23; yaw-vote counts per hypothesis without a gyro). Then: next gate seen too few times before a pass (2003: gate 7 m
    behind the target, 2 sightings); re-try `handoff_yaw_floor`; speed up `refine_upright`.
-3. **Two-solution sightings** (done 2026-10-22, see Done): ambiguous upright fits carry no yaw;
+3. Two-solution sightings (done 2026-10-22, see Done): ambiguous upright fits carry no yaw;
    what is left of the handoff yaw error is in single-solution sightings beyond ~12 m and in
    gates seen through another gate's opening.
-4. **Error of merged / overlapping-gate detections.** Run 17 measured clean single-gate
+4. Error of merged / overlapping-gate detections. Run 17 measured clean single-gate
    detections on rendered frames: yaw RMS < 1.6 deg and range bias < 0.1% out to 12 m. The
    remaining yaw/handoff error must come from RANSAC outlines, openings seen through other
    gates, and same-viewpoint averaging. Measure per-detection error by type on rendered
    multi-gate scenes before the next perception change.
-5. **Two-gate lookahead guidance.** At 8 m/s the drone has ~1 s after a pass to line up for
+5. Two-gate lookahead guidance. At 8 m/s the drone has ~1 s after a pass to line up for
    the next gate. Plan through the current AND next gate (e.g. a cubic through both with the
    exit velocity chosen for the turn) so it starts the turn on the right line.
-6. **Measurement covariance from the PnP Jacobian** instead of the heuristic distance model
+6. Measurement covariance from the PnP Jacobian instead of the heuristic distance model
    (`pnp.gate_position_cov`). Proper anisotropy should cut rejects and phantom offsets.
-7. **Speed policy.** Once accuracy improves: slow for sharp turns, faster on straights
+7. Speed policy. Once accuracy improves: slow for sharp turns, faster on straights
    (lap time is reported with every result; see the pace rule in CLAUDE.md).
 
 ## (B) Robustness, realism, tooling
 
-- **Failure analysis tool** (the run-10 scratch analysis — estimate vs truth in the target
-  frame and logged guidance accelerations before each crash — is what it should automate): `python -m vdr.analyze results/<file>.json` -> failure modes by
+- Failure analysis tool (the run-10 scratch analysis - estimate vs truth in the target
+  frame and logged guidance accelerations before each crash - is what it should automate): `python -m vdr.analyze results/<file>.json` -> failure modes by
   gate index, outcome, pre-crash estimation error; `--seed N` re-runs one seed with a
   trajectory/estimate plot saved to `docs/img/`.
-- **Stack unit tests:** handoff, retarget and search logic with scripted detections.
-- **Harder benchmark: done (run 25)** — orange clutter at 20 objects (see Done). Next knobs when
+- Stack unit tests: handoff, retarget and search logic with scripted detections.
+- Harder benchmark: done (run 25) - orange clutter at 20 objects (see Done). Next knobs when
   this saturates again: motion blur ~5 ms (after making `motion_px` cheaper), lens distortion.
 - **Realism, one knob at a time (each: add SimConfig field defaulting to old behaviour ->
   flip default -> re-baseline):**
-  - **camera latency: knob added (run 19, `SimConfig.camera_latency`, default 0)**. Seed 0:
+  - camera latency: knob added (run 19, `SimConfig.camera_latency`, default 0). Seed 0:
     10 ms 100%, 15 ms 92%, 20 ms 52%, 30 ms 18.75%, 40 ms 4.5%. The stale *attitude* is the
     whole effect (stale position alone: 100% at 20 ms). Blocked on a contract decision (Dom):
     frame capture timestamp in `Observation` (or latency in `VehicleInfo`); then (A) attitude
     rewind / delayed ESKF update behind a flag, then flip the default to ~25 ms and re-baseline.
   - IMU/camera timestamp jitter
-  - **motion blur: knob added (run 21, `SimConfig.exposure_time`, default 0).** Seed 0: 5/10/20 ms
+  - motion blur: knob added (run 21, `SimConfig.exposure_time`, default 0). Seed 0: 5/10/20 ms
     all 100% (est. error 0.20 -> 0.33 m at 20 ms); seed 1000 at 20 ms 98.0% (1 run). Harmless
     to pass rate but ~2x benchmark time; flip to ~5 ms together with the next harder knob, after
     making `motion_px` cheaper (only corners inside the image).
   - lens distortion (+ give the autonomy calibrated distortion coefficients via VehicleInfo)
   - lighting/exposure changes, gate colour variation, shadows
-  - **orange distractor objects: done (run 25, `n_distractors`, default 20).** Still to add:
+  - orange distractor objects: done (run 25, `n_distractors`, default 20). Still to add:
     partial occlusion of gates by clutter in front of them (clutter is kept 2 m off the legs).
   - wind gusts; unknown thrust scaling (battery sag)
   - higher-resolution camera option (and runtime budget check)
 
-- **Camera-only follow-ups:** test with a deliberately wrong vehicle model (drag, lags); estimate
+- Camera-only follow-ups: test with a deliberately wrong vehicle model (drag, lags); estimate
   thrust scale/drag online; a vision-only attitude cue (horizon line) to replace the accelerometer.
 
 ## (C) Write-up
@@ -119,36 +119,36 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
 
 ## Done
 
-- 2026-10-30 — Write-up refresh (C, run 27): README/WRITEUP/figures/demo re-reported on the
+- 2026-10-30: Write-up refresh (C, run 27): README/WRITEUP/figures/demo re-reported on the
   clutter world (see the (C) section); no flight change.
 
-- 2026-10-28 — Clutter-robust initialisation (A, run 26): `init_rescue` (default on). In WAIT, a
+- 2026-10-28: Clutter-robust initialisation (A, run 26): `init_rescue` (default on). In WAIT, a
   frame with no PnP candidate keeps lone far RANSAC outlines and accepts a 3-corner upright fit
   when exactly one corner is an outlier. Pooled 6 sets 97.75% -> 98.58% (camera-only 96.46% ->
   97.46%); 1028/3027/4039 fly, 4038 breaks at gate 4; laps flat.
 
-- 2026-10-27 — Orange clutter (B, run 25): `SimConfig.n_distractors` — panels/banners and cone
+- 2026-10-27: Orange clutter (B, run 25): `SimConfig.n_distractors` - panels/banners and cone
   triangles in gate-like paint, >= 2 m off the racing line. Seed-0 sweep: 10 -> 100.0%,
   20 -> 95.75%, 40 -> 89.5% (+12% benchmark time at 20). Default flipped to 20 and re-baselined:
   pooled 6 sets 99.83% -> 97.75% (camera-only 97.79% -> 96.46%); not comparable with earlier numbers.
 
-- 2026-10-26 — No reinit from an ambiguous measurement (A, run 24), tried:
-  `reinit_unambiguous_only` — pooled 6 sets 99.83% -> 99.83%; only 1005 and 5007 change, both
+- 2026-10-26: No reinit from an ambiguous measurement (A, run 24), tried:
+  `reinit_unambiguous_only` - pooled 6 sets 99.83% -> 99.83%; only 1005 and 5007 change, both
   complete; 5007 reinits 3 -> 0, pos err RMS 1.15 -> 0.34 m, lap -0.34 s. Left off (one run of
   evidence); camera-only never reinitialises (0/300), so unaffected.
 
-- 2026-10-25 — Write-up refresh (C, run 23): README/WRITEUP/figures report the 5143039 default
+- 2026-10-25: Write-up refresh (C, run 23): README/WRITEUP/figures report the 5143039 default
   (pooled 6 sets 99.83%, seed 0 100.0%, 11.59 s); unambiguous yaw votes in history/ablations/
   paired laps; section 4.1 sensor sensitivity (`docs/img/sensitivity.png`); stories 6.11, 6.12.
   Camera-only re-run on 6 sets: pooled 97.79% vs 99.83% (was 98.62% vs 99.54%: 6 broken,
   2 rescued, not diagnosed); replay and GIF regenerated.
 
-- 2026-10-24 — Hypotheses after a reinit (A, run 22), tried: `reinit_reexpress_hyps` (apply the
-  reinit's pose correction to stored gate hypotheses) and `reinit_clear_hyps` both flat — pooled
+- 2026-10-24: Hypotheses after a reinit (A, run 22), tried: `reinit_reexpress_hyps` (apply the
+  reinit's pose correction to stored gate hypotheses) and `reinit_clear_hyps` both flat - pooled
   6 sets 99.83% -> 99.83% each; only the 12/300 runs with a reinit change, none fails; left off.
   Root cause of 5007 is the reinit itself (item 2).
 
-- 2026-10-23 — Motion blur knob (B, run 21): `SimConfig.exposure_time` (default 0, old
+- 2026-10-23: Motion blur knob (B, run 21): `SimConfig.exposure_time` (default 0, old
   behaviour), frame = mean of renders over the shutter interval, sub-frames ~1 per px of image
   motion. Sweep: no pass-rate cost up to 20 ms (near the 25 ms frame period); est. error +60% at
   20 ms. Default not flipped (2x benchmark time, no measurable effect at a realistic 5 ms).
@@ -158,17 +158,17 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   5-10). Pooled 6 sets 99.54% -> 99.83% (2 rescued, 1 broken), median est. error lower on all 6
   sets (~0.31 -> ~0.22 m), laps flat. Bearing-only fallback variant was flat (99.54%).
 
-- 2026-10-21 — Camera latency knob (B, run 19): `SimConfig.camera_latency` (default 0, old
+- 2026-10-21: Camera latency knob (B, run 19): `SimConfig.camera_latency` (default 0, old
   behaviour); seed-0 sweep 0-50 ms shows a cliff at 15-20 ms (100% -> 52%), caused by stale
   attitude, not stale position. Default not flipped (needs a frame-timestamp contract field).
 
-- 2026-10-20 — Write-up refresh (run 18): README/WRITEUP/figures report the 9acf025 default
+- 2026-10-20: Write-up refresh (run 18): README/WRITEUP/figures report the 9acf025 default
   (pooled 6 sets 99.54%, seed 0 100.0%, 11.60 s), upright PnP in history/ablations/paired laps,
   stories 6.9 (tilt drift) and 6.10 (joint fit ceiling). Camera-only re-run on 6 sets: pooled
   98.62% vs 99.54% (was 92.96% vs 99.08%); replay and GIF regenerated.
 
 - 2026-10-20 **Both squares (A4), tried**: `joint_squares` (upright 8-point fit of outline +
-  opening) flat — pooled 6 sets 99.54% -> 99.54% (1 rescued / 1 broken), laps +0.007 s; left
+  opening) flat - pooled 6 sets 99.54% -> 99.54% (1 rescued / 1 broken), laps +0.007 s; left
   off. Clean single-gate outlines are already accurate to 12 m; it only helps beyond that.
 
 - 2026-10-19 **Upright PnP** (`upright_pnp` + `upright_keep_tilt`): 4-DoF fit (position + yaw)
@@ -176,71 +176,71 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   completed 295 -> 298, est. error lower on all 6 sets, laps flat. Yaw-only update alone was
   worse (97.71%: tilt drifted).
 
-- 2026-10-17 — Write-up refresh (run 15): README/WRITEUP/figures report the 3395fb0 default
+- 2026-10-17: Write-up refresh (run 15): README/WRITEUP/figures report the 3395fb0 default
   (pooled 6 sets 99.08%, seed 0 97.8%, 11.59 s), feasible lateral in history/ablations/paired
   laps, stories 6.7 (plan around saturation) and 6.8 (handoff yaw). Camera-only re-run on 6 sets
   with the current default: pooled 99.08% vs 92.96% (completed 295 vs 268); replay and GIF
   regenerated.
 
-- 2026-10-17 — Handoff yaw diagnosis + `handoff_yaw_floor` A/B (12 deg floor on the averaged
+- 2026-10-17: Handoff yaw diagnosis + `handoff_yaw_floor` A/B (12 deg floor on the averaged
   next-gate yaw sigma): pooled 6 sets 99.08% -> 99.17% (1 rescued, 0 broken), laps +0.02 s;
   left off. Phantom handoffs traced to next-gate yaw errors (see item A0, NIGHTLY_LOG run 14).
 
-- 2026-10-16 — Feasible lateral guidance (`feasible_lateral`, default on): shortest lateral
+- 2026-10-16: Feasible lateral guidance (`feasible_lateral`, default on): shortest lateral
   time-to-go whose cubic peak stays within 11 m/s², braking along x when that is later than the
   along-track arrival. Pooled 6 sets 97.92% -> 99.08%, completed 290 -> 295 (9 rescued, 4 broken),
   paired laps +0.34 s (+3%); headline seed 0 100.0% -> 97.8%.
 
-- 2026-10-15 — Write-up refresh (run 12): README/WRITEUP report the 1d4bb7f baseline (seed 0
+- 2026-10-15: Write-up refresh (run 12): README/WRITEUP report the 1d4bb7f baseline (seed 0
   100.0%, pooled over 5 sets 97.75%, 11.26 s), along-track time-to-go in the history, ablation
   and a second paired-laps figure (`docs/img/paired_laps_tgo.png`), the lateral-first A/B as a
   "tried, left off" row, guidance section rewritten, debugging story 6.6 (crashes were control).
   Flight GIF re-recorded with the current default.
-- 2026-10-15 — Along-track time-to-go (`along_track_tgo`, default on): the 0.3 s T floor made the
+- 2026-10-15: Along-track time-to-go (`along_track_tgo`, default on): the 0.3 s T floor made the
   cubic brake at 20-70 m/s² inside x ≈ -2.4 m. Pooled pass 97.50% -> 97.75% (flat), completed
   240 -> 241, paired laps -1.03 s (233 runs); headline seed 0 96.8% -> 100.0%, 12.27 -> 11.26 s.
 
-- 2026-10-14 — Crash analysis (A0): crashes are guidance saturation, not estimation error at
+- 2026-10-14: Crash analysis (A0): crashes are guidance saturation, not estimation error at
   impact. `lateral_accel_priority` A/B on 5 seed sets: pooled 97.50% -> 98.25%, completed runs
   240 -> 240 (8 rescued / 8 broken), laps -0.04 s; left off (see NIGHTLY_LOG run 10).
 
-- 2026-10-13 — Camera-only mode (`camera_only`, no IMU, command-driven prediction): pooled
+- 2026-10-13: Camera-only mode (`camera_only`, no IMU, command-driven prediction): pooled
   98.0% -> 94.1% on 4 seed sets, left off. Standalone app (`vdr-racing`, PyInstaller release
   workflow for Windows/macOS/Linux, pip/pipx install) and browser replay (`docs/demo/`, Pages).
 
-- 2026-10-13 — Drop far lone RANSAC outlines (`drop_lone_robust_far`, > 6 m with no valid
+- 2026-10-13: Drop far lone RANSAC outlines (`drop_lone_robust_far`, > 6 m with no valid
   opening; they read ~12% near). Pooled 5 seed sets 96.25% -> 97.50%, missed_gate 4 -> 0,
   laps unchanged (paired -0.007 s), est. error down on all sets; seed 0 alone 97.5% -> 96.8%.
   Re-tuning `robust_inner_depth_tol` was measured to be pointless (see NIGHTLY_LOG run 9).
 
-- 2026-10-12 — Write-up (C): `docs/WRITEUP.md`, three figures from committed results
+- 2026-10-12: Write-up (C): `docs/WRITEUP.md`, three figures from committed results
   (`python -m vdr.report`: history, ablations, paired lap times), README links. No flight change.
 
-- 2026-10-12 — Sub-pixel corners on by default (`subpixel_corners`), refinement vectorised
+- 2026-10-12: Sub-pixel corners on by default (`subpixel_corners`), refinement vectorised
   (1.17 -> 0.50 ms per quad). Four seed sets: pass rate unchanged (pooled 96.9% -> 96.7%),
   completed laps 0.155 s faster (paired, 145/179 faster). Headline 97.5% / 12.33 s.
 
-- 2026-10-12 — Renderer realism (B): area-coverage gate anti-aliasing
+- 2026-10-12: Renderer realism (B): area-coverage gate anti-aliasing
   (`SimConfig.gate_supersample=8`); cv2 LINE_AA had painted every gate edge ~0.7 px too wide.
   Re-baselined: 96.2% (seed 0), 95.2% (seed 1000), lap 12.5 s; not comparable with earlier runs.
 
-- 2026-10-11 — UDP link mode (`--link udp`, `vdr/link/`), the last first-week extra: the
+- 2026-10-11: UDP link mode (`--link udp`, `vdr/link/`), the last first-week extra: the
   autonomy runs as a separate process over localhost UDP in lockstep, with fragmentation and
   retransmission. 50-run seed 0 per-run results identical to in-process (95.2% both);
   3 new separation tests cover the autonomy process.
 
-- 2026-10-11 — Robust-outline sanity check (`robust_outer_use_inner`): a RANSAC-fitted outline
+- 2026-10-11: Robust-outline sanity check (`robust_outer_use_inner`): a RANSAC-fitted outline
   whose range disagrees (> 8%) with the gate's own opening is replaced by the opening's PnP.
   Seed 0 94.5% -> 95.2%; 1000 93.5% -> 96.5%; 2000 95.0% -> 96.0%; 3000 (held out)
   87.8% -> 95.2%; pooled 92.7% -> 95.8%, lap time within 1.4%.
 
-- 2026-10-10 — First-week extras: README flight GIF (`python -m vdr.flightviz`) and GitHub
+- 2026-10-10: First-week extras: README flight GIF (`python -m vdr.flightviz`) and GitHub
   Actions CI (pytest + 8-run harness smoke test). No flight change (94.5% before and after).
 
-- 2026-10-10 — Lost-target recovery (`recover_lost_target`): a gate seen straight ahead just
+- 2026-10-10: Lost-target recovery (`recover_lost_target`): a gate seen straight ahead just
   beyond an unmatched target becomes the target. 89.2% -> 94.5% (seed 0), 91.2% -> 93.5%
   (seed 1000), 86.8% -> 95.0% (seed 2000, held out); lap time within 0.6%.
 
-- 2026-10-07 — Bootstrap: simulator, autonomy stack, harness, 40 tests.
+- 2026-10-07: Bootstrap: simulator, autonomy stack, harness, 40 tests.
   Baseline 89.2% pass rate / 82% completion / 11.9 s lap (`2026-10-07_c25234a_baseline.json`).
   Ablations: no chi2 gating 75.5%; 4 m/s cruise 57.0% (race clock).

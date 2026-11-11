@@ -5,9 +5,9 @@ pass rate before -> after, results files.
 
 ---
 
-## 2026-10-07 ~01:30 BST — Run 1: bootstrap (started interactively with Dom)
+## 2026-10-07 ~01:30 BST, Run 1: bootstrap (started interactively with Dom)
 
-**What:** built the whole project from an empty repo.
+What: built the whole project from an empty repo.
 - `vdr/sim`: quadrotor dynamics driven by thrust + body-rate commands (acro), IMU with
   noise and random-walk biases, 320x240 FPV renderer (20 deg uptilt, 100 deg HFOV),
   seeded 8-gate courses of identical gates with guarantees (next gate visible and nearest
@@ -22,41 +22,41 @@ pass rate before -> after, results files.
 - 40 tests including `tests/test_separation.py` (contract field lists + no `vdr.sim` imports
   in the autonomy).
 
-**Design decisions (Dom):** acro thrust + body-rate commands; identical gates with no IDs;
+Design decisions (Dom): acro thrust + body-rate commands; identical gates with no IDs;
 first-week extras = README flight GIF, UDP link mode, GitHub Actions CI.
 
-**Why these choices:** see CLAUDE.md "Lessons learned" — each was forced by a concrete
+Why these choices: see CLAUDE.md "Lessons learned" - each was forced by a concrete
 failure during bring-up (overlapping gates, accelerometer-only initial tilt, guidance stall,
 phantom next-gate estimates, merged outlines).
 
-**Benchmark choice:** default cruise speed 8 m/s plus the race clock, so the benchmark is at
+Benchmark choice: default cruise speed 8 m/s plus the race clock, so the benchmark is at
 race pace and can't be gamed by flying slowly (at 4 m/s the clock expires: 57.0%). At 4 m/s
 with the clock switched off the stack passes 97.8% of gates, so race pace is where the
 headroom is.
 
-**Verified:** `pytest` 40 passed; episodes are bit-for-bit deterministic (test); harness
+Verified: `pytest` 40 passed; episodes are bit-for-bit deterministic (test); harness
 runs 50 episodes in ~65 s on 2 cores.
 
-**Results (seed 0, 50 runs, commit c25234a):**
+Results (seed 0, 50 runs, commit c25234a):
 | config | pass rate | completion | lap (s) | file |
 |---|---|---|---|---|
 | baseline | **89.2%** | 82% | 11.9 | `2026-10-07_c25234a_baseline.json` |
 | chi2 gating off | 75.5% | 60% | 12.0 | `2026-10-07_c25234a_ablation-no-chi2.json` |
-| cruise 4 m/s | 57.0% | 0% (clock) | — | `2026-10-07_c25234a_ablation-4mps.json` |
+| cruise 4 m/s | 57.0% | 0% (clock) | - | `2026-10-07_c25234a_ablation-4mps.json` |
 | cruise 4 m/s, no race clock | 97.8% | 96% | 23.5 | `2026-10-07_0423930_ablation-4mps-noclock.json` |
 
 (0423930 only changed the harness's dirty-flag logic; the flight code is identical to c25234a.)
 
-**Next:** ROADMAP (A1) early handoffs are the main failure mode; (B) first-week extras.
+Next: ROADMAP (A1) early handoffs are the main failure mode; (B) first-week extras.
 
 ---
 
-## 2026-10-10 — Run 2: (A) lost-target recovery
+## 2026-10-10, Run 2: (A) lost-target recovery
 
-**Baseline confirmed on main (865c062):** pytest 40 passed; `--runs 50 --seed 0` = 89.2%
-pass rate, 82% completion, 11.94 s lap — identical to `2026-10-07_c25234a_baseline.json`.
+Baseline confirmed on main (865c062): pytest 40 passed; `--runs 50 --seed 0` = 89.2%
+pass rate, 82% completion, 11.94 s lap - identical to `2026-10-07_c25234a_baseline.json`.
 
-**Diagnosis (ROADMAP A1, "early handoffs"):** hooked `_handoff`/`_switch_to` with ground truth
+Diagnosis (ROADMAP A1, "early handoffs"): hooked `_handoff`/`_switch_to` with ground truth
 (scratch script, diagnostics only). In 6 of the 9 seed-0 failures (10, 15, 25, 36, 37, 42) the
 handoff to the next gate put its estimate 2-5 m *short* (depth-biased far sightings). The real
 gate then lands just outside the association radius: it is not "target", not "next gate"
@@ -65,19 +65,19 @@ filter flies ~1 s on IMU alone with a falsely small covariance (x sigma ~0.1 m),
 pass 2-3 m before the real gate, and clips the frame. Seed 15: estimate x = -6.5 m vs true -9.3 m
 at the handoff; pass declared at true x = -2.7 m.
 
-**Change (`recover_lost_target`, default now True):** a third sanity check next to retarget.
+Change (`recover_lost_target`, default now True): a third sanity check next to retarget.
 While tracking, a detection in the drone's forward cone, *beyond* the target and not otherwise
 classified, is clustered into a "beyond" hypothesis. If the target has gone unmatched for
 `lost_target_frames` = 3 consecutive frames with detections, the beyond hypothesis has
 `lost_target_min_sightings` = 3 sightings and the target is still > 3 m away, switch the target
 to it (same `_switch_to` as a retarget). New stat `recoveries`; new end-to-end test (seed 15).
 
-**Tried and dropped:** (1) 6 frames / 4 sightings: seed 0 94.0%, seed 1000 91.2% (no gain;
+Tried and dropped: (1) 6 frames / 4 sightings: seed 0 94.0%, seed 1000 91.2% (no gain;
 recovery came too late in seed 1010). (2) Re-initialising from the sighting's own PnP yaw
 instead of the averaged hypothesis: seed 1000 90.0%, worse. The 3/3 thresholds were chosen after
 looking at seeds 0 and 1000, so seed 2000 was run as a held-out confirmation.
 
-**Results (50 runs each, commit 0181f50):**
+Results (50 runs each, commit 0181f50):
 | seeds | recovery off | recovery on | completion off -> on | lap off -> on (s) |
 |---|---|---|---|---|
 | 0 (headline) | 89.2% | **94.5%** | 82% -> 90% | 11.94 -> 11.97 |
@@ -87,21 +87,21 @@ looking at seeds 0 and 1000, so seed 2000 was run as a held-out confirmation.
 Files: `results/2026-10-10_0181f50_{baseline,ablation-no-recovery}{,-seed1000,-seed2000}.json`.
 Lap time within 0.6% (pace rule OK). Pooled over 150 runs: 89.1% -> 94.3%.
 
-**Still failing (seed 0):** 3, 11 (missed gate 3 with correct handoffs: large lateral/height
+Still failing (seed 0): 3, 11 (missed gate 3 with correct handoffs: large lateral/height
 handoff errors), 5 (crash at gate 5, handoffs correct), 37 and 42 (still an early handoff). Across the three seed sets 9 of 19 remaining failures still have an early handoff. The root
-cause — depth-biased next-gate estimates — is untouched; recovery only limits the damage.
+cause - depth-biased next-gate estimates - is untouched; recovery only limits the damage.
 
-**Next:** fix the handoff estimate itself (ROADMAP A2 upright PnP / A3 sub-pixel corners /
+Next: fix the handoff estimate itself (ROADMAP A2 upright PnP / A3 sub-pixel corners /
 A6 PnP-Jacobian covariance), or B (first-week extras) since the last two runs were build + A.
 
 ---
 
-## 2026-10-10 — Run 3: (B) first-week extras — flight GIF + CI
+## 2026-10-10, Run 3: (B) first-week extras: flight GIF + CI
 
-**Baseline confirmed on main (d33c241):** pytest 41 passed; `--runs 50 --seed 0` = 94.5% pass
-rate, 90% completion, 11.97 s lap — identical to `2026-10-10_0181f50_baseline.json`.
+Baseline confirmed on main (d33c241): pytest 41 passed; `--runs 50 --seed 0` = 94.5% pass
+rate, 90% completion, 11.97 s lap - identical to `2026-10-10_0181f50_baseline.json`.
 
-**Chunk B (last run was A):**
+Chunk B (last run was A):
 - `python -m vdr.flightviz --seed N --out docs/img/flight.gif`: onboard camera (with HUD:
   time, true speed, gates passed, tracker mode) beside a top-down view of the course and the
   true trajectory. Truth is used for the picture only, outside the autonomy. README now shows
@@ -115,42 +115,42 @@ rate, 90% completion, 11.97 s lap — identical to `2026-10-10_0181f50_baseline.
 - Tests: +2 (`tests/test_flightviz.py`), 43 total. README results table updated to the
   current baseline and the recovery ablation.
 
-**Verified:** pytest 43 passed; harness on fe6114d = 94.5% / 90% / 11.97 s, identical to before
-(`results/2026-10-10_fe6114d_baseline.json`) — the change touches no flight code.
+Verified: pytest 43 passed; harness on fe6114d = 94.5% / 90% / 11.97 s, identical to before
+(`results/2026-10-10_fe6114d_baseline.json`) - the change touches no flight code.
 
-**Next:** (A) ROADMAP A1 depth-biased handoff estimates; last remaining extra is UDP link mode.
+Next: (A) ROADMAP A1 depth-biased handoff estimates; last remaining extra is UDP link mode.
 
 ---
 
-## 2026-10-11 — Run 4: (A) robust-outline sanity check
+## 2026-10-11, Run 4: (A) robust-outline sanity check
 
-**Baseline confirmed on main (d9209f9):** pytest 43 passed; `--runs 50 --seed 0` = 94.5% pass
-rate, 90% completion, 11.97 s lap — identical to `2026-10-10_fe6114d_baseline.json`.
+Baseline confirmed on main (d9209f9): pytest 43 passed; `--runs 50 --seed 0` = 94.5% pass
+rate, 90% completion, 11.97 s lap - identical to `2026-10-10_fe6114d_baseline.json`.
 
-**Diagnosis (ROADMAP A1, depth-biased next-gate estimates):** scratch diagnostic (truth used
+Diagnosis (ROADMAP A1, depth-biased next-gate estimates): scratch diagnostic (truth used
 offline only) comparing every PnP solution's range with the true range of the nearest gate,
 seeds 0-9, split by detection type. Median estimated/true range:
 - clean outer outlines: 0.98-1.00 at all ranges (gate looks ~1-2% near)
 - inner openings: 1.01 at < 3 m rising to 1.10 at 12-30 m (looks far; the AA mask grows the frame)
-- **RANSAC-fitted ("robust") outer outlines at 7-16 m: 0.80-0.84** — 2-3 m short at 10-15 m,
+- RANSAC-fitted ("robust") outer outlines at 7-16 m: 0.80-0.84 - 2-3 m short at 10-15 m,
   while the *same detections'* inner openings read 1.03.
-A robust outline means the gate's frame merged with another gate in the image — typically the
-next gate seen overlapping the current one — which is exactly when next-gate sightings are
+A robust outline means the gate's frame merged with another gate in the image - typically the
+next gate seen overlapping the current one - which is exactly when next-gate sightings are
 made. The RANSAC quad overshoots onto the other gate, so the gate looks too big, i.e. too near.
 
-**Change (`robust_outer_use_inner`, default now True; `robust_inner_depth_tol` = 0.08):** for a
+Change (`robust_outer_use_inner`, default now True; `robust_inner_depth_tol` = 0.08): for a
 robust outer detection with a valid inner-opening fit, if the two ranges disagree by > 8%, use
 the opening's PnP. Refactored into `Autonomy._detection_solutions`; +3 unit tests
 (`tests/test_stack_selection.py`), 46 total.
 
-**Tried first and changed:** "always use the opening for robust outlines" (tolerance 0):
-seed 0 94.8%, 1000 93.5%, 2000 95.8% vs 94.5/93.5/95.0 off — within noise, and it broke 4 seed-0
+Tried first and changed: "always use the opening for robust outlines" (tolerance 0):
+seed 0 94.8%, 1000 93.5%, 2000 95.8% vs 94.5/93.5/95.0 off - within noise, and it broke 4 seed-0
 runs that the old code completed (14, 16, 18, 40). Seed 16: near the gate both fits were good
 and the outer was more accurate; only when they *disagreed* was the outer badly wrong (gate 3:
 outer 3.4 m off, opening 0.25 m). Hence the agreement test. 0.08 was the only tolerance tried.
 Because the refinement was motivated by a seed-0 failure, seed 3000 was run as a held-out set.
 
-**Results (50 runs each, commit 68513f6):**
+Results (50 runs each, commit 68513f6):
 | seeds | check off | check on | completion off -> on | lap off -> on (s) |
 |---|---|---|---|---|
 | 0 (headline) | 94.5% | **95.2%** | 90% -> 94% | 11.97 -> 12.10 |
@@ -164,19 +164,19 @@ Pooled over 200 runs: 92.7% -> 95.8% pass, 84.5% -> 92.5% completion; lap time +
 way and the held-out set moves most. Scratch handoff diagnostic (seeds 0-49, estimate minus
 truth right after each pass handoff): handoffs with |x error| > 1.5 m 17.8% -> 10.1%.
 
-**Still failing (seed 0):** 3 runs (1 crash_gate, 2 missed_gate). 10% of handoffs are still
+Still failing (seed 0): 3 runs (1 crash_gate, 2 missed_gate). 10% of handoffs are still
 > 1.5 m off along x; the remaining bias sources are the inner openings' +5-10% range at > 9 m
 (mask growth) and the filter's own position error at the moment of the sighting.
 
-**Next:** (A) correct the mask-growth edge bias (ROADMAP A3 sub-pixel corners) or use both
+Next: (A) correct the mask-growth edge bias (ROADMAP A3 sub-pixel corners) or use both
 squares together (A4); or (B) the UDP link mode, the last first-week extra.
 
 ---
 
-## 2026-10-11 — Run 5: (B) UDP link mode (last first-week extra)
+## 2026-10-11, Run 5: (B) UDP link mode (last first-week extra)
 
-**Baseline confirmed on main (06008fb):** pytest 46 passed; `--runs 50 --seed 0` = 95.2% pass
-rate, 94% completion, 12.1 s lap — identical to `2026-10-11_68513f6_baseline.json`.
+Baseline confirmed on main (06008fb): pytest 46 passed; `--runs 50 --seed 0` = 95.2% pass
+rate, 94% completion, 12.1 s lap - identical to `2026-10-11_68513f6_baseline.json`.
 
 **Chunk B (last run was A; pass rate is at 95.2% where single-set gains are now below the
 8 pp noise threshold, so the remaining extra was the better use of a run):**
@@ -199,35 +199,35 @@ rate, 94% completion, 12.1 s lap — identical to `2026-10-11_68513f6_baseline.j
   `tests/test_link.py` +5 (round trip bit-exact, extra field rejected, fragmentation,
   UDP == in-process for seed 5, lossy lockstep). 54 tests total.
 
-**Verified (commit 8d3e44c):** pytest 54 passed. `--runs 50 --seed 0`: in-process 95.2% / 94% /
+Verified (commit 8d3e44c): pytest 54 passed. `--runs 50 --seed 0`: in-process 95.2% / 94% /
 12.1 s (`results/2026-10-11_8d3e44c_baseline.json`); UDP 95.2% / 94% / 12.1 s
 (`results/2026-10-11_8d3e44c_link-udp.json`). All 50 per-run results (outcome, time, events,
 diagnostics) are identical between the two and to `68513f6_baseline.json`; 0 retransmissions.
 Wall time 82 s in-process vs 125 s over UDP (process start-up + serialisation).
 
-**Next:** (A) ROADMAP A1/A3 (inner-opening mask-growth range bias) or A4 (both squares). (C) is
+Next: (A) ROADMAP A1/A3 (inner-opening mask-growth range bias) or A4 (both squares). (C) is
 due by 2026-10-14 (7 days since the last write-up on 2026-10-07): docs/WRITEUP.md.
 
 ---
 
-## 2026-10-12 — Run 6: (B) renderer realism — area-coverage anti-aliasing (re-baseline)
+## 2026-10-12, Run 6: (B) renderer realism: area-coverage anti-aliasing (re-baseline)
 
-**Baseline confirmed on main (8c96b4b):** pytest 54 passed; `--runs 50 --seed 0` = 95.2% pass
-rate, 94% completion, 12.1 s lap — identical to `2026-10-11_8d3e44c_baseline.json`.
+Baseline confirmed on main (8c96b4b): pytest 54 passed; `--runs 50 --seed 0` = 95.2% pass
+rate, 94% completion, 12.1 s lap - identical to `2026-10-11_8d3e44c_baseline.json`.
 
-**Why (started as ROADMAP A3, sub-pixel corners):** scratch diagnostic (truth used offline
+Why (started as ROADMAP A3, sub-pixel corners): scratch diagnostic (truth used offline
 only): 1500 random single-gate views at 2-20 m, detected corners vs true projected corners.
 Contour corners: outer squares +0.3% to +1.7% too big, openings -2.7% to -10.4% too small,
 RMS 0.6 / 1.6 px. A first sub-pixel refinement (half-contrast edge crossings) made it *worse*
-(outer +10%, openings -12% at 14-20 m, RMS exactly 1.0 px at every range) — a constant pixel
+(outer +10%, openings -12% at 14-20 m, RMS exactly 1.0 px at every range) - a constant pixel
 offset, i.e. the edges themselves were drawn in the wrong place. Rendering a 20 x 20 px square
 with cv2 `fillPoly(LINE_AA)` paints 456 px² instead of 400: **the simulator's renderer painted
 every gate ~0.7 px too wide on every edge** (squares too big, openings too small). That is a
 simulator defect, not something the autonomy should be tuned to, so this run became (B).
 
-**Change:** `SimConfig.gate_supersample` (commit dfb2535, default 0 = old renderer): each gate
+Change: `SimConfig.gate_supersample` (commit dfb2535, default 0 = old renderer): each gate
 is rasterised into an N x N supersampled mask, box-filtered to per-pixel coverage and
-alpha-blended — like a pixel integrating light over its area. cv2's fill also includes
+alpha-blended - like a pixel integrating light over its area. cv2's fill also includes
 sub-pixels whose centres lie on/just outside the edge, so the outline is shrunk and the
 opening grown by half a sub-pixel first; with N = 8 a 20 px frame with a 10 px opening paints
 300.0 px² (exact 300)
@@ -237,7 +237,7 @@ area; legacy fill shown too fat). `test_lost_target_recovery_rescues_a_phantom_h
 (seed 15) no longer has a phantom handoff on the new renderer, so it is pinned to
 `gate_supersample=0`, where the scenario was found.
 
-**Corner accuracy on the new renderer (same diagnostic):**
+Corner accuracy on the new renderer (same diagnostic):
 | range (m) | contour: outer / opening size, RMS | sub-pixel: outer / opening size, RMS |
 |---|---|---|
 | 2-4 | -1.1% / -0.5%, 0.8 / 0.9 px | -0.0% / +0.0%, 0.10 / 0.12 px |
@@ -245,7 +245,7 @@ area; legacy fill shown too fat). `test_lost_target_recovery_rescues_a_phantom_h
 | 14-20 | -6.3% / -1.6%, 0.8 / 0.9 px | +1.7% / -2.5%, 0.32 / 0.33 px |
 (The contour tracer follows the centres of boundary mask pixels, so it now reads gates far.)
 
-**Re-baseline (commit a1d6b65; numbers before/after are NOT comparable):**
+Re-baseline (commit a1d6b65; numbers before/after are NOT comparable):
 | seeds | pass | completion | outcomes | lap (s) | file |
 |---|---|---|---|---|---|
 | 0 (headline) | **96.2%** | 94% | 47 done, 3 crash_gate | 12.5 | `2026-10-12_a1d6b65_rebaseline-coverage-aa.json` |
@@ -255,26 +255,26 @@ runs are on average 0.37 s slower (median 0.30 s, 45 runs completed in both); un
 hypothesis: contour corners now read gates 1-6% *far* (before ~1% near), which changes when
 the guidance turns and hands off.
 
-**Preliminary (not a decision): sub-pixel corners** (`subpixel_corners`, commit b6ec22d,
+Preliminary (not a decision): sub-pixel corners (`subpixel_corners`, commit b6ec22d,
 default False; +1 detector test): seed 0 96.2% -> 96.8% (lap 12.5 -> 12.3 s), seed 1000
 95.2% -> 96.0% (lap 12.53 -> 12.33 s); median estimation error 0.58 -> 0.57 m and
 0.62 -> 0.55 m. Same direction on both sets, but each well under the 8 pp noise threshold.
 Files `2026-10-12_a1d6b65_ab-subpix{,-seed1000}.json`. Harness wall time 73 s -> 107 s (the
 per-profile Python loop; vectorise before flipping).
 
-**Next:** (A) finish the sub-pixel A/B: vectorise, run seeds 2000/3000, decide; then revisit
+Next: (A) finish the sub-pixel A/B: vectorise, run seeds 2000/3000, decide; then revisit
 `robust_inner_depth_tol` (its 8% was set on the old renderer's biases). (C) write-up is due
 by 2026-10-14.
 
 ---
 
-## 2026-10-12 — Run 7: (A) sub-pixel corners — finish the A/B, now default
+## 2026-10-12, Run 7: (A) sub-pixel corners: finish the A/B, now default
 
-**Baseline confirmed on main (66a635a):** pytest 56 passed; `--runs 50 --seed 0` = 96.2% pass
-rate, 94% completion, 12.5 s lap, 3 crash_gate — identical to
+Baseline confirmed on main (66a635a): pytest 56 passed; `--runs 50 --seed 0` = 96.2% pass
+rate, 94% completion, 12.5 s lap, 3 crash_gate - identical to
 `2026-10-12_a1d6b65_rebaseline-coverage-aa.json`.
 
-**Speed-up first (commit 06ceff9):** `refine_quad_subpix` now samples all four edges' profiles
+Speed-up first (commit 06ceff9): `refine_quad_subpix` now samples all four edges' profiles
 with one `cv2.remap`, finds every half-level crossing at once (argmax over the "above half"
 mask instead of a per-profile Python loop) and fits each edge line in closed form (2x2 scatter
 angle) instead of an SVD. On 386 calls recorded from seed 3 it returns the same corners to
@@ -282,7 +282,7 @@ angle) instead of an SVD. On 386 calls recorded from seed 3 it returns the same 
 episodes; harness wall time with the flag on is now ~+20% (114 -> 137 s) instead of ~+50%.
 The flag-off path is bit-identical to a1d6b65 (all 50 `per_run` entries equal).
 
-**A/B (commit 06ceff9, same seeds, flag off vs on):**
+A/B (commit 06ceff9, same seeds, flag off vs on):
 | seeds | pass off -> on | completion | lap (s) off -> on | median est. error (m) |
 |---|---|---|---|---|
 | 0 | 96.2% -> 97.5% | 94% -> 96% | 12.50 -> 12.33 | 0.583 -> 0.558 |
@@ -299,32 +299,32 @@ Why the laps get faster is not verified; hypothesis: contour corners read gates 
 the guidance was planning against a gate further away than it is.
 
 Outcome churn is large: 8 runs rescued and 10 broken across the four sets, including 3 new
-`missed_gate` outcomes (seeds 1005, 1006, 3004; none with the flag off) — worth a look.
+`missed_gate` outcomes (seeds 1005, 1006, 3004; none with the flag off) - worth a look.
 
-**Noise lesson:** the earlier preliminary A/B (a1d6b65, SVD line fit) gave 96.8% / 96.0% on
+Noise lesson: the earlier preliminary A/B (a1d6b65, SVD line fit) gave 96.8% / 96.0% on
 seeds 0 / 1000; the same algorithm with the closed-form fit (corners equal to 1e-13 px) gives
 97.5% / 94.8%. 40+ of 50 runs have different traces and 1-2 outcomes flip per set. Per-seed
 outcomes are chaotic, so only pooled multi-set numbers mean anything below ~8 pp.
 
-**New headline (commit 3b6cbbb, default config):** `--runs 50 --seed 0` = **97.5%** pass rate,
+New headline (commit 3b6cbbb, default config): `--runs 50 --seed 0` = **97.5%** pass rate,
 96% completion, 48 completed / 2 crash_gate, 12.33 s lap
 (`results/2026-10-12_3b6cbbb_baseline.json`; per-run identical to `06ceff9_ab-subpix.json`).
 Tests: 56 passed. The seed-15 phantom-handoff scenario test now also pins
 `subpixel_corners=False` (it was found with contour corners and the legacy renderer).
 
-**Next:** (C) the write-up is due by 2026-10-14 (docs/WRITEUP.md). Then (A): look at the three
+Next: (C) the write-up is due by 2026-10-14 (docs/WRITEUP.md). Then (A): look at the three
 new `missed_gate` runs; re-tune `robust_inner_depth_tol` (8%, set on the legacy renderer's
 biases) and the range-noise model now that corners are within ~1-2% at range.
 
 ---
 
-## 2026-10-12 — Run 8: (C) write-up
+## 2026-10-12, Run 8: (C) write-up
 
-**Baseline confirmed on main (8872bfa):** pytest 56 passed; `--runs 50 --seed 0` = 97.5% pass
-rate, 96% completion, 12.33 s lap, 48 completed / 2 crash_gate — identical to
+Baseline confirmed on main (8872bfa): pytest 56 passed; `--runs 50 --seed 0` = 97.5% pass
+rate, 96% completion, 12.33 s lap, 48 completed / 2 crash_gate - identical to
 `2026-10-12_3b6cbbb_baseline.json`.
 
-**Chunk C (due by 2026-10-14; no write-up since the bootstrap on 2026-10-07):**
+Chunk C (due by 2026-10-14; no write-up since the bootstrap on 2026-10-07):
 - `docs/WRITEUP.md`: problem and rules, results, pipeline (mermaid diagram), detection, PnP
   ambiguities, the ESKF in the target gate's frame and the handoff frame change, chi-squared
   gating, the gate-category table (target / next / nearer / beyond), cubic guidance and
@@ -341,25 +341,25 @@ rate, 96% completion, 12.33 s lap, 48 completed / 2 crash_gate — identical to
   updated (README and CLAUDE.md said 54 tests / ~65 s; it is 57 / ~130 s since sub-pixel
   corners).
 
-**Verified:** pytest 57 passed; 8-run harness smoke on 861bf57 100% (64/64). No flight code
+Verified: pytest 57 passed; 8-run harness smoke on 861bf57 100% (64/64). No flight code
 changed, so no new results file.
 
-**Pass rate:** no change (97.5%).
+Pass rate: no change (97.5%).
 
-**Next:** (A) ROADMAP item 0 — re-tune `robust_inner_depth_tol` and the range-noise model for
+Next: (A) ROADMAP item 0 - re-tune `robust_inner_depth_tol` and the range-noise model for
 the new corners, and look at the three `missed_gate` runs (seeds 1005, 1006, 3004). Next (C) due
 by 2026-10-19.
 
-## 2026-10-12 — Interactive session (not a scheduled run): code review fixes
+## 2026-10-12, Interactive session (not a scheduled run): code review fixes
 
 Requested by Dom: review the codebase, fix what was found.
 
-- **bb0d16f** `flightviz --live`: tkinter window that replays a flight at real-time pace.
-- **63ac0b6** cleanups with identical flight results — ESKF computes P Hᵀ and S once per
+- bb0d16f `flightviz --live`: tkinter window that replays a flight at real-time pace.
+- 63ac0b6 cleanups with identical flight results - ESKF computes P Hᵀ and S once per
   update; detector skips re-fitting a hole whose quad already failed in pass 1; harness
   reports a true median (was the upper median for even run counts) and rejects `--runs 0`;
   flightviz handles 0/1 frames. Verified: 50 runs, seed 0, per-run results identical.
-- **49d3f9a** small behaviour changes + two opt-in flags:
+- 49d3f9a small behaviour changes + two opt-in flags:
   - `ESKF.change_frame` rotates `pos_cov` (old-frame covariance of t) into the new frame
     (rounding-only today: callers pass an isotropic covariance);
   - OUTER detection area measured on the sub-pixel refined quad (INNER already was);
@@ -368,25 +368,25 @@ Requested by Dom: review the codebase, fix what was found.
   - `SimConfig.pixel_noise_fresh` (default False): independent image noise every frame
     instead of a bank of 8 patterns. Not benchmarked; flipping it needs a re-baseline.
 
-**Defaults after 49d3f9a** (`*_49d3f9a_baseline*.json`): 97.5 / 95.75 / 97.5 / 94.0% on seed
+Defaults after 49d3f9a (`*_49d3f9a_baseline*.json`): 97.5 / 95.75 / 97.5 / 94.0% on seed
 sets 0/1000/2000/3000, pooled 96.19% (vs 96.69% for `*_06ceff9_ab-subpix*.json`; within
-noise — chaotic per-seed flips). Headline unchanged: 97.5%, 96% completion, 12.33 s.
+noise - chaotic per-seed flips). Headline unchanged: 97.5%, 96% completion, 12.33 s.
 
-**A/B `yaw_correlated_cov`** (`*_49d3f9a_ab-yawcorr*.json`): 97.0 / 93.25 / 96.5 / 98.75%,
+A/B `yaw_correlated_cov` (`*_49d3f9a_ab-yawcorr*.json`): 97.0 / 93.25 / 96.5 / 98.75%,
 pooled 96.38% vs 96.19% off; paired laps n = 179, mean -0.003 s, 87 faster. No clear effect:
 left off (flag kept for later, e.g. under harder sim settings).
 
-**Pass rate:** no change (97.5%).
+Pass rate: no change (97.5%).
 
 ---
 
-## 2026-10-13 — Run 9: (A) drop far RANSAC outlines that have no opening to cross-check
+## 2026-10-13, Run 9: (A) drop far RANSAC outlines that have no opening to cross-check
 
-**Baseline confirmed on main (41a2fe0):** pytest 58 passed; `--runs 50 --seed 0` = 97.5% pass
-rate, 96% completion, 12.33 s lap, 48 completed / 2 crash_gate — identical to
+Baseline confirmed on main (41a2fe0): pytest 58 passed; `--runs 50 --seed 0` = 97.5% pass
+rate, 96% completion, 12.33 s lap, 48 completed / 2 crash_gate - identical to
 `2026-10-12_3b6cbbb_baseline.json`.
 
-**Measure first (ROADMAP item 0).** Scratch script (not committed): wrap
+Measure first (ROADMAP item 0). Scratch script (not committed): wrap
 `Autonomy._detection_solutions` and compare every PnP range with the true range to the gate
 nearest the estimate, seeds 0-19, default config, ~20 000 detections:
 | type | 7-10 m | 10-13 m | 13-20 m | 20-40 m |
@@ -401,11 +401,11 @@ squares are good to ~1% out to 13 m. Re-tuning `robust_inner_depth_tol` would no
 RANSAC outlines beyond 7 m the chosen range is -2.8% median at tol 0 vs -3.5% at 8%, ~half
 still > 5% off either way, because 455 of 819 of them have no valid opening to compare with.
 
-**Change (commit b6a6a31, flag `drop_lone_robust_far`, default False; +1 test):** a RANSAC
+Change (commit b6a6a31, flag `drop_lone_robust_far`, default False; +1 test): a RANSAC
 outline with no valid opening of its own, measured beyond `lone_robust_max_range` = 6 m, is
 dropped instead of being used as a target update or next-gate sighting.
 
-**A/B (commit b6a6a31, same seeds, off -> on):**
+A/B (commit b6a6a31, same seeds, off -> on):
 | seeds | pass | completion | lap (s) | median est. error (m) |
 |---|---|---|---|---|
 | 0 | 97.5% -> 96.8% | 96 -> 94% | 12.33 -> 12.27 | 0.556 -> 0.394 |
@@ -415,34 +415,34 @@ dropped instead of being used as a target update or next-gate sighting.
 | 4000 (held out, run after the first four) | 94.5% -> 95.5% | 92 -> 94% | 12.29 -> 12.26 | 0.625 -> 0.482 |
 | pooled (2000 gates) | **96.25% -> 97.50%** | | | |
 Files `results/2026-10-1{2,3}_b6a6a31_{baseline,ab-droplone}{,-seed1000,...,-seed4000}.json`.
-Paired laps (229 runs completed both ways): mean -0.007 s, median 0.000, s.e. 0.008 — unchanged.
+Paired laps (229 runs completed both ways): mean -0.007 s, median 0.000, s.e. 0.008 - unchanged.
 11 runs rescued, 4 broken (seeds 4, 2015, 3036, 4010, all crash_gate). `missed_gate`
 outcomes 4 -> 0 (incl. seeds 1005, 1006, 3004 from run 7). Estimation error lower on all five
 sets. Every per-set difference is under the 8 pp noise threshold (3 up, 2 down), so the
 decision rests on the pooled number, the held-out set agreeing, and the consistent error drop.
-**Kept: default True** (commit 0f1e256). The seed-15 recovery scenario test now pins the flag
+Kept: default True (commit 0f1e256). The seed-15 recovery scenario test now pins the flag
 off: with it on, that seed completes all 8 gates with no recovery needed.
 
-**New headline (commit 0f1e256):** `--runs 50 --seed 0` = **96.8%** pass rate, 94% completion,
+New headline (commit 0f1e256): `--runs 50 --seed 0` = **96.8%** pass rate, 94% completion,
 47 completed / 3 crash_gate, 12.27 s lap, median est. error 0.394 m
 (`results/2026-10-13_0f1e256_baseline.json`; per-run identical to `b6a6a31_ab-droplone.json`).
-The seed-0 set drops one run (seed 4) — noise against a pooled +1.25 pp; reported as is.
+The seed-0 set drops one run (seed 4) - noise against a pooled +1.25 pp; reported as is.
 README, WRITEUP (results table, ablation row, section 6.5) and figures updated.
 Tests: 59 passed.
 
-**Pass rate:** headline 97.5% -> 96.8% (seed 0); pooled over five seed sets 96.25% -> 97.50%.
+Pass rate: headline 97.5% -> 96.8% (seed 0); pooled over five seed sets 96.25% -> 97.50%.
 
-**Next:** (A) the remaining failures are all `crash_gate`; look at what the estimate was doing
+Next: (A) the remaining failures are all `crash_gate`; look at what the estimate was doing
 before each (a failure-analysis tool, ROADMAP (B), would make this quick). Then ROADMAP items
 2/4 (upright PnP, both squares). (C) due by 2026-10-19.
 
-## 2026-10-13 — Interactive session (not a scheduled run): camera-only mode, standalone app, browser replay
+## 2026-10-13, Interactive session (not a scheduled run): camera-only mode, standalone app, browser replay
 
 Requested by Dom: a fully vision-based option with no map and no IMU, and a version viewers can
 install or open easily. He chose: camera-only as an A/B'd option (default only if it holds up);
 standalone executables and a browser demo.
 
-**Camera-only (commit d26fe46, flag `camera_only`, default False).** The IMU fields of the
+Camera-only (commit d26fe46, flag `camera_only`, default False). The IMU fields of the
 observation are never read (`tests/test_camera_only.py` feeds NaN accel / 1e6 gyro and checks
 identical commands). Between frames the ESKF is propagated with a predicted specific force and
 body rate from the drone's own last command: first-order rate (40 ms) and thrust (30 ms) lags
@@ -451,7 +451,7 @@ filter assumes it starts level. These are the autonomy's own model assumptions, 
 nominal airframe (the sim also has quadratic drag the model omits); no sensitivity test with a
 deliberately wrong model was run.
 
-A/B (commit db88370 — d26fe46 plus the app entry point, no flight-code change), off -> on:
+A/B (commit db88370 - d26fe46 plus the app entry point, no flight-code change), off -> on:
 | seeds | pass | completion | lap (s) | median est. error (m) |
 |---|---|---|---|---|
 | 0 | 96.8% -> 98.0% | 94 -> 96% | 12.27 -> 12.28 | 0.394 -> 0.441 |
@@ -461,21 +461,21 @@ A/B (commit db88370 — d26fe46 plus the app entry point, no flight-code change)
 | pooled (1600 gates) | **98.00% -> 94.12%** | | | |
 Files `results/2026-10-13_db88370_{baseline,ab-camonly}{,-seed1000,-seed2000,-seed3000}.json`.
 Paired laps (173 runs): +0.064 s mean. 5 runs rescued, 20 broken; estimation error worse on all
-four sets. **Left off** — camera + IMU stays the default. Seed set 0 alone pointed the other way.
+four sets. **Left off** - camera + IMU stays the default. Seed set 0 alone pointed the other way.
 
 Baseline check at db88370: seed 0 96.75% (= `2026-10-13_0f1e256_baseline.json`, per-run).
 
-**Standalone app.** `vdr/app.py` is one entry point (`vdr-racing`: launcher; `fly`, `bench`,
+Standalone app. `vdr/app.py` is one entry point (`vdr-racing`: launcher; `fly`, `bench`,
 `demo-data` sub-commands). The launcher re-runs its own executable with a sub-command when
 frozen; harness workers call `freeze_support`. `pyproject.toml` (pip/pipx install, console
 script `vdr-racing`); `packaging/build.py` (PyInstaller one-folder build + zip);
 `.github/workflows/release.yml` builds Windows/macOS/Linux on a `v*` tag, smoke-tests each
 executable with a 1-course benchmark and attaches the zips to a release. Linux build verified
 here: 185 MB zip; `bench`, `fly --out x.gif` and `demo-data` run from the executable (the tk
-launcher window could not be opened here — no display/tkinter in this container). Harness writes
+launcher window could not be opened here - no display/tkinter in this container). Harness writes
 `results/` into the current folder and records commit "unknown" when not run from a git checkout.
 
-**Browser replay** (`docs/demo/`, published by `.github/workflows/pages.yml` once Pages is set to
+Browser replay (`docs/demo/`, published by `.github/workflows/pages.yml` once Pages is set to
 "GitHub Actions"): `python -m vdr.demo` records flights (JPEG frames, detector quads re-run on the
 same pixels, true and estimated positions); the page plays them back with a top view and the
 camera-only benchmark table read from the committed results. Seeds 0, 1017, 2034, both modes
@@ -483,12 +483,12 @@ camera-only benchmark table read from the committed results. Seeds 0, 1017, 2034
 
 Tests: 63 passed. **Pass rate:** no change to the default (headline 96.8%).
 
-## 2026-10-14 — Run 10: (A) what the remaining crashes are; lateral-priority saturation (left off)
+## 2026-10-14, Run 10: (A) what the remaining crashes are; lateral-priority saturation (left off)
 
-**Baseline check** at ef43188: tests 63 passed; `--runs 50 --seed 0` 96.8% (387/400), 47 completed /
-3 crash_gate, 12.27 s — same as `2026-10-13_0f1e256_baseline.json`.
+Baseline check at ef43188: tests 63 passed; `--runs 50 --seed 0` 96.8% (387/400), 47 completed /
+3 crash_gate, 12.27 s - same as `2026-10-13_0f1e256_baseline.json`.
 
-**Crash analysis (ROADMAP A0).** Re-flew the 10 failed runs of the current default over seed sets
+Crash analysis (ROADMAP A0). Re-flew the 10 failed runs of the current default over seed sets
 0/1000/2000/3000/4000 (seeds 4, 14, 47, 2015, 2049, 3018, 3036, 4008, 4010, 4042) with
 `run_episode(record=True)`, comparing the estimate with truth in the target gate's frame, and
 logged the guidance acceleration with a monkeypatched `gate_guidance` (scratch scripts, not committed):
@@ -496,13 +496,13 @@ logged the guidance acceleration with a monkeypatched `gate_guidance` (scratch s
 - In 8 of 10 the estimate was within 6 cm of truth at impact (exceptions: 47 and 2015, 0.4-0.5 m
   along x). So it is not estimation error at the moment of the crash.
 - In 5 of 10 (4, 2015, 3018, 3036, 4010) the estimate had been 1.7-3.5 m off about 0.8-1.0 s
-  before impact and was corrected with ~0.6 s to go — late after a handoff.
+  before impact and was corrected with ~0.6 s to go - late after a handoff.
 - Either way the drone then needs more lateral acceleration than it has: close to `terminal_x`
   the cubic asks for 30-75 m/s² and `attitude_command` scales *all* axes down to 14 m/s², so a
   large spurious along-track braking term (-20 to -39 m/s² at x ≈ -1.3 m) eats most of the
   budget. The terminal "hold the line" law (k_lat = 3 1/s² for ~0.15 s) barely moves the drone.
 
-**A/B: `lateral_accel_priority`** (commit 2d7e3f6, default False). When the gate guidance asks for
+A/B: `lateral_accel_priority` (commit 2d7e3f6, default False). When the gate guidance asks for
 more than `max_accel`, keep the lateral (gate y/z) part and shorten the along-track part first.
 | seeds | pass off -> on | completion | lap (s) | median est. error (m) |
 |---|---|---|---|---|
@@ -514,13 +514,13 @@ more than `max_accel`, keep the lateral (gate y/z) part and shorten the along-tr
 | pooled (2000 gates) | **97.50% -> 98.25%** | 240 -> 240 runs | | |
 Files `results/2026-10-1{3,4}_2d7e3f6_{baseline,ab-latprio}{,-seed1000,...,-seed4000}.json`.
 Paired laps (232 runs completed both ways): mean -0.040 s. 8 runs rescued (4, 14, 2015, 3018,
-3036, 4008, 4010, 4042 — 8 of the 10 analysed crashes; 47 and 2049 still crash) and 8 broken
+3036, 4008, 4010, 4042 - 8 of the 10 analysed crashes; 47 and 2049 still crash) and 8 broken
 (5, 11, 2003, 2010, 2030, 2042, 2046, 3019; 5 of them on set 2000), so completed runs are
 unchanged (240/250 both ways); the gate-count gain is broken runs failing later. Not a clear
 win -> **left off**.
 
 Why it breaks runs (guidance traces of 5, 2003, 2030, 3019 with the flag on): with lateral
-priority the saturated cubic becomes bang-bang — full 14 m/s² sideways until ~1.8 m out builds
+priority the saturated cubic becomes bang-bang - full 14 m/s² sideways until ~1.8 m out builds
 4-5 m/s of lateral speed that can't be removed in time, so the drone overshoots through the
 centre line into the other side of the frame. In 3019 the guidance asked for -9 to -12 m/s²
 vertically; `f_z` then nearly vanishes and the tilt limit in `attitude_command` clips the
@@ -532,17 +532,17 @@ budget.
 Added `tests/test_control.py` (4 tests on the saturation helper and flag-off equivalence).
 Tests: 67 passed. **Pass rate:** no change to the default (headline 96.8%, pooled 97.50%).
 
-**Next:** (A) a guidance law that respects the acceleration limit — e.g. lateral cubic with T
+Next: (A) a guidance law that respects the acceleration limit - e.g. lateral cubic with T
 chosen so its peak acceleration stays under `max_accel` (slowing x only when needed), or a
 min-time bang-bang with a braking switch; A/B pooled over 5 sets. Also: the 5 late corrections
 point at handoff accuracy (ROADMAP A1/A4). (C) write-up due by 2026-10-19.
 
-## 2026-10-15 — Run 11: (A) along-track time-to-go (kept: pass rate flat, laps -1.03 s)
+## 2026-10-15, Run 11: (A) along-track time-to-go (kept: pass rate flat, laps -1.03 s)
 
-**Baseline check** at 1e0fdb1: tests 67 passed; `--runs 50 --seed 0` 96.8% (387/400), 47 completed /
-3 crash_gate, 12.27 s — same as `2026-10-13_0f1e256_baseline.json`.
+Baseline check at 1e0fdb1: tests 67 passed; `--runs 50 --seed 0` 96.8% (387/400), 47 completed /
+3 crash_gate, 12.27 s - same as `2026-10-13_0f1e256_baseline.json`.
 
-**Where the spurious braking came from.** Run 10 found the cubic asking for -20 to -39 m/s²
+Where the spurious braking came from. Run 10 found the cubic asking for -20 to -39 m/s²
 along-track near x ≈ -1.3 m. The cause is the `t_go_min` = 0.3 s floor on time-to-go: at 8 m/s
 the floor is active from x ≈ -2.4 m to `terminal_x` = -1.2 m, where the gate is really
 0.15-0.3 s away, so the cubic "arrives too early" and brakes hard (at 8 m/s on the line with
@@ -550,7 +550,7 @@ the floor is active from x ≈ -2.4 m to `terminal_x` = -1.2 m, where the gate i
 -40). Uniform clipping to 14 m/s² then left 12 and 7 m/s² for the lateral correction.
 Range-based T (it includes the lateral offset) adds a smaller braking term further out.
 
-**A/B: `along_track_tgo`** (commit 131d93c). Time-to-go from the along-track motion only,
+A/B: `along_track_tgo` (commit 131d93c). Time-to-go from the along-track motion only,
 T_x = 2(-p_x)/(v_x + V); the x axis uses T_x unfloored (zero demand at cruise on the line), the
 lateral axes keep the 0.3 s floor.
 | seeds | pass off -> on | completion | lap (s) |
@@ -567,7 +567,7 @@ On: `results/2026-10-1{4,5}_131d93c_ab-attgo{,-seed1000,...,-seed4000}.json`.
 Paired laps (233 runs completed both ways): mean -1.03 s (-8.4%), median -1.03 s, worst +0.085 s.
 Pass rate is flat (within noise), so by the pace rule (faster at equal pass rate) it is an
 improvement -> **kept**, default flipped in 1d4bb7f. Post-flip headline:
-`results/2026-10-15_1d4bb7f_baseline.json` — 100.0% (400/400), 50/50 completed, 11.26 s,
+`results/2026-10-15_1d4bb7f_baseline.json` - 100.0% (400/400), 50/50 completed, 11.26 s,
 median est. error 0.401 m. UDP smoke test (8 runs) passes.
 
 Rescued 8 runs (4, 14, 47, 3018, 3036, 4008, 4010, 4042), broke 7 (1020, 1033, 3001, 3004, 3010,
@@ -575,31 +575,31 @@ Rescued 8 runs (4, 14, 47, 3018, 3036, 4008, 4010, 4042), broke 7 (1020, 1033, 3
 run 10, now at a higher average speed: all hit / miss the target gate 0.54-1.19 m off centre
 laterally; estimate error at impact <= 0.12 m in all 7; in 1020 and 1033 it was 3.5-3.9 m off
 0.8 s before (late post-handoff correction). So lateral authority close to the gate is still
-the limit — the cubic's lateral demand saturates.
+the limit - the cubic's lateral demand saturates.
 
 Tests: `tests/test_control.py` +2 (no along-track demand on the line at cruise; agrees with
 the old law far out on the axis). `test_lost_target_recovery_rescues_a_phantom_handoff` now pins
 `along_track_tgo=False` (the new flight path no longer produces that phantom handoff). 69 passed.
 
-**Pass rate (headline, seed 0):** 96.8% -> 100.0% (pooled 5 sets 97.50% -> 97.75%, i.e. flat);
+Pass rate (headline, seed 0): 96.8% -> 100.0% (pooled 5 sets 97.50% -> 97.75%, i.e. flat);
 lap 12.27 -> 11.26 s.
 
-**Next:** (A) lateral demand that respects `max_accel`: e.g. pick lateral T so the cubic's peak
+Next: (A) lateral demand that respects `max_accel`: e.g. pick lateral T so the cubic's peak
 lateral acceleration (6|Δy|/T² for a rest-to-rest move) stays under the limit and slow along x
 only when that T exceeds the arrival time; pooled over 5 sets, paired laps. (C) write-up is due
-by 2026-10-19 — README/WRITEUP still quote the 96.8% / 12.27 s baseline (true for its file).
+by 2026-10-19 - README/WRITEUP still quote the 96.8% / 12.27 s baseline (true for its file).
 
-## 2026-10-15 — Run 12: (C) write-up refresh
+## 2026-10-15, Run 12: (C) write-up refresh
 
 Chunk choice: runs 10 and 11 were both (A), and README/WRITEUP still quoted the pre-run-11
 baseline (96.8% / 12.27 s), so this run is (C).
 
-**Baseline check** at 1c03a85 (local `main` had been 35 commits behind `origin/main`;
+Baseline check at 1c03a85 (local `main` had been 35 commits behind `origin/main`;
 fast-forwarded before starting): tests 69 passed; `--runs 50 --seed 0` 100.0% (400/400),
-50/50 completed, 11.26 s, median est. error 0.401 m — identical to
+50/50 completed, 11.26 s, median est. error 0.401 m - identical to
 `results/2026-10-15_1d4bb7f_baseline.json` (run not saved; no code change since).
 
-**What changed (docs and figures only; no autonomy or sim code touched):**
+What changed (docs and figures only; no autonomy or sim code touched):
 - `vdr/report.py`: 1d4bb7f baseline added to the history; along-track time-to-go added to the
   ablation figure (5 sets: 97.50% -> 97.75%); new `REJECTED` list (lateral-first saturation,
   97.50% -> 98.25%, printed, not plotted); `PAIRED` is now a list, giving a second figure
@@ -625,18 +625,18 @@ Not done: the browser replay recordings (`docs/demo/flights.js`) and the camera-
 predate along-track time-to-go; re-running camera-only on the current default should come
 first so the replay and its table match (ROADMAP C).
 
-**Next:** (A) lateral guidance that plans within `max_accel` (ROADMAP A0), pooled over 5 sets
+Next: (A) lateral guidance that plans within `max_accel` (ROADMAP A0), pooled over 5 sets
 with paired laps.
 
 
-## 2026-10-16 — Run 13: (A) lateral guidance planned within an acceleration budget
+## 2026-10-16, Run 13: (A) lateral guidance planned within an acceleration budget
 
 Chunk choice: run 12 was (C), so (A), ROADMAP item A0.
 
-**Baseline check** at b408312: tests 69 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.26 s, median est. error 0.401 m — identical to `results/2026-10-15_1d4bb7f_baseline.json`.
+Baseline check at b408312: tests 69 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.26 s, median est. error 0.401 m - identical to `results/2026-10-15_1d4bb7f_baseline.json`.
 
-**Idea (`feasible_lateral`, commit d37cf14).** The cubic's lateral acceleration is linear in
+Idea (`feasible_lateral`, commit d37cf14). The cubic's lateral acceleration is linear in
 time, so its peak is at one end: a(0) = (-6y - 4T v_y)/T², a(T) = (6y + 2T v_y)/T². Pick the
 shortest lateral time-to-go T_lat whose peak stays within `feasible_lat_accel` = 11 m/s². If
 T_lat is later than the along-track arrival T_x, brake along x at constant deceleration so x
@@ -644,7 +644,7 @@ reaches 0 at T_lat (arrival speed free but >= `feasible_min_speed` = 3 m/s; brak
 what `max_accel` leaves). Example: 1 m off at 4 m and 8 m/s, the old law asks 24 m/s² sideways
 (clipped to 14); the new one asks 11.3 sideways and brakes at 6.9.
 
-**A/B** (off = current default; `results/2026-10-15_1d4bb7f_baseline.json` for seed 0 and
+A/B (off = current default; `results/2026-10-15_1d4bb7f_baseline.json` for seed 0 and
 `results/2026-10-1{4,5}_131d93c_ab-attgo-seed{1000..4000}.json`, same code path;
 on = `results/2026-10-1{5,6}_d37cf14_ab-feaslat[-seedN].json`):
 | seeds | pass off -> on | completed | lap (s) |
@@ -657,17 +657,17 @@ on = `results/2026-10-1{5,6}_d37cf14_ab-feaslat[-seedN].json`):
 | 5000 (held out) | 98.8% -> 100.0% | 49 -> 50 | 11.28 -> 11.64 |
 | pooled (2400 gates) | **97.92% -> 99.08%** | 290 -> 295 | |
 Seed 5000 off: `results/2026-10-16_d37cf14_baseline-seed5000.json` (flag off at d37cf14).
-Rescued 9 (1020, 2015, 2049, 3001, 3004, 3010, 4004, 4011, 5022 — 8 of them the lateral-saturation
+Rescued 9 (1020, 2015, 2049, 3001, 3004, 3010, 4004, 4011, 5022 - 8 of them the lateral-saturation
 crashes from run 11), broke 4 (1, 20, 1043, 3019). Paired laps (286 runs): mean +0.344 s (+3%),
-median +0.324 s, 271 slower — within the pace rule (< 5%), so **kept**, default flipped in
+median +0.324 s, 271 slower - within the pace rule (< 5%), so **kept**, default flipped in
 3395fb0. Post-flip headline `results/2026-10-16_3395fb0_baseline.json`: 97.8% (391/400), 48/50,
 11.59 s, median est. error 0.382 m. Seed 0 alone went down (it was the lucky set); the pooled
 number is the one to quote. UDP 8-run smoke test matches in-process (seed 1 missed in both).
 
-A lateral budget of 13.5 instead of 11 on seed 0 (not saved): 96.8%, 11.45 s — not pursued.
+A lateral budget of 13.5 instead of 11 on seed 0 (not saved): 96.8%, 11.45 s - not pursued.
 
-**Broken runs** (re-flown with `run_episode(record=True)`): 1, 20 and 3019 are phantom
-handoffs — right after the pass the next-gate estimate is 2-4 m off laterally (and short); the
+Broken runs (re-flown with `run_episode(record=True)`): 1, 20 and 3019 are phantom
+handoffs - right after the pass the next-gate estimate is 2-4 m off laterally (and short); the
 new law brakes and chases it, and by the time sightings correct it (~0.6-0.8 s later) the drone
 has lateral velocity the wrong way. 1043 crashed with 0.33 m estimate error. So the remaining
 failures are perception again (post-handoff next-gate estimates), not control.
@@ -675,25 +675,25 @@ failures are perception again (post-handoff next-gate estimates), not control.
 Tests: `tests/test_control.py` +2 (`lateral_min_tgo` stays in budget; flag brakes only when
 the lateral move can't fit and keeps |a| <= max_accel and arrival speed >= 3 m/s). 71 passed.
 
-**Pass rate (headline, seed 0):** 100.0% -> 97.8%; pooled 6 sets 97.92% -> 99.08%;
+Pass rate (headline, seed 0): 100.0% -> 97.8%; pooled 6 sets 97.92% -> 99.08%;
 lap 11.26 -> 11.59 s.
 
-**Next:** (A) don't plan hard on a fresh handoff estimate — e.g. limit braking/lateral demand
+Next: (A) don't plan hard on a fresh handoff estimate - e.g. limit braking/lateral demand
 while the target's position covariance is still the handoff floor, until a close sighting is
 accepted (attacks the 3 phantom-handoff breaks). (C) README/WRITEUP still quote the 1d4bb7f
 numbers (100.0% / 11.26 s / pooled 97.75%); refresh with this result (due by 2026-10-22).
 
-## 2026-10-17 — Run 14: (A) handoff yaw — diagnosis + `handoff_yaw_floor` A/B (flat, left off)
+## 2026-10-17, Run 14: (A) handoff yaw: diagnosis + `handoff_yaw_floor` A/B (flat, left off)
 
 Chunk choice: run 13 was (A) and run 12 (C); the write-up is not due until 2026-10-22, so (A),
 ROADMAP item A0 (phantom handoffs).
 
-**Baseline check** at 4ec4074 (local checkout was a detached HEAD 39 commits behind
+Baseline check at 4ec4074 (local checkout was a detached HEAD 39 commits behind
 `origin/main`; switched to `main` and fast-forwarded first): tests 71 passed; `--runs 50 --seed 0`
-97.8% (391/400), 48/50, 11.59 s, median est. error 0.382 m — identical to
+97.8% (391/400), 48/50, 11.59 s, median est. error 0.382 m - identical to
 `results/2026-10-16_3395fb0_baseline.json` (not saved; no code change).
 
-**Diagnosis (scratch scripts hooking `_switch_to` / `_update_target`, truth used only offline).**
+Diagnosis (scratch scripts hooking `_switch_to` / `_update_target`, truth used only offline).
 The run-13 idea ("don't plan hard until a close sighting is accepted") can't help: after every
 handoff in seeds 1, 2, 3, 5, 20, 1043, 3019 the first position update is accepted 0.01-0.08 s
 later. Yet 2-4 m lateral errors (with 0.5-1.7 m along x) persist for ~0.5-0.7 s. They are the
@@ -703,16 +703,16 @@ the body frame) has zero innovation; only the weak PnP attitude update can corre
 Per-handoff yaw error vs truth (`yaw of R_cur^T R_next`), seed sets 0 and 1000 (343 + 342 handoffs):
 measured (averaged sightings) RMS 9.0° / 10.5°, median 3.5° / 3.9°, 28 / 38 handoffs > 15°,
 worse at short range (< 7 m: RMS 12.8° / 15.8°); bearing prior RMS 9.8° / 9.9°. The claimed
-sigma of the averaged yaw has median 3.1° — 2-3x over-confident (normalised error RMS 2.2 / 3.0),
+sigma of the averaged yaw has median 3.1° - 2-3x over-confident (normalised error RMS 2.2 / 3.0),
 because sightings from one viewpoint share their bias. The failing handoffs had 16-46° errors
 (1043: -45.9°, 3019: +23.5° and +20.9°, 20: +16.3°).
 
-**Idea (`handoff_yaw_floor`, commit cbd0150).** Floor that sigma at 12° (the re-init yaw sigma)
+Idea (`handoff_yaw_floor`, commit cbd0150). Floor that sigma at 12° (the re-init yaw sigma)
 before the bearing blend, so the filter starts with a realistic yaw uncertainty and the
 attitude updates can pull it in. Offline, the blended yaw RMS drops 7.6° -> 6.7° (set 0) and
 9.6° -> 8.5° (set 1000).
 
-**A/B** (off = current default, same files as run 13's "on" arm: `results/2026-10-16_3395fb0_baseline.json`
+A/B (off = current default, same files as run 13's "on" arm: `results/2026-10-16_3395fb0_baseline.json`
 and `results/2026-10-16_d37cf14_ab-feaslat-seed{1000..5000}.json`; on =
 `results/2026-10-17_cbd0150_ab-yawfloor[-seedN].json`):
 | seeds | pass off -> on | completed | lap (s) | median est. err (m) |
@@ -725,7 +725,7 @@ and `results/2026-10-16_d37cf14_ab-feaslat-seed{1000..5000}.json`; on =
 | 5000 | 100.0% -> 100.0% | 50 -> 50 | 11.64 -> 11.65 | 0.469 -> 0.459 |
 | pooled (2400 gates) | 99.08% -> 99.17% | 295 -> 296 | | |
 Rescued 1 (seed 20), broke 0; paired laps (295 runs) +0.018 s mean. One run is noise, so
-**left off** (flag kept for ablation). In 3019 and 1043 the post-handoff error decays only a
+left off (flag kept for ablation). In 3019 and 1043 the post-handoff error decays only a
 little faster (e.g. 3019 last handoff: 2.52 m -> 1.56 m at +0.2 s); the attitude measurements
 that would correct the yaw are the same single-square PnP rotations (5-30° noise, IPPE flips),
 so a wider prior alone doesn't fix them.
@@ -733,23 +733,23 @@ so a wider prior alone doesn't fix them.
 Tests: `tests/test_handoff.py` (+2: flag off keeps the ~5° handoff yaw sigma; on gives the
 12°/20° blend ≈ 10.3°). 73 passed.
 
-**Pass rate (headline, seed 0):** no change (97.8%; pooled 99.08%).
+Pass rate (headline, seed 0): no change (97.8%; pooled 99.08%).
 
-**Next:** (A) gravity-constrained upright PnP (ROADMAP A2): solve position + yaw only, with
-roll/pitch from the filter — directly attacks the yaw error that causes phantom handoffs; then
+Next: (A) gravity-constrained upright PnP (ROADMAP A2): solve position + yaw only, with
+roll/pitch from the filter - directly attacks the yaw error that causes phantom handoffs; then
 re-try the yaw floor on top of it. Measure yaw error per handoff before/after with the same
 offline script. (C) write-up due by 2026-10-22 (still quotes the 1d4bb7f numbers).
 
-## 2026-10-17 — Run 15: (C) write-up refresh (feasible lateral, handoff yaw, camera-only re-run)
+## 2026-10-17, Run 15: (C) write-up refresh (feasible lateral, handoff yaw, camera-only re-run)
 
 Chunk choice: runs 13 and 14 were both (A), and README/WRITEUP still quoted the 1d4bb7f numbers
 (seed 0 100.0%, pooled 97.75%) although the default changed in run 13, so (C).
 
-**Baseline check** at 45db4d5: tests 73 passed; `--runs 50 --seed 0` 97.8% (391/400), 48/50,
-11.59 s, median est. error 0.382 m — identical to `results/2026-10-16_3395fb0_baseline.json`
+Baseline check at 45db4d5: tests 73 passed; `--runs 50 --seed 0` 97.8% (391/400), 48/50,
+11.59 s, median est. error 0.382 m - identical to `results/2026-10-16_3395fb0_baseline.json`
 (not saved; no flight code changed this run).
 
-**Write-up (commit 21b0f5f).**
+Write-up (commit 21b0f5f).
 - `vdr/report.py`: history gains the 3395fb0 baseline; ablations gain feasible lateral guidance
   (6 seed sets, pooled 97.92% -> 99.08%); rejected list gains the handoff yaw floor (99.08% ->
   99.17%); new paired-laps figure `docs/img/paired_laps_feaslat.png` (286 runs: 271 slower,
@@ -761,7 +761,7 @@ Chunk choice: runs 13 and 14 were both (A), and README/WRITEUP still quoted the 
   6.8 (next-gate yaw is invisible to the gate-centre measurement); limitations now point at
   upright PnP for yaw and a terminal miss-distance law. README test count 69 -> 73.
 
-**Camera-only re-run with the current default** (roadmap C item; the README table was from
+Camera-only re-run with the current default (roadmap C item; the README table was from
 db88370, before along-track time-to-go). `--flag camera_only=true` at 21b0f5f (docs-only commit,
 flight code identical to 3395fb0), 6 seed sets vs the default files above:
 | seeds | camera + IMU | camera only | completed |
@@ -782,21 +782,21 @@ the doc edits uncommitted (files tagged `-dirty`); deleted and re-run after comm
 
 Verify: pytest 73 passed; 8-run smoke 89.1% (seed 1 missed_gate, as in run 13).
 
-**Pass rate (headline, seed 0):** no change (97.8%; pooled 6 sets 99.08%).
+Pass rate (headline, seed 0): no change (97.8%; pooled 6 sets 99.08%).
 
-**Next:** (A) gravity-constrained upright PnP (ROADMAP A2) to measure next-gate yaw better,
+Next: (A) gravity-constrained upright PnP (ROADMAP A2) to measure next-gate yaw better,
 then re-try `handoff_yaw_floor` on top; measure per-handoff yaw error before/after.
 
-## 2026-10-18/19 — Run 16: (A) gravity-constrained ("upright") PnP (pooled 99.08% -> 99.54%)
+## 2026-10-18/19, Run 16: (A) gravity-constrained ("upright") PnP (pooled 99.08% -> 99.54%)
 
 Chunk choice: run 15 was (C); ROADMAP A2 (upright PnP) was next, aimed at the next-gate yaw
 error that run 14 found behind the phantom handoffs.
 
-**Baseline check** at 01c5631 (local main was 2 commits behind origin; fast-forwarded first):
+Baseline check at 01c5631 (local main was 2 commits behind origin; fast-forwarded first):
 tests 73 passed; `--runs 50 --seed 0` 97.8% (391/400), 48/50, 11.59 s, median est. error
-0.382 m — identical to `results/2026-10-16_3395fb0_baseline.json` (not saved).
+0.382 m - identical to `results/2026-10-16_3395fb0_baseline.json` (not saved).
 
-**Idea (`upright_pnp`, commit bc81c40).** Gates are vertical, so with roll/pitch known from the
+Idea (`upright_pnp`, commit bc81c40). Gates are vertical, so with roll/pitch known from the
 filter's gravity direction a square's pose has 4 unknowns (position + yaw), not 6.
 `pnp.refine_upright` runs Gauss-Newton on the 8 reprojection residuals with the object frame's
 +y fixed to the filter's "up", seeded from each up-aligned IPPE solution; both IPPE solutions
@@ -805,14 +805,14 @@ scenes per band, 0.5 px corner noise, 1° error in "up"): drone yaw error RMS 3.
 2-5 m, 7.9 -> 5.4° at 5-8 m (>15°: 8.0% -> 1.2%), 11.0 -> 9.5° at 8-12 m; body position median
 error roughly halved. ~2 ms per detection in numpy.
 
-**A/B 1: upright PnP with a yaw-only attitude update** (the constrained pose carries no tilt
-information of its own) — worse: pooled 97.71% (2345/2400), completed 289 vs 295; 4 rescued
-(1, 20, 1033, 3019 — the yaw-handoff seeds), 10 broken. Files
-`results/2026-10-1{8,9}_bc81c40_ab-upright[-seedN].json`. Why: seed 3041 with truth — tilt error
+A/B 1: upright PnP with a yaw-only attitude update (the constrained pose carries no tilt
+information of its own) - worse: pooled 97.71% (2345/2400), completed 289 vs 295; 4 rescued
+(1, 20, 1033, 3019 - the yaw-handoff seeds), 10 broken. Files
+`results/2026-10-1{8,9}_bc81c40_ab-upright[-seedN].json`. Why: seed 3041 with truth - tilt error
 grew to 5° (1.2° RMS off vs 2.4° on): with no vision tilt update, tilt drifts, and an upright fit
 made with a tilted "up" absorbs the tilt error instead of exposing it.
 
-**A/B 2: `upright_keep_tilt` (commit da2703a)** — keep the 3-DoF attitude update, roll/pitch
+A/B 2: `upright_keep_tilt` (commit da2703a) - keep the 3-DoF attitude update, roll/pitch
 from the unconstrained IPPE seed (independent of the filter), yaw from the upright fit; position
 from the upright fit. Off = run 13's files (`3395fb0_baseline`, `d37cf14_ab-feaslat-seed*`), on =
 `results/2026-10-19_da2703a_ab-upright-tilt[-seedN].json`:
@@ -825,13 +825,13 @@ from the upright fit. Off = run 13's files (`3395fb0_baseline`, `d37cf14_ab-feas
 | 4000 | 100.0% -> 100.0% | 50 -> 50 | 11.55 -> 11.54 | 0.412 -> 0.358 |
 | 5000 | 100.0% -> 98.2% | 50 -> 49 | 11.64 -> 11.56 | 0.469 -> 0.316 |
 | pooled (2400 gates) | **99.08% -> 99.54%** | 295 -> 298 | | |
-Rescued 5 (1, 20, 1033, 1043, 3019), broke 2 (1005 crash_gate at 4, 5007 wrong_gate at 1 — not
+Rescued 5 (1, 20, 1033, 1043, 3019), broke 2 (1005 crash_gate at 4, 5007 wrong_gate at 1 - not
 yet diagnosed). Paired laps (293 runs) -0.036 s mean (flat). Per-run yaw error RMS mean 4.20° ->
 2.87°; median estimation error lower on all six sets. The pass-rate gain alone is small, but it
 is on the pooled 6 sets with a consistent mechanism metric, so **kept** (both flags on, commit
 9acf025). Cost: harness wall time ~90 s -> ~140 s per 50 runs.
 
-New baseline: `results/2026-10-19_9acf025_baseline.json` — 100.0% (400/400), 50/50, 11.60 s,
+New baseline: `results/2026-10-19_9acf025_baseline.json` - 100.0% (400/400), 50/50, 11.60 s,
 median est. error 0.299 m.
 
 Tests: +4 (`test_pnp`: exact upright fit on clean corners with one merged solution, yaw error
@@ -839,22 +839,22 @@ Tests: +4 (`test_pnp`: exact upright fit on clean corners with one merged soluti
 `test_lost_target_recovery_rescues_a_phantom_handoff` now pins `upright_pnp=False` (with it the
 seed-15 handoff is good enough that no recovery happens). 77 passed.
 
-**Pass rate (headline, seed 0):** 97.8% -> 100.0%; pooled 6 sets 99.08% -> 99.54%.
+Pass rate (headline, seed 0): 97.8% -> 100.0%; pooled 6 sets 99.08% -> 99.54%.
 
-**Next:** (A) diagnose 1005 and 5007 (wrong_gate is new); re-try `handoff_yaw_floor` on top of
+Next: (A) diagnose 1005 and 5007 (wrong_gate is new); re-try `handoff_yaw_floor` on top of
 upright PnP; ROADMAP A4 (both squares) now fits naturally into the upright solver (8 points).
 (C) write-up due by 2026-10-24: add the upright PnP story and re-run the camera-only A/B.
 
-## 2026-10-19/20 — Run 17: (A) joint outline + opening upright fit (flat, left off)
+## 2026-10-19/20, Run 17: (A) joint outline + opening upright fit (flat, left off)
 
 Chunk choice: run 16 was (A) and run 15 (C); the write-up is not due until 2026-10-24, so
 (A) again: ROADMAP A4 ("use both squares"), which run 16 noted now fits into the upright solver.
 
-**Baseline check** at 78d96eb: tests 77 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.60 s, median est. error 0.299 m — identical to `results/2026-10-19_9acf025_baseline.json`
+Baseline check at 78d96eb: tests 77 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.60 s, median est. error 0.299 m - identical to `results/2026-10-19_9acf025_baseline.json`
 (not saved). Harness wall time on this machine ~260-280 s per 50 runs.
 
-**Idea (`joint_squares`, commit 42e68bf).** The outer outline and the inner opening are
+Idea (`joint_squares`, commit 42e68bf). The outer outline and the inner opening are
 concentric coplanar squares of one gate. When an OUTER detection has its own opening and the
 outline was not already replaced by it (robust-outline check), `pnp.refine_upright_squares`
 fits all 8 corners at once (4 DoF, Gauss-Newton seeded from each upright outline solution);
@@ -862,7 +862,7 @@ fits all 8 corners at once (4 DoF, Gauss-Newton seeded from each upright outline
 Offline (scratch, synthetic corners with 0.5 px noise, 0.7° error in "up"): drone yaw RMS
 1.5 -> 1.2° at 2-5 m, 4.6 -> 4.0° at 5-8 m, 9.3 -> 8.1° at 8-12 m.
 
-**A/B** (off = `9acf025_baseline` + `da2703a_ab-upright-tilt-seedN`, same code path; on =
+A/B (off = `9acf025_baseline` + `da2703a_ab-upright-tilt-seedN`, same code path; on =
 `results/2026-10-{19,20}_42e68bf_ab-joint[-seedN].json`):
 | seeds | pass off -> on | completed | lap (s) | median est. err (m) | mean yaw err RMS (°) |
 |---|---|---|---|---|---|
@@ -876,9 +876,9 @@ Offline (scratch, synthetic corners with 0.5 px noise, 0.7° error in "up"): dro
 Rescued 1005 (crash_gate at 4, one of the two runs upright PnP broke), broke 2003 (missed_gate
 at 4). Paired laps (297 runs) +0.007 s. Yaw and estimation error mixed. **Flat -> left off.**
 
-**Why it didn't help** (scratch: one gate rendered by the real `FpvCamera`, 250 clean
+Why it didn't help (scratch: one gate rendered by the real `FpvCamera`, 250 clean
 single-gate detections per band, detector with sub-pixel corners, 0.7° error in "up"): the
-outline alone is already far better than the synthetic 0.5 px model assumed — yaw RMS 0.27°
+outline alone is already far better than the synthetic 0.5 px model assumed - yaw RMS 0.27°
 (2-5 m), 0.77° (5-8 m), 1.59° (8-12 m), range bias < 0.1%. The joint fit only helps beyond
 12 m (yaw 6.4 -> 3.4°, range bias -0.86% -> -0.07%), where the opening alone is worse than the
 outline at every range (it is smaller). So clean single-gate detections are not where the
@@ -888,23 +888,23 @@ remaining yaw error comes from; it is merged/overlapping gates and the handoff a
 Tests: +1 (`test_pnp`: joint fit exact on clean corners, keeps size and IPPE seed). 78 passed;
 8-run smoke 100.0% (64/64).
 
-**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.54%).
+Pass rate (headline, seed 0): no change (100.0%; pooled 6 sets 99.54%).
 
-**Next:** (C) write-up due by 2026-10-24 (upright PnP story, camera-only re-run on 6 sets).
-(A) the remaining failures: 2003 (missed_gate, new with joint fit — irrelevant now), 5007
+Next: (C) write-up due by 2026-10-24 (upright PnP story, camera-only re-run on 6 sets).
+(A) the remaining failures: 2003 (missed_gate, new with joint fit - irrelevant now), 5007
 wrong_gate; measure per-handoff yaw error for merged-gate detections specifically.
 
-## 2026-10-20 — Run 18: (C) write-up refresh (upright PnP, joint fit, camera-only re-run)
+## 2026-10-20, Run 18: (C) write-up refresh (upright PnP, joint fit, camera-only re-run)
 
 Chunk choice: runs 16 and 17 were both (A), and README/WRITEUP still quoted the 3395fb0 default
 (pooled 99.08%) although upright PnP became the default in run 16, so (C).
 
-**Baseline check** at dcb8934 (local `main` was behind origin and HEAD detached; checked out
+Baseline check at dcb8934 (local `main` was behind origin and HEAD detached; checked out
 `main` and fast-forwarded first): tests 78 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.60 s, median est. error 0.299 m — identical to `results/2026-10-19_9acf025_baseline.json`
+11.60 s, median est. error 0.299 m - identical to `results/2026-10-19_9acf025_baseline.json`
 (not saved; no flight code changed this run). ~195 s per 50 runs on this machine.
 
-**Write-up (commit d356d7a).**
+Write-up (commit d356d7a).
 - `vdr/report.py`: history gains the 9acf025 baseline; ablations gain upright PnP (6 sets,
   pooled 99.08% -> 99.54%); rejected list gains upright PnP with a yaw-only update (97.71%) and
   the joint outline + opening fit (99.54% -> 99.54%); new paired-laps figure
@@ -917,7 +917,7 @@ Chunk choice: runs 16 and 17 were both (A), and README/WRITEUP still quoted the 
   filter's estimate removes observability) and 6.10 (measure the ceiling on real frames);
   limitations now point at merged-gate detection error. README test count 73 -> 78, ~80 s.
 
-**Camera-only re-run with the current default** (`--flag camera_only=true` at dcb8934, run from
+Camera-only re-run with the current default (`--flag camera_only=true` at dcb8934, run from
 a clean worktree so the doc edits could not tag the files `-dirty`):
 | seeds | camera + IMU | camera only | completed |
 |---|---|---|---|
@@ -929,7 +929,7 @@ a clean worktree so the doc edits could not tag the files `-dirty`):
 | 5000 | 98.2% | 100.0% | 49 -> 50 |
 | pooled (2400 gates) | **99.54%** | **98.62%** | 298 -> 294 (6 lost, 2 rescued) |
 Files: `results/2026-10-20_dcb8934_ab-camonly[-seedN].json` (commit 632139a). Camera-only laps
-11.4-11.6 s per set. The gap shrank from 6.1 pp (run 15: 92.96% vs 99.08%) to 0.9 pp — upright
+11.4-11.6 s per set. The gap shrank from 6.1 pp (run 15: 92.96% vs 99.08%) to 0.9 pp - upright
 PnP helped camera-only far more than camera + IMU. Not yet diagnosed why (hypothesis: without a
 gyro, heading between frames rests on the vision yaw). `vdr/demo.py` BENCHMARK now lists these
 6 pairs; `docs/demo/{flights,benchmark}.js` regenerated (seeds 0/1017/2034: five flights 8/8,
@@ -938,30 +938,30 @@ camera-only 2034 missed_gate at 4, matching its results file); `docs/img/flight.
 
 Verify: pytest 78 passed; 8-run smoke 100.0% (64/64).
 
-**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.54%).
+Pass rate (headline, seed 0): no change (100.0%; pooled 6 sets 99.54%).
 
-**Next:** (A) diagnose 1005 (crash_gate) and 5007 (wrong_gate); measure per-detection error of
+Next: (A) diagnose 1005 (crash_gate) and 5007 (wrong_gate); measure per-detection error of
 merged/overlapping-gate detections on rendered multi-gate scenes (ROADMAP A4). Check per-frame
 yaw error in camera-only mode against truth to confirm why upright PnP closed that gap.
 
-## 2026-10-20/21 — Run 19: (B) camera latency knob + sensitivity sweep (default unchanged)
+## 2026-10-20/21, Run 19: (B) camera latency knob + sensitivity sweep (default unchanged)
 
 Chunk choice: run 18 was (C) and run 17 (A). The benchmark is saturated (seed 0 100.0%, pooled
 6 sets 99.54%, 2 failing runs out of 300), so another (A) A/B cannot show a gain above noise.
 (B) instead: the first ROADMAP realism knob, camera latency, to find where the stack has headroom.
 
-**Baseline check** at 914576a: tests 78 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.60 s, median est. error 0.299 m — identical to `results/2026-10-19_9acf025_baseline.json`
+Baseline check at 914576a: tests 78 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.60 s, median est. error 0.299 m - identical to `results/2026-10-19_9acf025_baseline.json`
 (not saved). ~180 s per 50 runs on this machine.
 
-**Knob (commit 1077d61).** `SimConfig.camera_latency` (s, default 0.0 = old behaviour, rounded
+Knob (commit 1077d61). `SimConfig.camera_latency` (s, default 0.0 = old behaviour, rounded
 to whole 5 ms control ticks): a frame is rendered at capture (the world as it was then) and
 handed to the autonomy in a later Observation. With 0 the render calls, RNG draws and frame
 schedule are unchanged by construction (frames are queued only when the latency is > 0). The autonomy is *not* told the latency
 (the contract has no frame timestamp or latency calibration), so it fuses each frame as if it
 were current. Test: `test_sim::test_camera_latency_delivers_the_frame_captured_earlier`.
 
-**Sweep** (seed 0, 50 runs, `--sim camera_latency=X`, files `results/2026-10-2{0,1}_1077d61_latency-<X>ms.json`):
+Sweep (seed 0, 50 runs, `--sim camera_latency=X`, files `results/2026-10-2{0,1}_1077d61_latency-<X>ms.json`):
 | latency | pass rate | completed | lap (s) | median est. err (m) | outcomes |
 |---|---|---|---|---|---|
 | 0 (baseline) | 100.0% | 50 | 11.60 | 0.299 | all completed |
@@ -969,52 +969,52 @@ were current. Test: `test_sim::test_camera_latency_delivers_the_frame_captured_e
 | 15 ms | 92.0% | 44 | 11.88 | 0.397 | 5 crash_gate, 1 missed |
 | 20 ms | 52.0% | 21 | 12.17 | 0.456 | 23 crash_gate, 5 missed, 1 ground |
 | 30 ms | 18.75% | 2 | 12.97 | 0.553 | 37 crash_gate, 10 missed, 1 wrong |
-| 40 ms | 4.5% | 0 | – | 0.468 | 33 crash_gate, 17 missed |
-| 50 ms | 8.75% | 0 | – | 0.579 | 25 crash_gate, 20 missed, 4 ground, 1 wrong |
+| 40 ms | 4.5% | 0 | - | 0.468 | 33 crash_gate, 17 missed |
+| 50 ms | 8.75% | 0 | - | 0.579 | 25 crash_gate, 20 missed, 4 ground, 1 wrong |
 A cliff between 10 and 20 ms; 20-40 ms is typical for a real FPV camera + capture pipeline.
-(Two files were first written with wrong tags by a shell typo — "02ms"/"04ms" for 20/40 ms, and
-"05ms" for what was really 0.05 s — and renamed; each file's `sim_config.camera_latency` is the
+(Two files were first written with wrong tags by a shell typo - "02ms"/"04ms" for 20/40 ms, and
+"05ms" for what was really 0.05 s - and renamed; each file's `sim_config.camera_latency` is the
 authority.)
 
-**Which part of the stale frame hurts?** (scratch, not committed: monkeypatched renderer, 50
+Which part of the stale frame hurts? (scratch, not committed: monkeypatched renderer, 50
 runs seed 0, 20 ms): frame from capture-time position *and* attitude 52.0% (reproduces the
 committed file exactly), capture-time **position** with current attitude **100.0%**,
 current position with capture-time **attitude** 52.8%. So the 16 cm of travel in 20 ms is
 harmless; what breaks the stack is the camera having rotated by up to a few degrees since
-exposure — at 6-10 m that moves the gate-centre bearing by tens of cm, and the filter applies it
+exposure - at 6-10 m that moves the gate-centre bearing by tens of cm, and the filter applies it
 with the current attitude. Turning the PnP attitude update off at 20 ms (`att_factor=1000`,
 `results/2026-10-21_1077d61_latency-20ms-noatt.json`) does not help (35.5%), so it is the
 gate-centre bearing measurement itself, not only the attitude update.
 
-**Default not flipped.** Compensation is cheap in principle (rewind the filter's attitude to
+Default not flipped. Compensation is cheap in principle (rewind the filter's attitude to
 exposure time with the buffered gyro, or apply the update at its own timestamp and re-propagate)
-but the autonomy must know when each frame was exposed. That needs a contract addition — a
+but the autonomy must know when each frame was exposed. That needs a contract addition - a
 capture timestamp in `Observation` (what every camera driver provides) or a measured latency in
-`VehicleInfo` — which changes `tests/test_separation.py`'s allowed lists, so it is left for Dom
+`VehicleInfo` - which changes `tests/test_separation.py`'s allowed lists, so it is left for Dom
 to decide. Flipping the default now would only measure that missing interface field.
 
 Verify: pytest 79 passed; 8-run smoke 100.0% (64/64).
 
-**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.54%); default world unchanged.
+Pass rate (headline, seed 0): no change (100.0%; pooled 6 sets 99.54%); default world unchanged.
 
-**Next:** if Dom approves a frame capture timestamp: (A) delayed-measurement handling in the
-ESKF behind a flag (attitude rewind first — the split says that is all that matters), A/B at
+Next: if Dom approves a frame capture timestamp: (A) delayed-measurement handling in the
+ESKF behind a flag (attitude rewind first - the split says that is all that matters), A/B at
 20-30 ms, then flip `camera_latency` to ~0.025 and re-baseline (`--tag rebaseline-latency`).
 Otherwise (A) diagnose 1005 / 5007 on the current world.
 
-## 2026-10-22 — Run 20: (A) next-gate yaw from unambiguous sightings only (pooled 99.54% -> 99.83%)
+## 2026-10-22, Run 20: (A) next-gate yaw from unambiguous sightings only (pooled 99.54% -> 99.83%)
 
 Chunk choice: runs 19 (B) and 18 (C) were not (A), so (A). Started from ROADMAP A2: diagnose the
 two runs upright PnP broke (1005 crash_gate at 4, 5007 wrong_gate at 1).
 
-**Baseline check** at f8cb3bd: tests 79 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.60 s, median est. error 0.299 m — identical to `results/2026-10-19_9acf025_baseline.json`.
+Baseline check at f8cb3bd: tests 79 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.60 s, median est. error 0.299 m - identical to `results/2026-10-19_9acf025_baseline.json`.
 
-**Diagnosis** (scratch scripts hooking `_switch_to` / `_add_sighting` with truth, not committed):
+Diagnosis (scratch scripts hooking `_switch_to` / `_add_sighting` with truth, not committed):
 - Both failures follow a handoff with a large next-gate yaw error: 1005 gate 3 -> 4, 25 deg
   (55 sightings, claimed sigma 3.5 deg); 5007 gate 0 -> 1, 41 deg.
 - 1005: gate 4 is seen through gate 3's opening at 6-13 m and nearly every sighting has *two*
-  valid upright solutions at about +/-40-45 deg from the truth — neither is right.
+  valid upright solutions at about +/-40-45 deg from the truth - neither is right.
 - Over 40k truth-matched next-gate sightings (seed sets 1000 + 5000, current default), yaw error
   by number of valid solutions: one solution RMS 5-10 deg (median 1.4-3.7); two solutions RMS
   17-44 deg (inner openings: median 34 deg, 72% > 15 deg; RANSAC outlines: median 20 deg). Even the
@@ -1024,12 +1024,12 @@ two runs upright PnP broke (1005 crash_gate at 4, 5007 wrong_gate at 1).
   yaw error, a second one fixed it 0.5 s later, but the next-gate hypotheses built in between
   were kept and one of them (in the wrong frame) became the handoff target. Not fixed this run.
 
-**Change** (`unambiguous_yaw_votes`, commits fe855c9 + 6b66b99): next-gate hypotheses keep two yaw
-averages — all sightings, and sightings with a single valid pose. The handoff (and retarget /
+Change (`unambiguous_yaw_votes`, commits fe855c9 + 6b66b99): next-gate hypotheses keep two yaw
+averages - all sightings, and sightings with a single valid pose. The handoff (and retarget /
 recovery switches) use the second; if a hypothesis has none, it falls back to all sightings (old
 behaviour). Positions still use every sighting. Tests: `test_handoff.py` (2 new).
 
-**A/B** (50 runs per set, same seeds, files `results/2026-10-22_{fe855c9,6b66b99}_ab-unamb*`):
+A/B (50 runs per set, same seeds, files `results/2026-10-22_{fe855c9,6b66b99}_ab-unamb*`):
 | seed set | off | bearing-only fallback | **on (fallback to all)** |
 |---|---|---|---|
 | 0 | 100.0% | 100.0% | 100.0% |
@@ -1052,37 +1052,37 @@ set and explained by the mechanism, so it was kept (default on, commit 5143039).
 2003 (broken) is not a yaw problem: gate 4 sits 7 m behind gate 3 and was seen only twice before
 the pass (off: 5 times), below `next_gate_min_sightings`, so the handoff went to gate 5.
 
-New baseline: `results/2026-10-22_5143039_baseline.json` — seed 0 100.0%, 50/50, 11.59 s,
+New baseline: `results/2026-10-22_5143039_baseline.json` - seed 0 100.0%, 50/50, 11.59 s,
 median est. error 0.203 m (was 0.299).
 
 Verify: pytest 81 passed; harness clean on all 6 sets.
 
-**Pass rate (headline, seed 0):** 100.0% -> 100.0%; pooled 6 sets 99.54% -> 99.83%.
+Pass rate (headline, seed 0): 100.0% -> 100.0%; pooled 6 sets 99.54% -> 99.83%.
 
-**Next:** (A) clear (or re-express) the next-gate / closer / beyond hypotheses on a filter
+Next: (A) clear (or re-express) the next-gate / closer / beyond hypotheses on a filter
 re-initialisation (5007's root cause; affects ~12 of 300 runs); handoff when the next gate was
 seen too few times (2003: a gate close behind the target); write-up refresh is due by 10-27.
 
-## 2026-10-22/23 — Run 21: (B) motion-blur knob + exposure sweep (default unchanged)
+## 2026-10-22/23, Run 21: (B) motion-blur knob + exposure sweep (default unchanged)
 
 Chunk choice: run 20 was (A) and pass rate is at 99.83% pooled (seed 0 100%), so the benchmark has
 little headroom for (A); the write-up is due by 10-27 (not yet). Took the next ROADMAP realism knob
 that needs no contract change: motion blur.
 
-**Baseline check** at 8141e1e: tests 81 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`.
+Baseline check at 8141e1e: tests 81 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m - identical to `results/2026-10-22_5143039_baseline.json`.
 
-**Change** (commits f58b856, 697a289): `SimConfig.exposure_time` (default 0 = instantaneous shutter,
+Change (commits f58b856, 697a289): `SimConfig.exposure_time` (default 0 = instantaneous shutter,
 old behaviour). With exposure > 0 the frame is the mean of noise-free renders at true poses sampled
 over [t - exposure, t] (poses interpolated between 400 Hz physics steps, rotation on SO(3)), then
 one frame of sensor noise. The shutter *ends* at capture, so mid-exposure is exposure/2 before the
-frame — a small built-in delay, as on a real camera. Sub-frame count follows the image motion
+frame - a small built-in delay, as on a real camera. Sub-frame count follows the image motion
 (`FpvCamera.motion_px`: camera rotation x f and every gate corner's displacement), ~1 per pixel,
 capped at `exposure_samples` = 16; a still drone costs one render. Test: `test_sim.py::
 test_motion_blur_averages_the_shutter_interval` (still drone renders bit-identical; fast yaw
 triples the edge-blend band; sampled poses span the shutter).
 
-**Sweep** (50 runs; `results/2026-10-23_*exposure*`, `*latency*`). The frame period at 40 Hz is
+Sweep (50 runs; `results/2026-10-23_*exposure*`, `*latency*`). The frame period at 40 Hz is
 25 ms, so 20 ms is close to the physical maximum:
 | world | seed set | pass rate | completed | lap | median est. error |
 |---|---|---|---|---|---|
@@ -1098,10 +1098,10 @@ Seed 1000 with the current default is 100.0% (`2026-10-22_6b66b99_ab-unamb2-on-s
 20 ms of blur costs at most one run there (under the noise level; 1009 not investigated).
 Reading: blur up to the frame period does not cost pass rate; it raises estimation error by ~60%
 at 20 ms. The latency controls (mid-exposure delay alone) say the same delay without blur is not
-better — 10 ms latency already sits at the edge of run 19's cliff (2 crashes here, 0 at 1077d61;
-2 runs is noise). Not concluded: whether blur *helps* versus pure delay — the difference is 2 runs.
+better - 10 ms latency already sits at the edge of run 19's cliff (2 crashes here, 0 at 1077d61;
+2 runs is noise). Not concluded: whether blur *helps* versus pure delay - the difference is 2 runs.
 
-**Default left at 0.** It would be the realistic choice (~5 ms) and is harmless to pass rate, but
+Default left at 0. It would be the realistic choice (~5 ms) and is harmless to pass rate, but
 the benchmark gets ~2x slower (seed 0: 143 s -> 284 s with adaptive sub-frames; most frames move
 2-5 px because of looming near gates), for no measurable change at 5 ms. Worth flipping once a
 second knob (latency compensation, distractors) makes the combined world harder; a cheaper motion
@@ -1112,30 +1112,30 @@ was 0.22 m. Read nothing but "it runs" into `--runs 2`.
 
 Verify: pytest 82 passed; harness clean on every sweep point.
 
-**Pass rate (headline, seed 0):** 100.0% -> 100.0% (no flight change; default world unchanged).
+Pass rate (headline, seed 0): 100.0% -> 100.0% (no flight change; default world unchanged).
 
-**Next:** (C) write-up refresh is due by 10-27 (add unambiguous_yaw_votes, the camera-only re-run,
+Next: (C) write-up refresh is due by 10-27 (add unambiguous_yaw_votes, the camera-only re-run,
 and the blur/latency sensitivity); (A) clear stale next-gate hypotheses on filter re-init;
 latency compensation still waits on Dom's frame-timestamp decision.
 
-## 2026-10-23/24 — Run 22: (A) gate hypotheses after a filter re-initialisation (flat, left off)
+## 2026-10-23/24, Run 22: (A) gate hypotheses after a filter re-initialisation (flat, left off)
 
 Chunk choice: run 21 was (B), run 20 (A); ROADMAP A2 "(next) stale hypotheses after a
 re-initialisation" (5007's root cause in run 20). Write-up is still due by 10-27.
 
-**Baseline check** at e10934f: tests 82 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`.
+Baseline check at e10934f: tests 82 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m - identical to `results/2026-10-22_5143039_baseline.json`.
 (The checkout was a detached HEAD with a stale local `main`; fast-forwarded `main` to origin.)
 
-**Change** (commit 418da48, two flags, default off): when 8 rejects in a row re-initialise the
+Change (commit 418da48, two flags, default off): when 8 rejects in a row re-initialise the
 filter, the next-gate / closer / beyond hypotheses and the previous gate were placed with the old
 pose. `reinit_reexpress_hyps` applies the reinit's pose correction to them
 (c' = p_new + R_new R_old^T (c - p_old), yaw votes rotated by d_yaw; exact on the running sums);
 `reinit_clear_hyps` drops them. Tests: `test_handoff.py` (2 new: exact re-expression of a
 20-deg-rotated hypothesis; off keeps it stale, clear empties the lists).
 
-**A/B** (50 runs per set; off = the committed `results/2026-10-22_6b66b99_ab-unamb2-on*.json`, the
-current default — seed 0 re-run tonight matches it; on = `results/2026-10-2{3,4}_418da48_ab-reinit-*`):
+A/B (50 runs per set; off = the committed `results/2026-10-22_6b66b99_ab-unamb2-on*.json`, the
+current default - seed 0 re-run tonight matches it; on = `results/2026-10-2{3,4}_418da48_ab-reinit-*`):
 | seed set | off | reexpress | clear | runs with a reinit |
 |---|---|---|---|---|
 | 0 | 100.0% | 100.0% | 100.0% | 1 |
@@ -1149,15 +1149,15 @@ Only runs with a reinit change (per_run identical otherwise): reexpress 6, clear
 complete; paired laps (299 runs) -0.000 s / -0.001 s; median est. error unchanged on every set.
 Left off (no measurable gain). 5007 already completes since run 20.
 
-**Diagnosis** (scratch hooks on `_after_reinit` / `_switch_to` / `_update_target` with truth, not
+Diagnosis (scratch hooks on `_after_reinit` / `_switch_to` / `_update_target` with truth, not
 committed):
 - Re-expression does what it should: 5007's second reinit (45.6 -> 0.4 deg) moved the stale
   hypotheses from 5.0 / 9.6 m off to 0.17 / 0.54 m; 4046's (-12.7 -> -3.2 deg) moved the g4
   hypothesis 1.32 -> 0.72 m. 4046's worse run-level error under reexpress (yaw RMS 3.4 -> 12.8 deg)
-  comes from a later handoff after the trajectory diverged (identical up to the g4 handoff) — chaos.
-- **The real problem in 5007 is the first reinit itself.** At t=0.25 s the filter was 6 cm / 0 deg
+  comes from a later handoff after the trajectory diverged (identical up to the g4 handoff) - chaos.
+- The real problem in 5007 is the first reinit itself. At t=0.25 s the filter was 6 cm / 0 deg
   off; then the target's *opening* was detected with a 0.40 m centre bias and two upright
-  solutions (+44 / -65 deg yaw). The chi2 gate correctly rejected it 8 frames in a row — and the
+  solutions (+44 / -65 deg yaw). The chi2 gate correctly rejected it 8 frames in a row - and the
   reinit then adopted it, putting the filter 4.9 m / 44 deg off. Re-expressing hypotheses after
   such a reinit only makes them agree with a wrong pose. A reinit should need a measurement that
   is itself trustworthy (single solution, or several rejected measurements agreeing with each
@@ -1165,22 +1165,22 @@ committed):
 
 Verify: pytest 84 passed; harness clean on all 12 runs.
 
-**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.83%); defaults unchanged.
+Pass rate (headline, seed 0): no change (100.0%; pooled 6 sets 99.83%); defaults unchanged.
 
-**Next:** (C) write-up refresh, due by 10-27. Then (A): don't re-initialise from a two-solution
-(ambiguous) measurement — 5007's bad reinit — behind a flag; handoff when the next gate was seen
+Next: (C) write-up refresh, due by 10-27. Then (A): don't re-initialise from a two-solution
+(ambiguous) measurement - 5007's bad reinit - behind a flag; handoff when the next gate was seen
 too few times (2003).
 
-## 2026-10-24/25 — Run 23: (C) write-up refresh + camera-only re-run (no flight change)
+## 2026-10-24/25, Run 23: (C) write-up refresh + camera-only re-run (no flight change)
 
 Chunk choice: run 22 was (A), run 21 (B); the write-up was last refreshed on 10-20 and due by
 10-27, and the last two runs both named it next.
 
-**Baseline check** at 75277ee: tests 84 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`
+Baseline check at 75277ee: tests 84 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m - identical to `results/2026-10-22_5143039_baseline.json`
 (not saved).
 
-**Camera-only re-run with the current default** (`--flag camera_only=true` at 75277ee, from a
+Camera-only re-run with the current default (`--flag camera_only=true` at 75277ee, from a
 clean worktree so the doc edits could not tag the files `-dirty`):
 | seeds | camera + IMU | camera only (now) | camera only (run 18, dcb8934) |
 |---|---|---|---|
@@ -1195,13 +1195,13 @@ Files: `results/2026-10-25_75277ee_ab-camonly[-seedN].json`. Camera-only failure
 broken 1, 14, 1030, 2003, 4028, 5018; rescued 41, 1002 (still failing: 11, 2034, 3023, 3025).
 The camera + IMU default gained 0.29 pp from unambiguous yaw votes; camera-only lost 0.83 pp
 (4 net runs). Not diagnosed: it may be chaos (a different default changes most trajectories),
-or ambiguity-filtered yaw votes leave camera-only — which has no gyro to carry heading — with
-too few votes on some hypotheses. Laps 11.4–11.6 s, median est. error 0.23–0.26 m per set.
+or ambiguity-filtered yaw votes leave camera-only - which has no gyro to carry heading - with
+too few votes on some hypotheses. Laps 11.4-11.6 s, median est. error 0.23-0.26 m per set.
 
-**Write-up** (README, docs/WRITEUP.md, figures): reports the 5143039 default (seed 0 100.0%,
+Write-up (README, docs/WRITEUP.md, figures): reports the 5143039 default (seed 0 100.0%,
 11.59 s; pooled 6 sets 99.83%, 299/300, only failure 2003). New: unambiguous yaw votes in the
 results table, history, ablations and a paired-laps figure (`docs/img/paired_laps_unamb.png`,
-297 runs, −0.007 s); bearing-only fallback and both reinit variants as "tried, left off" rows;
+297 runs, -0.007 s); bearing-only fallback and both reinit variants as "tried, left off" rows;
 section 4.1 "Sensor sensitivity" with a new figure (`docs/img/sensitivity.png`) from the
 committed latency (run 19) and exposure (run 21) sweeps; stories 6.11 (split a measurement by
 solver ambiguity) and 6.12 (check the recovery before repairing after it); limitations rewritten
@@ -1214,29 +1214,29 @@ printout and the log.
 
 Verify: pytest 84 passed; 8-run smoke 100.0% (64/64).
 
-**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.83%).
+Pass rate (headline, seed 0): no change (100.0%; pooled 6 sets 99.83%).
 
-**Next:** (A) don't re-initialise the filter from a two-solution measurement (5007's bad reinit),
+Next: (A) don't re-initialise the filter from a two-solution measurement (5007's bad reinit),
 behind a flag; check camera-only's drop against truth (yaw-vote counts per hypothesis with and
 without `unambiguous_yaw_votes` in camera-only mode). Latency compensation still waits on Dom's
 frame-timestamp decision.
 
-## 2026-10-26 — Run 24: (A) no re-initialisation from an ambiguous measurement (flat, left off)
+## 2026-10-26, Run 24: (A) no re-initialisation from an ambiguous measurement (flat, left off)
 
 Chunk choice: run 23 was (C), run 22 (A); ROADMAP A2 "(next) bad re-initialisations" (5007's
 first reinit adopted a biased two-solution opening, run 22).
 
-**Baseline check** at d55e023: tests 84 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`
+Baseline check at d55e023: tests 84 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m - identical to `results/2026-10-22_5143039_baseline.json`
 (not saved). (Checkout was again a detached HEAD; reset `main` to origin/main, no local work.)
 
-**Change** (commit f3542f3, flag `reinit_unambiguous_only`, default off): after
+Change (commit f3542f3, flag `reinit_unambiguous_only`, default off): after
 `max_consecutive_rejects` (8) chi2 rejects, a measurement with two valid poses (`len(sols) > 1`)
 no longer triggers the reinit; the next rejected single-solution one does, or any one once
 `reinit_ambiguous_max_rejects` (24) rejects have piled up (lock-out recovery kept). Test:
 `test_handoff.py::test_reinit_unambiguous_only_waits_for_a_single_solution`.
 
-**A/B** (50 runs per set; off = committed `results/2026-10-22_6b66b99_ab-unamb2-on*.json`, the
+A/B (50 runs per set; off = committed `results/2026-10-22_6b66b99_ab-unamb2-on*.json`, the
 current default, seed 0 re-run tonight identical; on = `results/2026-10-26_f3542f3_ab-reinit-unamb*.json`):
 | seed set | off | on | runs changed |
 |---|---|---|---|
@@ -1249,7 +1249,7 @@ current default, seed 0 re-run tonight identical; on = `results/2026-10-26_f3542
 | pooled (2400 gates) | 99.83% | 99.83% | 2/300 |
 Per-run `diag` of the two changed runs: **5007** reinits 3 -> 0, pos rejects 27 -> 12, pos err
 RMS 1.149 -> 0.335 m (max 4.88 -> 1.90 m), yaw err RMS 9.19 -> 2.01 deg, lap 11.87 -> 11.535 s.
-**1005** still 1 reinit (deferred to a single-solution frame), pos err unchanged (2.44 m RMS),
+1005 still 1 reinit (deferred to a single-solution frame), pos err unchanged (2.44 m RMS),
 yaw RMS 3.58 -> 4.60 deg, lap 11.375 -> 11.342 s. The other 10 runs with a reinit reinitialise
 from a single-solution measurement already and are identical.
 
@@ -1257,30 +1257,30 @@ The mechanism cannot reach camera-only mode: the committed camera-only files
 (`results/2026-10-25_75277ee_ab-camonly*.json`) have 0 reinits in 300 runs, so no camera-only
 re-run was needed.
 
-**Left off.** It does exactly what it was meant to on the one run that motivated it, and breaks
+Left off. It does exactly what it was meant to on the one run that motivated it, and breaks
 nothing, but one run (-0.34 s, no pass-rate change) is not "clearly helps" under the A/B rule.
 The benchmark is saturated (299/300 complete): further (A) work needs a harder world to show up.
 
 Verify: pytest 85 passed; harness clean on all 6 sets.
 
-**Pass rate (headline, seed 0):** no change (100.0%; pooled 6 sets 99.83%); defaults unchanged.
+Pass rate (headline, seed 0): no change (100.0%; pooled 6 sets 99.83%); defaults unchanged.
 
-**Next:** the benchmark no longer discriminates: (B) make the world harder (flip motion blur to
+Next: the benchmark no longer discriminates: (B) make the world harder (flip motion blur to
 ~5 ms together with a second knob, e.g. orange distractors or lens distortion) and re-baseline,
 so (A) changes like this one can be judged. Latency compensation still waits on Dom's
 frame-timestamp decision. Camera-only drop (98.62% -> 97.79%) still undiagnosed.
 
-## 2026-10-27 — Run 25: (B) orange clutter knob, default flipped to 20, re-baselined
+## 2026-10-27, Run 25: (B) orange clutter knob, default flipped to 20, re-baselined
 
 Chunk choice: run 24 was (A), run 23 (C); runs 24 and the roadmap both said the benchmark is
 saturated (299/300 complete) and (A) changes can no longer be judged, so (B) a harder world.
 
-**Baseline check** at de28867: tests 85 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
-11.59 s, median est. error 0.203 m — identical to `results/2026-10-22_5143039_baseline.json`
+Baseline check at de28867: tests 85 passed; `--runs 50 --seed 0` 100.0% (400/400), 50/50,
+11.59 s, median est. error 0.203 m - identical to `results/2026-10-22_5143039_baseline.json`
 (not saved).
 
-**Knob** (commit c76b992, `SimConfig.n_distractors`, default 0 = old behaviour): orange clutter
-beside the course — flat vertical rectangles (banners/panels, 0.4-2.5 x 0.3-1.5 m, bottom 0-1.8 m
+Knob (commit c76b992, `SimConfig.n_distractors`, default 0 = old behaviour): orange clutter
+beside the course - flat vertical rectangles (banners/panels, 0.4-2.5 x 0.3-1.5 m, bottom 0-1.8 m
 up, random yaw; 75%) and ground triangles (cones seen side-on; 25%), paint jittered around the gate
 colour but always inside the gate-paint HSV range. Every vertex stays `distractor_clearance` (2 m)
 from every leg (incl. start -> gate 0) and gate centre, placed up to `distractor_spread` (8 m) to
@@ -1291,7 +1291,7 @@ Test: `test_sim.py::test_distractors_are_clutter_off_the_racing_line`.
 `n_distractors=0` reproduces the baseline per run exactly (50/50 `per_run` entries equal minus
 `wall_s`, `results/2026-10-27_c76b992_knob-clutter0.json`).
 
-**Sweep** (seed 0, 50 runs, c76b992, `results/2026-10-27_c76b992_sweep-clutter{10,20,40}.json`):
+Sweep (seed 0, 50 runs, c76b992, `results/2026-10-27_c76b992_sweep-clutter{10,20,40}.json`):
 | n_distractors | pass rate | completed | lap (s) | median est. err (m) | wall (s) |
 |---|---|---|---|---|---|
 | 0 | 100.0% | 50/50 | 11.59 | 0.203 | 117 |
@@ -1300,7 +1300,7 @@ Test: `test_sim.py::test_distractors_are_clutter_off_the_racing_line`.
 | 40 | 89.5% | 44/50 | 11.69 | 0.528 | 148 |
 Cheap (+12% benchmark time at 20, vs +100% for motion blur), so motion blur stays off.
 
-**Default flipped to 20** (commit 11f0132; two old scenario tests pinned to `n_distractors=0`,
+Default flipped to 20 (commit 11f0132; two old scenario tests pinned to `n_distractors=0`,
 the world they were found in). **Numbers before and after this commit are not comparable.**
 Re-baseline, 50 runs per set (`results/2026-10-27_11f0132_rebaseline-clutter[-seedN].json` and
 `..._rebaseline-clutter-camonly[-seedN].json`):
@@ -1314,53 +1314,53 @@ Re-baseline, 50 runs per set (`results/2026-10-27_11f0132_rebaseline-clutter[-se
 | 5000 | 98.0% | 98.0% |
 | pooled (2400 gates) | **97.75%** (2346/2400, 292/300) | **96.46%** (2315/2400, 286/300) |
 Laps 11.45-11.68 s; median est. error 0.24-0.46 m (was ~0.20-0.22 m without clutter).
-Camera + IMU failures: 4 timeouts at gate 0 (1028, 3027, 4039, 5033 — also in camera-only),
+Camera + IMU failures: 4 timeouts at gate 0 (1028, 3027, 4039, 5033 - also in camera-only),
 3 missed_gate (0, 47, 49), 1 crash_gate (4024). Seed 0 tracked the wrong object 38% of the
-time (`wrong_gate_frac` 0.38, 4 retargets) — a distractor taken as the target.
+time (`wrong_gate_frac` 0.38, 4 retargets) - a distractor taken as the target.
 
-**Why the four never initialise** (scratch check at the hover start, not committed): the gate-0
+Why the four never initialise (scratch check at the hover start, not committed): the gate-0
 outline is found every frame (1028: one corner pulled 7 px out by a cone touching the frame;
-3027: all four corners within 0.2 px of truth), but no inner opening is detected — clutter seen
-through the opening merges with the frame in the colour mask, so the hole is not a quad — and
+3027: all four corners within 0.2 px of truth), but no inner opening is detected - clutter seen
+through the opening merges with the frame in the colour mask, so the hole is not a quad - and
 the outline gets 0 PnP candidates. Not yet confirmed which rule drops it; the likely one is
 `drop_lone_robust_far` (lone RANSAC outline beyond 6 m with no opening; gate 0 starts 5-7 m away).
 
 Verify: pytest 86 passed; all 17 harness invocations tonight ran cleanly.
 
-**Pass rate (headline, seed 0):** 100.0% -> 95.75% from the harder world (not an autonomy change;
+Pass rate (headline, seed 0): 100.0% -> 95.75% from the harder world (not an autonomy change;
 pooled 6 sets 99.83% -> 97.75%, camera-only 97.79% -> 96.46%).
 
-**Next:** (A) clutter-robust initialisation: confirm which rule drops the clean gate-0 outline in
+Next: (A) clutter-robust initialisation: confirm which rule drops the clean gate-0 outline in
 1028/3027/4039/5033 and let a lone outline through when it is the only plausible gate (e.g. in
 WAIT, or when its outline is clean), behind a flag. Then: reject distractors as targets (seed 0,
 4024: solid rectangles with no opening, or quads that fail the gate's aspect/size). Re-test
 `reinit_unambiguous_only` on the new benchmark. Write-up (C) due by 11-01 must re-report all
 numbers on the clutter benchmark.
 
-## 2026-10-28 — Run 26: (A) init_rescue — clutter-robust initialisation (pooled 97.75% -> 98.58%, kept)
+## 2026-10-28, Run 26: (A) init_rescue: clutter-robust initialisation (pooled 97.75% -> 98.58%, kept)
 
 Chunk choice: run 25 was (B) and asked for this (A) item next; write-up (C) is due by 11-01.
 
-**Baseline check** at 765fb5b: tests 86 passed; `--runs 50 --seed 0` 95.75% (383/400), 47/50,
-11.65 s, 0.306 m — identical to `results/2026-10-27_11f0132_rebaseline-clutter.json` (not saved).
+Baseline check at 765fb5b: tests 86 passed; `--runs 50 --seed 0` 95.75% (383/400), 47/50,
+11.65 s, 0.306 m - identical to `results/2026-10-27_11f0132_rebaseline-clutter.json` (not saved).
 
-**Diagnosis** (scratch hook on `_detection_solutions` in WAIT, not committed) of the 4 runs that
+Diagnosis (scratch hook on `_detection_solutions` in WAIT, not committed) of the 4 runs that
 never initialise:
 - 3027, 4039: lone RANSAC outline at 6.2-6.7 m with no opening -> dropped by
   `drop_lone_robust_far` (6 m limit) on every frame. Run 25's guess was right for these two.
 - 1028: a clean (non-RANSAC) outline; IPPE fits (0.82 px) but the upright fit is 4.3 px because a
   cone touching the frame pulls one corner ~7 px out. Upright fit to the other 3 corners: 0.23 px,
   range 6.38 m vs true 6.51 m; no other corner choice fits (>= 4.4 px).
-- 5033: a merged blob (reproj 12-20 px) plus a 39 px² "opening" at a fake 22 m — not rescuable here.
+- 5033: a merged blob (reproj 12-20 px) plus a 39 px² "opening" at a fake 22 m - not rescuable here.
 
-**Change** (059848c, flag `init_rescue`; `pnp.refine_upright` gets a corner mask `use`): in WAIT
-only, when a frame yields no PnP candidate at all, retry its detections leniently — keep lone far
+Change (059848c, flag `init_rescue`; `pnp.refine_upright` gets a corner mask `use`): in WAIT
+only, when a frame yields no PnP candidate at all, retry its detections leniently - keep lone far
 RANSAC outlines, and if the 4-corner upright fit fails accept a 3-corner upright fit when exactly
 one dropped corner fits the rest to <= 1 px and the 4 corners don't fit. Frames that already
 give a candidate are untouched. Test: `test_pnp.py::test_upright_fit_to_three_corners_ignores_one_pulled_corner`.
 Flag off reproduces the baseline per run exactly (`results/2026-10-28_059848c_ab-init-rescue-off.json`).
 
-**A/B** (50 runs per set, flag on: `results/2026-10-28_059848c_ab-init-rescue[-seedN].json`,
+A/B (50 runs per set, flag on: `results/2026-10-28_059848c_ab-init-rescue[-seedN].json`,
 `..._ab-init-rescue-camonly[-seedN].json`; off = run 25's re-baseline files):
 | seeds | camera + IMU off -> on | camera only off -> on |
 |---|---|---|
@@ -1373,34 +1373,34 @@ Flag off reproduces the baseline per run exactly (`results/2026-10-28_059848c_ab
 | pooled | **97.75 -> 98.58%** (2346 -> 2366/2400; 292 -> 294/300) | **96.46 -> 97.46%** (2315 -> 2339; 286 -> 289) |
 Paired lap time: 0.000 s (291 runs), camera-only -0.005 s (286). The rescue fired in 14/300 runs.
 
-**Init error against truth** (scratch hook on `_init_on_gate`): lone-outline inits 0.41 m (3027),
-0.19 m (4039); 3-corner inits 1.69 m (1028) and 1.53 m (4038), mostly lateral — 3 corners of a
+Init error against truth (scratch hook on `_init_on_gate`): lone-outline inits 0.41 m (3027),
+0.19 m (4039); 3-corner inits 1.69 m (1028) and 1.53 m (4038), mostly lateral - 3 corners of a
 ~35 px square pin range well but yaw poorly (~14 deg), which the filter then corrects. 4038 (was
 complete) crashed at gate 4, four gates after that init; not traced further.
 Side finding: in the baseline, runs 0 and 39 (seed 0) and 4038 initialise on an object 10-12 m
-from every gate (a distractor, chosen as the biggest candidate) — run 0 then misses gate 1.
+from every gate (a distractor, chosen as the biggest candidate) - run 0 then misses gate 1.
 
-**Kept**: default flipped to True (e65b78d); `results/2026-10-28_e65b78d_baseline.json` equals the
+Kept: default flipped to True (e65b78d); `results/2026-10-28_e65b78d_baseline.json` equals the
 flag-on seed-0 file per run. Verify: pytest 87 passed; all 16 harness invocations ran cleanly.
 
-**Pass rate (headline, seed 0):** 95.75% -> 95.75% (no change on seed 0); pooled 6 sets
+Pass rate (headline, seed 0): 95.75% -> 95.75% (no change on seed 0); pooled 6 sets
 97.75% -> 98.58%, camera-only 96.46% -> 97.46%.
 
-**Next:** (C) write-up due by 11-01 (clutter benchmark numbers, init_rescue, update `vdr/demo.py`
-BENCHMARK). Then (A): reject distractors at initialisation and as targets — the WAIT rule "biggest
+Next: (C) write-up due by 11-01 (clutter benchmark numbers, init_rescue, update `vdr/demo.py`
+BENCHMARK). Then (A): reject distractors at initialisation and as targets - the WAIT rule "biggest
 candidate" picks clutter (seed 0 run 0, 39; 4038); gate 0 should be a quad with an opening or the
 nearest upright 1.7 m square straight ahead.
 
-## 2026-10-30 — Run 27: (C) write-up refresh on the clutter benchmark (no flight change)
+## 2026-10-30, Run 27: (C) write-up refresh on the clutter benchmark (no flight change)
 
 Chunk choice: run 26 was (A) and run 25 (B), so (A) was not the default; the write-up was due by
 11-01 (last (C) run 23 on 10-25) and run 26 named it next.
 
-**Baseline check** at 31d08cd: tests 87 passed; `--runs 50 --seed 0` 95.75% (383/400), 47/50,
-11.65 s, median est. error 0.306 m — identical to `results/2026-10-28_e65b78d_baseline.json`
+Baseline check at 31d08cd: tests 87 passed; `--runs 50 --seed 0` 95.75% (383/400), 47/50,
+11.65 s, median est. error 0.306 m - identical to `results/2026-10-28_e65b78d_baseline.json`
 (not saved). (Checkout was again a detached HEAD at an older commit; reset `main` to origin/main.)
 
-**Done** (fe9dbe3; no new results files, every number from committed ones):
+Done (fe9dbe3; no new results files, every number from committed ones):
 - README: results re-reported on the clutter world (pooled 6 sets 98.58%, 294/300; seed 0 95.75%;
   init rescue off 97.75%; clean world 99.83% as reference), clean-world ablation table kept as
   history, camera-only table now the init-rescue files (pooled 97.46%, 289/300), simulator
@@ -1419,9 +1419,9 @@ Chunk choice: run 26 was (A) and run 25 (B), so (A) was not the default; the wri
 
 Verify: pytest 87 passed; harness, report, demo and flightviz ran cleanly.
 
-**Pass rate (headline, seed 0):** no change (95.75%; pooled 6 sets 98.58%, camera-only 97.46%).
+Pass rate (headline, seed 0): no change (95.75%; pooled 6 sets 98.58%, camera-only 97.46%).
 
-**Next:** (A) reject distractors at initialisation and as targets (seed 0 runs 0/47/49, 4024,
+Next: (A) reject distractors at initialisation and as targets (seed 0 runs 0/47/49, 4024,
 4038): prefer a quad with its opening or the nearest upright 1.7 m square straight ahead over the
 biggest candidate in WAIT; give 3-corner inits a wider initial yaw sigma; re-test
 `reinit_unambiguous_only` on the clutter world.
