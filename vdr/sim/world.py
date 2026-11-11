@@ -112,7 +112,7 @@ class Simulator:
         if cfg.exposure_time > 0:
             self._pose_hist.append((self.t, self.state.p.copy(), self.state.R.copy()))
 
-    # ------------------------------------------------------------ interface
+    # Interface
     def vehicle_info(self) -> VehicleInfo:
         c = self.cfg
         return VehicleInfo(
@@ -169,7 +169,7 @@ class Simulator:
             events=list(self.events),
         )
 
-    # ------------------------------------------------------------- internals
+    # Internals
     def _observe(self, f_mean=None, w_mean=None, force_image=False) -> Observation:
         if f_mean is None:
             f_mean = QuadDynamics.specific_force_body(self.state)

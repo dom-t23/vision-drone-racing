@@ -45,7 +45,7 @@ class ESKF:
         self.P = np.eye(15)
         self.initialized = False
 
-    # ------------------------------------------------------------------ setup
+    # Setup
     def initialize(self, p, v, R, P0: np.ndarray, ba=None, bg=None) -> None:
         self.p = np.array(p, float)
         self.v = np.array(v, float)
@@ -57,7 +57,7 @@ class ESKF:
         self.P = np.array(P0, float)
         self.initialized = True
 
-    # ------------------------------------------------------------- prediction
+    # Prediction
     def predict(self, accel: np.ndarray, gyro: np.ndarray, dt: float) -> None:
         a_b = accel - self.ba
         w_b = gyro - self.bg
@@ -82,7 +82,7 @@ class ESKF:
         P[_BG, _BG] += np.eye(3) * (self.sbg2 * dt)
         self.P = 0.5 * (P + P.T)
 
-    # ----------------------------------------------------------------- updates
+    # Updates
     def _apply(self, H: np.ndarray, r: np.ndarray, Rn: np.ndarray, gate: bool, thresh: float,
                PHt: np.ndarray, S: np.ndarray):
         P = self.P
@@ -159,7 +159,7 @@ class ESKF:
         S = H @ PHt + Rn
         return self._apply(H, np.array([r]), Rn, gate, thresh, PHt, S)
 
-    # --------------------------------------------------------- frame change
+    # Frame change
     def change_frame(self, yaw: float, t: np.ndarray, pos_cov: np.ndarray, yaw_sigma: float,
                      correlate_yaw: bool = False) -> None:
         """Re-express the state in a new gate frame G2 given G2's pose in the current frame G.

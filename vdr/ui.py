@@ -115,7 +115,7 @@ class App:
         root.protocol("WM_DELETE_WINDOW", self.close)
         root.after(100, self._drain)
 
-    # ------------------------------------------------------------- settings
+    # Settings
     def _settings(self):
         """Current settings, or None (after showing an error) if a field isn't a valid number."""
         from tkinter import messagebox
@@ -131,7 +131,7 @@ class App:
             return None
         return s
 
-    # -------------------------------------------------------------- actions
+    # Actions
     def fly(self):
         s = self._settings()
         if s:
@@ -163,7 +163,7 @@ class App:
         self.stop()
         self.root.destroy()
 
-    # ------------------------------------------------------------ subprocess
+    # Subprocess
     def _start(self, cmd: list, status: str):
         if self.proc and self.proc.poll() is None:
             return

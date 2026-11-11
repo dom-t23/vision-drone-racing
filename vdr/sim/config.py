@@ -2,7 +2,7 @@
 
 Everything that defines how hard the world is lives here. Making the sim
 harder (blur, latency, clutter, ...) means adding a field here with a default
-that preserves old behaviour, then re-baselining (see CLAUDE.md).
+that preserves old behaviour, then re-baselining.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from vdr.cfgutil import override
 
 @dataclass
 class SimConfig:
-    # --- timing -----------------------------------------------------------
+    # Timing
     physics_dt: float = 0.0025        # s (400 Hz rigid-body integration)
     control_substeps: int = 2         # physics steps per control tick -> 200 Hz IMU / commands
     camera_every: int = 5             # control ticks per camera frame -> 40 Hz camera
@@ -29,7 +29,7 @@ class SimConfig:
     race_min_speed: float = 5.0       # m/s: race clock = start allowance + path length / this (0 disables)
     race_start_allowance: float = 2.0 # s added to the race clock for take-off
 
-    # --- camera -------------------------------------------------------------
+    # Camera
     image_width: int = 320
     image_height: int = 240
     hfov_deg: float = 100.0
@@ -41,7 +41,7 @@ class SimConfig:
     gate_supersample: int = 8         # 0: legacy cv2 LINE_AA fill (paints ~0.7 px too wide on every edge);
                                       # N >= 2: area-coverage anti-aliasing from an N x N supersampled mask
 
-    # --- gates & course -------------------------------------------------------
+    # Gates & course
     gate_outer: float = 1.7           # outer edge of square frame (m)
     gate_inner: float = 1.4           # inner opening (m)
     n_gates: int = 8
@@ -56,21 +56,21 @@ class SimConfig:
     path_clearance: float = 2.5       # other gates must be this far from each straight leg
     next_gate_cone_deg: float = 60.0  # next gate must be the nearest gate in this cone after a pass
 
-    # --- clutter --------------------------------------------------------------
+    # Clutter
     n_distractors: int = 20           # orange clutter beside the course: flat vertical panels/banners and
                                       # cone-like triangles in gate-like paint (visual only, no collision);
                                       # 0 = none (behaviour before 2026-10-27)
     distractor_clearance: float = 2.0 # m from every straight leg (incl. start -> gate 0) and gate centre
     distractor_spread: float = 8.0    # m: placed up to this far to the side of a randomly chosen leg
 
-    # --- start ----------------------------------------------------------------
+    # Start
     start_dist_min: float = 5.0       # hover start, this far before gate 0
     start_dist_max: float = 7.0
     start_lateral: float = 1.0
     start_vertical: float = 0.3
     start_yaw_deg: float = 10.0
 
-    # --- vehicle ----------------------------------------------------------------
+    # Vehicle
     thrust_max: float = 4.0 * 9.81    # mass-normalised (thrust-to-weight 4)
     rate_max_rp: float = 12.0         # rad/s roll/pitch rate limit
     rate_max_yaw: float = 6.0         # rad/s yaw rate limit
@@ -81,7 +81,7 @@ class SimConfig:
     drag_quad: float = 0.015          # 1/m, quadratic airframe drag
     drone_radius: float = 0.15        # m, collision radius
 
-    # --- IMU ----------------------------------------------------------------------
+    # IMU
     gyro_noise: float = 0.002         # rad/s/sqrt(Hz), white noise density (incl. vibration)
     accel_noise: float = 0.05         # m/s^2/sqrt(Hz)
     gyro_bias_sigma: float = 0.01     # rad/s, per-run constant bias (1 sigma)
@@ -89,7 +89,7 @@ class SimConfig:
     gyro_bias_walk: float = 1e-4      # rad/s^2/sqrt(Hz)
     accel_bias_walk: float = 1e-3     # m/s^3/sqrt(Hz)
 
-    # --- run termination ------------------------------------------------------------
+    # Run termination
     flyaway_dist: float = 30.0        # m from nearest gate centre
 
     @property

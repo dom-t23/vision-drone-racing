@@ -140,7 +140,7 @@ class Autonomy:
                           att_rejects=0, reinits=0, handoffs=0, switches=0, retargets=0, searches=0,
                           target_frames=0, recoveries=0)
 
-    # ================================================================== API
+    # API
     def step(self, obs: Observation) -> Command:
         dt = self.info.control_dt
         if self._last_t is not None:
@@ -191,7 +191,7 @@ class Autonomy:
         return dict(mode=self.mode, initialized=e.initialized, p=e.p.copy(), v=e.v.copy(),
                     R=e.R.copy(), passes=self.passes)
 
-    # ========================================================== perception
+    # Perception
     def _up_body(self) -> np.ndarray:
         if self.eskf.initialized:
             return self.eskf.R.T @ _EZ
@@ -371,7 +371,7 @@ class Autonomy:
         c = self.cfg
         return pnp.gate_position_cov(s, self.info.K, c.corner_sigma_px, c.depth_factor, c.pos_sigma_floor)
 
-    # =============================================================== filter
+    # Filter
     def _init_on_gate(self, s: pnp.GatePose, keep_velocity: bool) -> None:
         """(Re)initialise the filter in the frame of the gate seen in PnP solution `s`."""
         info, cfg, e = self.info, self.cfg, self.eskf
@@ -586,7 +586,7 @@ class Autonomy:
         self.mode = TRACK
         self.stats["handoffs" if passed else "switches"] += 1
 
-    # ============================================================== control
+    # Control
     def _command(self) -> Command:
         info, cfg, e = self.info, self.cfg, self.eskf
         if self.mode == WAIT or not e.initialized:

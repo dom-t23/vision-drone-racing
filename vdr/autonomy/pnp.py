@@ -138,7 +138,7 @@ def attitude_sigma(pose: GatePose, K: np.ndarray, corner_sigma: float, att_facto
     return max(floor_rad, att_factor * corner_sigma * pose.distance / (f * pose.size))
 
 
-# ------------------------------------------------------------------ upright (4-DoF) PnP
+# Upright (4-DoF) PnP
 def _upright_basis(up_cam: np.ndarray):
     """Orthonormal basis (a, b) of the plane perpendicular to up (camera frame)."""
     up = up_cam / np.linalg.norm(up_cam)

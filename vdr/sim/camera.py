@@ -106,7 +106,7 @@ class FpvCamera:
         self._gate_polys = None
         self._distractors = []           # [(centre, vertices, colour)]
 
-    # ------------------------------------------------------------------ setup
+    # Setup
     def _make_noise(self):
         """One frame of additive Gaussian noise, split into (positive, negative) uint8 parts."""
         nz = self.rng.normal(0.0, self.cfg.pixel_noise_sigma, (self.H, self.W, 3))
@@ -132,7 +132,7 @@ class FpvCamera:
         self._distractors = [(d.center.copy(), np.asarray(d.vertices, float), tuple(d.colour))
                              for d in distractors]
 
-    # ---------------------------------------------------------------- render
+    # Render
     def camera_pose(self, p_wb: np.ndarray, R_wb: np.ndarray):
         R_wc = R_wb @ self.R_bc
         p_wc = p_wb + R_wb @ self.t_bc

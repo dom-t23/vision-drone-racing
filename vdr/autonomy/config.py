@@ -18,7 +18,7 @@ from vdr.cfgutil import override
 
 @dataclass
 class AutonomyConfig:
-    # --- detector -------------------------------------------------------------
+    # Detector
     hue_lo: int = 0                   # OpenCV hue (0-179) range of the gate paint
     hue_hi: int = 25
     sat_min: int = 120
@@ -33,7 +33,7 @@ class AutonomyConfig:
     subpix_max_shift: float = 2.0     # px; keep the contour quad if refinement moves a corner further than this
     border_margin: float = 1.5        # px; reject quads touching the image border (truncated)
 
-    # --- PnP / measurement model --------------------------------------------------
+    # PnP / measurement model
     corner_sigma_px: float = 1.5      # assumed corner noise (px)
     depth_factor: float = 0.7         # depth-noise scale for a 4-point square
     pos_sigma_floor: float = 0.03     # m
@@ -46,7 +46,7 @@ class AutonomyConfig:
     drop_lone_robust_far: bool = True     # drop RANSAC outlines with no valid opening of their own ...
     lone_robust_max_range: float = 6.0    # ... measured further than this (m): they read ~12% too near
 
-    # --- ESKF ------------------------------------------------------------------------
+    # ESKF
     accel_noise: float = 0.08         # m/s^2/sqrt(Hz)   (assumed, includes vibration)
     gyro_noise: float = 0.003         # rad/s/sqrt(Hz)
     accel_bias_walk: float = 0.005    # m/s^3/sqrt(Hz)
@@ -100,7 +100,7 @@ class AutonomyConfig:
     init_rescue_reproj_px: float = 1.0   # the 3 kept corners must fit this well
     reinit_ambiguous_max_rejects: int = 24
 
-    # --- gate tracking & handoff ---------------------------------------------------
+    # Gate tracking & handoff
     assoc_radius: float = 2.0         # m (+ assoc_radius_per_m * range, capped) to call a detection "the target gate"
     assoc_radius_per_m: float = 0.1   #   -- generous on purpose: the chi-squared gate decides if it's used
     assoc_radius_max: float = 4.0
@@ -160,8 +160,8 @@ class AutonomyConfig:
     unambiguous_yaw_bearing_only: bool = False
     chi2_threshold_1dof: float = 6.635    # yaw-only update: 99% quantile
 
-    # --- guidance & control -------------------------------------------------------
-    cruise_speed: float = 8.0         # m/s through the gates (race pace; see CLAUDE.md before changing)
+    # Guidance & control
+    cruise_speed: float = 8.0         # m/s through the gates (race pace)
     t_go_min: float = 0.3             # s, floor on time-to-go in the cubic guidance law
     terminal_x: float = -1.2          # m, inside this distance just hold the line through the gate
     look_ahead_x: float = 1.5         # m beyond the gate the camera is pointed at
@@ -185,7 +185,7 @@ class AutonomyConfig:
     # brake along x (constant deceleration, free arrival speed >= feasible_min_speed) so the
     # gate is reached when the lateral move is done. Needs along_track_tgo. On since 2026-10-16:
     # pooled over 6 seed sets 97.92% -> 99.08%, completed 290 -> 295 (9 rescued, 4 broken),
-    # laps +0.34 s (+3%, paired, 286 runs) — within the pace rule.
+    # laps +0.34 s (+3%, paired, 286 runs), within the pace rule.
     feasible_lateral: bool = True
     feasible_lat_accel: float = 11.0  # m/s^2, lateral budget (leaves ~8.7 m/s^2 of max_accel for braking)
     feasible_min_speed: float = 3.0   # m/s, never plan to arrive slower than this
