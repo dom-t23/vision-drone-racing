@@ -16,7 +16,8 @@ prompt is the top-level authority; nothing here may weaken it.
 - Design decisions fixed by Dom: thrust + body-rate (acro) commands; all gates identical
   with no IDs (the course guarantees the next gate is visible after each pass); first-week
   extras: README flight GIF, optional UDP link mode, GitHub Actions CI.
-- Git: work on `main`, small commits, never force-push, never delete Dom's work.
+- Git: work on `main`, small commits, never force-push, never delete Dom's work. Commit
+  messages follow "Engineering conventions" below.
 - README voice. `README.md` is written in Dom's voice, in plain prose. When updating it,
   keep its tone, length and structure: change numbers and facts, not the style. Do not add a
   "How this was built" section back (Dom removed it). Detailed tables and per-seed results belong in
@@ -104,6 +105,64 @@ estimate trace and course for one seed - use it to debug a specific failure.
 2. Run tests and the 50-run harness on current main to confirm the baseline.
 3. Do ONE chunk (A pass rate / B robustness & realism / C write-up), verify, commit.
 4. Append to NIGHTLY_LOG.md; update ROADMAP.md; lessons learned below if durable.
+
+## Engineering conventions
+
+The repo should read like one engineer's project: conventional layout, short commits, code that
+explains itself, and docs written for a reader who was not there. These rules apply to
+everything written from now on. Do not rewrite existing history or old log entries to match.
+
+### Commits
+
+- Subject line in the imperative, at most 72 characters, no trailing full stop, optionally
+  prefixed with the area: `detector: reject outlines with no opening beyond 6 m`.
+- Numbers, seeds and file names go in the body, not the subject. The body says why the change
+  was made and what it did to the benchmark, in two to six lines.
+- One logical change per commit. Code, its tests and its results file may share a commit;
+  unrelated doc updates may not. Not `Results, log, roadmap and lesson for run 26`, but
+  `docs: log init-rescue A/B and update roadmap`.
+- No run numbers in commit subjects.
+
+### Code
+
+- A comment says what the code cannot: why it is this way, a unit, a non-obvious constraint.
+  It does not narrate the change or record when it was made.
+- New config fields get one or two lines on what the setting does. Dates, run numbers, A/B
+  results and seed numbers belong in NIGHTLY_LOG.md and the write-up, not in code. The
+  existing history comments in `vdr/autonomy/config.py` stay; do not add to them.
+- Docstrings are one line unless the behaviour needs more. No ASCII diagrams in new
+  docstrings, no ruler-style banners, no references to this file.
+- Test names say what is checked in a few words (`test_chi2_gate_rejects_outliers`), not a
+  full sentence.
+- A rejected experiment is reverted, flag and all, unless ROADMAP.md names a planned re-test.
+  The log entry and the committed results file are the record. A kept change keeps its flag
+  for ablation, as before.
+- No scratch scripts, notebooks or generated files in the repo. `/scratch/` is ignored for
+  that purpose.
+
+### Layout
+
+- No new files at the repo root. Code goes under `vdr/`, tests under `tests/` as
+  `test_<module>.py`, documents under `docs/`, figures under `docs/img/`, results under
+  `results/`.
+- A new module gets a line in the Architecture list above and in the README's Layout block
+  in the same commit.
+- Keep `requirements.txt` and the dependencies in `pyproject.toml` in step.
+
+### Docs and log
+
+- Plain sentences. No em dashes or Unicode arrows (write `-`, `:` or `->`), no emoji, no bold
+  label at the start of a bullet, paragraph or log entry. Bold is for the one number a reader
+  must not miss in a table.
+- Headings name the topic. They do not state a lesson or a conclusion.
+- A NIGHTLY_LOG.md entry is at most about 25 lines: what was tried, what the benchmark said
+  (pooled and per set), whether it was kept, the results files, and what is next. Leave out
+  how the session went (checkout state, reruns, waiting on jobs).
+- In `docs/WRITEUP.md` the results files behind each table go in the appendix, not under the
+  table.
+- A lesson added below is at most three lines and starts with the date.
+- Do not mention how the work was produced (scheduled runs, sessions, assistants) in the
+  README, the write-up, the demo page, code or commit messages.
 
 ## Lessons learned
 
@@ -239,7 +298,8 @@ estimate trace and course for one seed - use it to debug a specific failure.
   clutter seen through the opening merged with the frame, so no hole was found and the lone
   outline got no PnP candidate (never initialised). When a realism knob costs pass rate, look at
   what the detector returns on the failing frames before assuming false positives. A sweep (10 / 20
-  / 40 objects: 100 / 95.75 / 89.5%) picks a default that discriminates without swamping.- 2026-10-28 - "Never initialised" had three different causes in four runs (a range rule, one
+  / 40 objects: 100 / 95.75 / 89.5%) picks a default that discriminates without swamping.
+- 2026-10-28: "Never initialised" had three different causes in four runs (a range rule, one
   clutter-pulled corner, a merged blob): log *why each detection got no candidate* per run before
   writing one fix. A recovery path that only runs when the normal path yields nothing leaves every
   other run bit-identical, so its A/B reads cleanly (14/300 runs changed). A 3-corner upright fit
@@ -249,10 +309,6 @@ estimate trace and course for one seed - use it to debug a specific failure.
 
 - 2026-11-11: Dom added the README voice rule (Non-negotiables). The README was rewritten
   that day and its detailed tables moved to `docs/WRITEUP.md` sections 2.1-2.3.
-- 2026-11-11: Dom removed the README's "How this was built" section and had the bold-label
-  bullets and box-drawing diagram replaced with plain prose and ASCII. Keep the README that way.
-- 2026-11-11: Dom had the docs and code comments restyled. Keep them that way: no em dashes or
-  Unicode arrows (write `-`, `:` or `->`), no bold labels at the start of bullets, paragraphs or
-  log entries, no ruler-style comment banners in code, and no references to this file from code.
-  Section titles in `docs/WRITEUP.md` name the topic, and the results files behind each table go
-  in its appendix, not under the table.
+- 2026-11-11: Dom removed the README's "How this was built" section and had the README, the
+  write-up, the demo page, the log, the roadmap and the code comments restyled. The rules that
+  keep them that way are in "Engineering conventions".
