@@ -18,8 +18,8 @@ prompt is the top-level authority; nothing here may weaken it.
   extras: README flight GIF, optional UDP link mode, GitHub Actions CI.
 - Git: work on `main`, small commits, never force-push, never delete Dom's work.
 - **README voice.** `README.md` is written in Dom's voice, in plain prose. When updating it,
-  keep its tone, length and structure: change numbers and facts, not the style. Never edit or
-  remove its "How this was built" section. Detailed tables and per-seed results belong in
+  keep its tone, length and structure: change numbers and facts, not the style. Do not add a
+  "How this was built" section back (Dom removed it). Detailed tables and per-seed results belong in
   `docs/WRITEUP.md`, not the README.
 
 ## Architecture
@@ -249,3 +249,5 @@ estimate trace and course for one seed — use it to debug a specific failure.
 
 - 2026-11-11 — Dom added the README voice rule (Non-negotiables). The README was rewritten
   that day and its detailed tables moved to `docs/WRITEUP.md` sections 2.1–2.3.
+- 2026-11-11 — Dom removed the README's "How this was built" section and had the bold-label
+  bullets and box-drawing diagram replaced with plain prose and ASCII. Keep the README that way.

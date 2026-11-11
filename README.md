@@ -15,15 +15,16 @@ Regenerate with `python -m vdr.flightviz --seed 1`.*
 
 ## Try it
 
-- **In the browser:** the [flight replay](https://dom-t23.github.io/vision-drone-racing/)
-  shows recorded flights with the onboard camera, the detected gate outlines and the drone's
-  own position estimate.
-- **Desktop app:** download the zip for Windows, macOS or Linux from
+- In the browser, the [flight replay](https://dom-t23.github.io/vision-drone-racing/) shows
+  recorded flights with the onboard camera, the detected gate outlines and the drone's own
+  position estimate.
+- For the desktop app, download the zip for Windows, macOS or Linux from
   [Releases](https://github.com/dom-t23/vision-drone-racing/releases), unzip it and run
   `vdr-racing` (`vdr-racing.exe` on Windows). The builds aren't code-signed, so on macOS
-  right-click → Open the first time, and on Windows choose "More info → Run anyway".
-- **With Python 3.10+:** `pipx install git+https://github.com/dom-t23/vision-drone-racing`,
-  then `vdr-racing`, `vdr-racing fly --seed 3 --live` or `vdr-racing bench --runs 8`.
+  right-click and choose Open the first time, and on Windows click "More info" and then
+  "Run anyway".
+- With Python 3.10+, `pipx install git+https://github.com/dom-t23/vision-drone-racing`, then
+  `vdr-racing`, `vdr-racing fly --seed 3 --live` or `vdr-racing bench --runs 8`.
 
 ## Results
 
@@ -33,8 +34,8 @@ along the course or it times out, so slowing down doesn't score.
 
 | | gate pass rate | courses completed | mean lap (per seed set) |
 |---|---|---|---|
-| camera + IMU (default) | **98.58%** | 294 / 300 | 11.45–11.67 s |
-| camera only, no IMU | 97.46% | 289 / 300 | 11.42–11.65 s |
+| camera + IMU (default) | **98.58%** | 294 / 300 | 11.45-11.67 s |
+| camera only, no IMU | 97.46% | 289 / 300 | 11.42-11.65 s |
 
 Every course has 20 pieces of clutter beside it (banners, panels, cones) painted in the gates'
 own orange, so colour alone can't separate a gate from a distraction. Before the clutter was
@@ -52,35 +53,39 @@ switched off are in [section 2 of the write-up](docs/WRITEUP.md#2-results).
 ## How it works
 
 ```
- camera 40 Hz ─► gate detector ─► IPPE_SQUARE PnP ─► chi-squared gate ─┐
-                 (HSV, contours,   (gravity resolves                   │
-                  RANSAC quads)     the square's symmetry)              ▼
- IMU 200 Hz ───────────────────────────────────────────────► ESKF in the target gate's frame
-                                                                        │
-            gate tracking: target / next-gate hypotheses / handoff ◄────┤
-                                                                        ▼
-                     cubic terminal-velocity guidance ─► attitude control ─► thrust + body rates
+ camera 40 Hz --> gate detector --> IPPE_SQUARE PnP --> chi-squared gate --+
+                  (HSV, contours,   (gravity resolves                      |
+                   RANSAC quads)     the square's symmetry)                v
+ IMU 200 Hz ------------------------------------------------> ESKF in the target gate's frame
+                                                                           |
+             gate tracking: target / next-gate hypotheses / handoff <------+
+                                                                           |
+                                                                           v
+                      cubic terminal-velocity guidance --> attitude control --> thrust + body rates
 ```
 
-- **Finding gates.** Gates are found by colour and each outline is fitted with a
-  quadrilateral. Because they're identical, the next gate is usually seen through or touching
-  the current one, so merged outlines get a RANSAC fit of their four main edges, and each
-  gate's inner opening is used as a second square.
-- **Pose from one square.** `solvePnP` with `IPPE_SQUARE` gives the gate's pose from its four
-  corners. A square looks the same rotated by 90°, so gravity (gates are upright) fixes which
-  corner is which. The pose is then refined with the gate held upright, solving only for
-  position and yaw.
-- **State estimation without a map.** A 15-state error-state Kalman filter runs in the frame
-  of the gate the drone is heading for. The IMU drives the prediction at 200 Hz; each detection
-  updates it with the gate centre in the camera frame and a weaker attitude measurement. A
-  chi-squared test on each innovation throws out misdetections and wrong PnP solutions.
-- **Which gate is next?** The gates have no IDs, so the rule is "the nearest gate ahead".
-  Gates seen beyond the current one are grouped into hypotheses on the way in; after a pass
-  the filter is re-expressed in the next gate's frame.
-- **Guidance and control.** A cubic trajectory brings the drone to the gate centre moving
-  along the gate's normal, with its time-to-go chosen so the sideways acceleration stays
-  within the drone's limits. A geometric attitude controller turns that into collective
-  thrust and body rates, the way a pilot flies in acro mode.
+Gates are found by colour and each outline is fitted with a quadrilateral. Because they're
+identical, the next gate is usually seen through or touching the current one, so merged
+outlines get a RANSAC fit of their four main edges, and each gate's inner opening is used as a
+second square.
+
+`solvePnP` with `IPPE_SQUARE` gives the gate's pose from its four corners. A square looks the
+same rotated by 90°, so gravity (gates are upright) fixes which corner is which. The pose is
+then refined with the gate held upright, solving only for position and yaw.
+
+There's no map, so a 15-state error-state Kalman filter runs in the frame of the gate the
+drone is heading for. The IMU drives the prediction at 200 Hz; each detection updates it with
+the gate centre in the camera frame and a weaker attitude measurement. A chi-squared test on
+each innovation throws out misdetections and wrong PnP solutions.
+
+The gates have no IDs, so the next gate is taken to be the nearest gate ahead. Gates seen
+beyond the current one are grouped into hypotheses on the way in; after a pass the filter is
+re-expressed in the next gate's frame.
+
+For guidance, a cubic trajectory brings the drone to the gate centre moving along the gate's
+normal, with its time-to-go chosen so the sideways acceleration stays within the drone's
+limits. A geometric attitude controller turns that into collective thrust and body rates, the
+way a pilot flies in acro mode.
 
 ## Simulator
 
@@ -131,20 +136,7 @@ packaging/         PyInstaller build
 tests/             unit and end-to-end tests
 ```
 
-## How this was built
-
-I set the problem and the design decisions that stay fixed: acro-mode thrust and body-rate
-commands, identical gates with no IDs, a strict wall between the simulator and the flight
-stack, and the benchmark rules (the race clock, no slowing down to gain pass rate, and every
-published number backed by a committed results file). Those rules are in
-[`CLAUDE.md`](CLAUDE.md).
-
-Most of the code was written by an AI coding agent (Claude) in scheduled overnight runs. Each
-night it re-ran the benchmark, tried one change behind a flag, A/B-tested it on the same
-courses and logged the outcome in [`NIGHTLY_LOG.md`](NIGHTLY_LOG.md), including the ideas
-that didn't work. I reviewed the results, and worked through some changes with Claude
-directly, including the desktop launcher, live playback and a fix to the filter's covariance
-when it switches gate frames.
+## More
 
 The full write-up (pipeline, filter design, evaluation method and debugging stories) is in
 [docs/WRITEUP.md](docs/WRITEUP.md), and [ROADMAP.md](ROADMAP.md) has what's next.
