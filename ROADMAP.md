@@ -8,6 +8,8 @@ anything earlier): `results/2026-10-28_e65b78d_baseline.json` - 95.75% pass rate
 completion, 11.65 s lap, median est. error 0.306 m (pooled over seeds 0/1000/.../5000 with
 init_rescue: 98.58%, 294/300 complete, `results/2026-10-28_059848c_ab-init-rescue*.json`;
 camera-only pooled 97.46%; quote the pooled number).
+Library versions: numpy 2.5.3 and opencv-python-headless 5.0.0.93, pinned in `requirements.txt`;
+other versions change per-seed outcomes (seed 0 94.0-97.5% on the same code), so bumping them is a re-baseline.
 Clutter re-baseline before init_rescue: `results/2026-10-27_11f0132_rebaseline-clutter.json` (pooled 97.75%).
 Clutter-free world (before 2026-10-27):
 `results/2026-10-22_5143039_baseline.json` - 100.0%, 11.59 s, 0.203 m (pooled 99.83%).
@@ -118,6 +120,9 @@ the legacy renderer (gates painted ~0.7 px too wide) and is not directly compara
   `vdr.analyze` exists.
 
 ## Done
+
+- 2026-11-25: Library pins (B): numpy 2.5.3 + opencv 5.0.0.93 reproduce the seed-0 baseline
+  on 50/50 runs from a fresh install; CI and release builds on Python 3.13; harness records versions.
 
 - 2026-10-30: Write-up refresh (C, run 27): README/WRITEUP/figures/demo re-reported on the
   clutter world (see the (C) section); no flight change.
