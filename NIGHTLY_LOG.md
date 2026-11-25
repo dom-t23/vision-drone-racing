@@ -1425,3 +1425,29 @@ Next: (A) reject distractors at initialisation and as targets (seed 0 runs 0/47/
 4038): prefer a quad with its opening or the nearest upright 1.7 m square straight ahead over the
 biggest candidate in WAIT; give 3-corner inits a wider initial yaw sigma; re-test
 `reinit_unambiguous_only` on the clutter world.
+
+## 2026-11-25: library version pins
+
+A fresh `pip install -r requirements.txt` (minimums only) installed numpy 2.5.3 and opencv
+5.1.0.95, and seed 1 then missed gate 1. CI had never matched the baseline either: on Python 3.11
+pip resolved numpy 2.4.6 (numpy 2.5 needs 3.12), and its smoke test flew seed 0 to completion.
+
+A search over numpy x opencv versions, comparing `per_run` entries minus `wall_s`, found that
+numpy 2.5.3 with opencv-python-headless 5.0.0.93 reproduces
+`results/2026-10-28_e65b78d_baseline.json` on all 50 runs, on Python 3.12 and 3.13. Python
+itself makes no difference. Both are now pinned in `requirements.txt` and `pyproject.toml`,
+`requires-python` is 3.12, CI and the release build use 3.13, and the harness records the
+Python, numpy and opencv versions in every results file.
+
+Same code (ba04043), seed 0, 50 runs:
+- numpy 2.5.3 + opencv 5.0.0: 95.75%, 47/50, 11.65 s, identical to the baseline on 50/50 runs
+  (fresh install from `requirements.txt`).
+- numpy 2.5.3 + opencv 5.1.0: 94.00%, 46/50, 11.65 s; 37/50 runs identical.
+- numpy 2.4.6 + opencv 5.0.0: 97.50%, 48/50, 11.66 s; 8/50 runs identical.
+The library versions alone move seed 0 by 3.5 pp, which is inside the 8 pp noise band. Numbers
+before and after this change are comparable: the pins are the versions the baseline was made with.
+
+Results: `results/2026-11-25_ba04043_repro-pinned.json`, `_libs-opencv5.1.json`, `_libs-numpy2.4.json`.
+
+Next: unchanged from 2026-10-30. Upgrading either pin is a re-baseline (separate commit,
+`--tag rebaseline-libs`, note in this log).
