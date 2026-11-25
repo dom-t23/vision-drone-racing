@@ -7,10 +7,11 @@ name = "vision-drone-racing"
 version = "0.1.0"
 description = "Vision-based autonomous drone racing in a self-contained Python simulator"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
-    "numpy>=1.26",
-    "opencv-python-headless>=4.8",
+    # pinned like requirements.txt: benchmark outcomes depend on these versions
+    "numpy==2.5.3",
+    "opencv-python-headless==5.0.0.93",
     "pillow>=10",
     "matplotlib>=3.8",
 ]

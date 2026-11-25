@@ -23,7 +23,7 @@ Regenerate with `python -m vdr.flightviz --seed 1`.*
   `vdr-racing` (`vdr-racing.exe` on Windows). The builds aren't code-signed, so on macOS
   right-click and choose Open the first time, and on Windows click "More info" and then
   "Run anyway".
-- With Python 3.10+, `pipx install git+https://github.com/dom-t23/vision-drone-racing`, then
+- With Python 3.12+, `pipx install git+https://github.com/dom-t23/vision-drone-racing`, then
   `vdr-racing`, `vdr-racing fly --seed 3 --live` or `vdr-racing bench --runs 8`.
 
 ## Results
