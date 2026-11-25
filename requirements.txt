@@ -1,5 +1,7 @@
-numpy>=1.26
-opencv-python-headless>=4.8
+# numpy and opencv are pinned: per-seed benchmark outcomes change with their versions, and the
+# committed results/ were produced with these. Keep in step with pyproject.toml.
+numpy==2.5.3
+opencv-python-headless==5.0.0.93
 scipy>=1.11
 matplotlib>=3.8
 pytest>=8
