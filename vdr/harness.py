@@ -64,6 +64,16 @@ def _git(*args) -> str:
         return "unknown"
 
 
+def library_versions() -> dict:
+    """Versions that per-seed outcomes depend on (see requirements.txt)."""
+    import platform
+
+    import cv2
+    import numpy
+
+    return {"python": platform.python_version(), "numpy": numpy.__version__, "opencv": cv2.__version__}
+
+
 def summarize(runs: list) -> dict:
     total_gates = sum(r["n_gates"] for r in runs)
     passed = sum(r["gates_passed"] for r in runs)
@@ -139,6 +149,7 @@ def main(argv=None) -> int:
         "flags": auto_kw,
         "sim_overrides": sim_kw,
         "link": a.link,
+        "versions": library_versions(),
         "wall_s": round(wall, 1),
         **summary,
         "autonomy_config": auto_cfg.to_dict(),
