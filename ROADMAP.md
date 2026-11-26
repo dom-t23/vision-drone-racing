@@ -10,6 +10,8 @@ init_rescue: 98.58%, 294/300 complete, `results/2026-10-28_059848c_ab-init-rescu
 camera-only pooled 97.46%; quote the pooled number).
 Library versions: numpy 2.5.3 and opencv-python-headless 5.0.0.93, pinned in `requirements.txt`;
 other versions change per-seed outcomes (seed 0 94.0-97.5% on the same code), so bumping them is a re-baseline.
+Per-run results also depend on the CPU (numpy/OpenBLAS SIMD kernels): they reproduce on the machine type
+that made them, not on CI's runner, whose smoke-test numbers are not comparable run for run.
 Clutter re-baseline before init_rescue: `results/2026-10-27_11f0132_rebaseline-clutter.json` (pooled 97.75%).
 Clutter-free world (before 2026-10-27):
 `results/2026-10-22_5143039_baseline.json` - 100.0%, 11.59 s, 0.203 m (pooled 99.83%).
