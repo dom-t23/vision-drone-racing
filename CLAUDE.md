@@ -305,8 +305,8 @@ everything written from now on. Do not rewrite existing history or old log entri
   other run bit-identical, so its A/B reads cleanly (14/300 runs changed). A 3-corner upright fit
   pins range (2%) but not yaw (~14 deg on a 35 px square) - check fallbacks against truth.
 - 2026-11-25: Per-seed outcomes depend on the numpy and opencv builds (same code, seed 0: 94.0 /
-  95.75 / 97.5% on three version sets), so both are pinned. Treat a pin bump as a re-baseline, and
-  check a results file's `versions` before comparing it with another.
+  95.75 / 97.5% on three version sets), so both are pinned and a bump is a re-baseline. They also
+  depend on the CPU (SIMD kernels chosen at run time): compare per run only on one machine type.
 
 ## Instruction changes
 
