@@ -1451,3 +1451,22 @@ Results: `results/2026-11-25_ba04043_repro-pinned.json`, `_libs-opencv5.1.json`,
 
 Next: unchanged from 2026-10-30. Upgrading either pin is a re-baseline (separate commit,
 `--tag rebaseline-libs`, note in this log).
+
+## 2026-11-26: CPU dependence of benchmark results
+
+With the pins in place, CI on Python 3.13 passes and its 8-run smoke test has the same pass rate
+as the baseline's first 8 runs (57/64), but a different lap time and median est. error, so at least
+one run flew differently on GitHub's runner. The same pinned install here reproduces the baseline
+per run, so the difference is the CPU, not the libraries.
+
+numpy and its bundled OpenBLAS choose SIMD kernels at run time from the CPU's features. On this
+machine (AVX-512) forcing OpenBLAS onto its AVX2 kernels (`OPENBLAS_CORETYPE=Haswell` or `Zen`),
+or capping numpy's own dispatch at AVX2, each changes the smoke test's lap time and est. error.
+No combination tried matched CI exactly, so the runner's CPU path is not known.
+
+Kept as it is: the committed results reproduce per run on the machine type that made them, and
+CI's numbers are not comparable with them run for run (pass rates in CI are a smoke test only).
+Making results CPU-independent would mean forcing one kernel level in the harness before numpy
+loads, which changes every number and so needs a re-baseline; not done.
+
+No new results files.
